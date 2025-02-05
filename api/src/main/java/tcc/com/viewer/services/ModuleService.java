@@ -108,25 +108,25 @@ public class ModuleService {
                         typeArgumentsContext.typeArgument().forEach(typeArgument -> {
                             if (typeArgument.typeType() != null) {
                                 String genericTypeName = typeArgument.typeType().classOrInterfaceType().getText();
-                                addDependencyIfValid(genericTypeName, dependencies);
+                                addDependencyIfValid(genericTypeName, typeArgument.typeType(), dependencies);
                             }
                         });
                     });
                 } else {
                     // If no generics, just add the outer type
-                    addDependencyIfValid(typeName, dependencies);
+                    addDependencyIfValid(typeName, typeContext, dependencies);
                 }
             } else {
                 // Add non-generic type (e.g., String, int)
                 String typeName = typeContext.getText();
-                addDependencyIfValid(typeName, dependencies);
+                addDependencyIfValid(typeName, typeContext, dependencies);
             }
         }
     }
 
-    private void addDependencyIfValid(String typeName, List<Dependency> dependencies) {
+    private void addDependencyIfValid(String typeName, JavaParser.TypeTypeContext typeType, List<Dependency> dependencies) {
         if (!isPrimitiveOrWrapper(typeName)) {
-            Dependency dependency = new Dependency(typeName);
+            Dependency dependency = new Dependency(typeName, typeType);
             if (dependency.dependencyDoesNotExist(dependencies)) {
                 dependencies.add(dependency);
             }
