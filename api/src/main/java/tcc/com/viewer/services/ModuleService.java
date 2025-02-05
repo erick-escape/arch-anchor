@@ -275,11 +275,16 @@ public class ModuleService {
                 @Override
                 public Void visitObjectCreationExpression(JavaParser.ObjectCreationExpressionContext ctx) {
                     // Add dependencies from `new` operator
-                    if (ctx.creator() != null && ctx.creator().createdName() != null) {
-                        String typeName = ctx.creator().createdName().getText();
-                        Dependency dependency = new Dependency(typeName);
-                        if (!isPrimitiveOrWrapper(typeName) && dependency.dependencyDoesNotExist(dependencies)) {
-                            dependencies.add(dependency);
+                    JavaParser.CreatorContext creator = ctx.creator();
+                    if (creator != null && creator.createdName() != null) {
+//                        String typeName = creator.createdName().getText();
+                        JavaParser.NonWildcardTypeArgumentsContext arguments = creator.nonWildcardTypeArguments();
+                        if (arguments != null) {
+                            arguments.typeList().typeType().forEach(typeType -> extractDependenciesFromType(typeType, dependencies));
+//                            Dependency dependency = new Dependency(typeName, );
+//                            if (!isPrimitiveOrWrapper(typeName) && dependency.dependencyDoesNotExist(dependencies)) {
+//                                dependencies.add(dependency);
+//                            }
                         }
                     }
                     return super.visitObjectCreationExpression(ctx);
