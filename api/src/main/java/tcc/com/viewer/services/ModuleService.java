@@ -170,20 +170,47 @@ public class ModuleService {
 
                     // Process interface methods inside interfaceBody
                     if (ctx.interfaceBody() != null) {
-                        ctx.interfaceBody().interfaceMemberDeclaration().forEach(member -> {
-                            if (member.interfaceMethodDeclaration() != null) {
-                                JavaParser.InterfaceMethodDeclarationContext methodCtx = member.interfaceMethodDeclaration();
+                        ctx.interfaceBody().interfaceBodyDeclaration().forEach(bodyDecl -> {
+                            if (bodyDecl.interfaceMemberDeclaration() != null) {
+                                JavaParser.InterfaceMemberDeclarationContext member = bodyDecl.interfaceMemberDeclaration();
 
-                                // Extract dependencies from return type
-                                if (methodCtx.typeTypeOrVoid().typeType() != null) {
-                                    extractDependenciesFromType(methodCtx.typeTypeOrVoid().typeType(), dependencies);
+                                // Extract method declarations from the interface
+                                if (member.interfaceMethodDeclaration() != null) {
+                                    JavaParser.InterfaceCommonBodyDeclarationContext commonBody = member
+                                            .interfaceMethodDeclaration()
+                                            .interfaceCommonBodyDeclaration();
+
+                                    // Extract dependencies from return type
+                                    if (commonBody.typeTypeOrVoid().typeType() != null) {
+                                        extractDependenciesFromType(commonBody.typeTypeOrVoid().typeType(), dependencies);
+                                    }
+
+                                    // Extract dependencies from method parameters
+                                    if (commonBody.formalParameters() != null && commonBody.formalParameters().formalParameterList() != null) {
+                                        commonBody.formalParameters().formalParameterList().formalParameter().forEach(parameter -> {
+                                            extractDependenciesFromType(parameter.typeType(), dependencies);
+                                        });
+                                    }
                                 }
 
-                                // Extract dependencies from method parameters
-                                if (methodCtx.formalParameters() != null && methodCtx.formalParameters().formalParameterList() != null) {
-                                    methodCtx.formalParameters().formalParameterList().formalParameter().forEach(parameter -> {
-                                        extractDependenciesFromType(parameter.typeType(), dependencies);
-                                    });
+                                // Extract dependencies from generic interface methods
+                                if (member.genericInterfaceMethodDeclaration() != null) {
+                                    JavaParser.InterfaceCommonBodyDeclarationContext genericMethodCtx = member
+                                            .genericInterfaceMethodDeclaration()
+                                            .interfaceCommonBodyDeclaration();
+
+                                    // Extract dependencies from return type
+                                    if (genericMethodCtx.typeTypeOrVoid().typeType() != null) {
+                                        extractDependenciesFromType(genericMethodCtx.typeTypeOrVoid().typeType(), dependencies);
+                                    }
+
+                                    // Extract dependencies from method parameters
+                                    if (genericMethodCtx.formalParameters() != null
+                                            && genericMethodCtx.formalParameters().formalParameterList() != null) {
+                                        genericMethodCtx.formalParameters().formalParameterList().formalParameter().forEach(parameter -> {
+                                            extractDependenciesFromType(parameter.typeType(), dependencies);
+                                        });
+                                    }
                                 }
                             }
                         });
@@ -191,7 +218,6 @@ public class ModuleService {
 
                     return super.visitInterfaceDeclaration(ctx);
                 }
-
 
                 @Override
                 public Void visitConstructorDeclaration(JavaParser.ConstructorDeclarationContext ctx) {
