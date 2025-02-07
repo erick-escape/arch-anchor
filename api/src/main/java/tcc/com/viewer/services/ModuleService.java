@@ -96,14 +96,12 @@ public class ModuleService {
 
     private void extractDependenciesFromType(JavaParser.TypeTypeContext typeContext, List<Dependency> dependencies) {
         if (typeContext != null) {
-            // Handle generic types like List<AttendeeDetailsDTO>
             if (typeContext.classOrInterfaceType() != null) {
                 JavaParser.ClassOrInterfaceTypeContext classType = typeContext.classOrInterfaceType();
-                String typeName = classType.getText(); // Outer type (e.g., List)
+                String typeName = classType.getText();
 
                 // Handle type arguments (e.g., AttendeeDetailsDTO in List<AttendeeDetailsDTO>)
                 if (!classType.typeArguments().isEmpty()) {
-                    // Navigate through the type arguments
                     classType.typeArguments().forEach(typeArgumentsContext -> {
                         typeArgumentsContext.typeArgument().forEach(typeArgument -> {
                             if (typeArgument.typeType() != null) {
@@ -117,7 +115,6 @@ public class ModuleService {
                     addDependencyIfValid(typeName, dependencies);
                 }
             } else {
-                // Add non-generic type (e.g., String, int)
                 String typeName = typeContext.getText();
                 addDependencyIfValid(typeName, dependencies);
             }
@@ -175,7 +172,6 @@ public class ModuleService {
                             if (bodyDecl.interfaceMemberDeclaration() != null) {
                                 JavaParser.InterfaceMemberDeclarationContext member = bodyDecl.interfaceMemberDeclaration();
 
-                                // Extract method declarations from the interface
                                 if (member.interfaceMethodDeclaration() != null) {
                                     JavaParser.InterfaceCommonBodyDeclarationContext commonBody = member
                                             .interfaceMethodDeclaration()
@@ -186,7 +182,6 @@ public class ModuleService {
                                         extractDependenciesFromType(commonBody.typeTypeOrVoid().typeType(), dependencies);
                                     }
 
-                                    // Extract dependencies from method parameters
                                     if (commonBody.formalParameters() != null && commonBody.formalParameters().formalParameterList() != null) {
                                         commonBody.formalParameters().formalParameterList().formalParameter().forEach(parameter -> {
                                             extractDependenciesFromType(parameter.typeType(), dependencies);
@@ -194,7 +189,6 @@ public class ModuleService {
                                     }
                                 }
 
-                                // Extract dependencies from generic interface methods
                                 if (member.genericInterfaceMethodDeclaration() != null) {
                                     JavaParser.InterfaceCommonBodyDeclarationContext genericMethodCtx = member
                                             .genericInterfaceMethodDeclaration()
@@ -205,7 +199,6 @@ public class ModuleService {
                                         extractDependenciesFromType(genericMethodCtx.typeTypeOrVoid().typeType(), dependencies);
                                     }
 
-                                    // Extract dependencies from method parameters
                                     if (genericMethodCtx.formalParameters() != null
                                             && genericMethodCtx.formalParameters().formalParameterList() != null) {
                                         genericMethodCtx.formalParameters().formalParameterList().formalParameter().forEach(parameter -> {
@@ -296,12 +289,12 @@ public class ModuleService {
         List<Clazz> classes = new ArrayList<>();
 
         Files.list(modulePath)
-                .filter(Files::isRegularFile) // Only regular files
-                .filter(file -> file.toString().endsWith(".java")) // Only Java files
+                .filter(Files::isRegularFile)
+                .filter(file -> file.toString().endsWith(".java"))
                 .forEach(javaFilePath -> {
                     Clazz clazz = new Clazz(
-                            javaFilePath.getFileName().toString().replace(".java", ""), // Class name
-                            getDependencies(javaFilePath).toArray(new Dependency[0]), // Dependencies
+                            javaFilePath.getFileName().toString().replace(".java", ""),
+                            getDependencies(javaFilePath).toArray(new Dependency[0]),
                             0.0, // Similarity will be calculated later
                             modulePath.getFileName().toString(), // firstModule
                             modulePath.getFileName().toString() // currentModule
@@ -322,14 +315,14 @@ public class ModuleService {
                 .filter(Files::isDirectory)
                 .forEach(modulePath -> {
                     try {
-                        List<Clazz> clazzes = getClasses(modulePath); // Get classes in this directory
-                        if (!clazzes.isEmpty()) { // Only include directories with Java files
+                        List<Clazz> clazzes = getClasses(modulePath);
+                        if (!clazzes.isEmpty()) {
                             Module module = new Module(
                                     modulePath.getParent().getFileName().toString() +
                                             '/' +
-                                            modulePath.getFileName().toString(), // Module name
+                                            modulePath.getFileName().toString(),
                                     null, // refClass will be calculated later
-                                    clazzes.toArray(new Clazz[0]), // Classes in this module
+                                    clazzes.toArray(new Clazz[0]),
                                     new Dependency[0], // Dependencies will be calculated later
                                     0.0 // Similarity will be calculated later
                             );
@@ -344,10 +337,8 @@ public class ModuleService {
     }
 
     public List<ModuleDTO> analyze(String directoryPath) throws IOException {
-        // Parse project to identify modules and their classes
         List<Module> modules = this.getModules(directoryPath);
 
-        // Calculate similarities for classes and modules
         for (Module module : modules) {
             this.calculateClassSimilarities(module);
             this.calculateModuleSimilarity(module);
