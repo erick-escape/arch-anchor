@@ -108,25 +108,25 @@ public class ModuleService {
                         typeArgumentsContext.typeArgument().forEach(typeArgument -> {
                             if (typeArgument.typeType() != null) {
                                 String genericTypeName = typeArgument.typeType().classOrInterfaceType().getText();
-                                addDependencyIfValid(genericTypeName, typeArgument.typeType(), dependencies);
+                                addDependencyIfValid(genericTypeName, dependencies);
                             }
                         });
                     });
                 } else {
                     // If no generics, just add the outer type
-                    addDependencyIfValid(typeName, typeContext, dependencies);
+                    addDependencyIfValid(typeName, dependencies);
                 }
             } else {
                 // Add non-generic type (e.g., String, int)
                 String typeName = typeContext.getText();
-                addDependencyIfValid(typeName, typeContext, dependencies);
+                addDependencyIfValid(typeName, dependencies);
             }
         }
     }
 
-    private void addDependencyIfValid(String typeName, JavaParser.TypeTypeContext typeType, List<Dependency> dependencies) {
+    private void addDependencyIfValid(String typeName, List<Dependency> dependencies) {
         if (!isPrimitiveOrWrapper(typeName)) {
-            Dependency dependency = new Dependency(typeName, typeType);
+            Dependency dependency = new Dependency(typeName);
             if (dependency.dependencyDoesNotExist(dependencies)) {
                 dependencies.add(dependency);
             }
@@ -155,7 +155,8 @@ public class ModuleService {
                     if (ctx.typeType() != null) {
                         extractDependenciesFromType(ctx.typeType(), dependencies);
                     }
-                    if (ctx.typeList() != null) { // Implements multiple interfaces
+                    // Implements multiple interfaces
+                    if (ctx.typeList() != null) {
                         ctx.typeList().forEach(type -> type.typeType().forEach(typeType -> extractDependenciesFromType(typeType, dependencies)));
                     }
                     return super.visitClassDeclaration(ctx);
@@ -221,7 +222,6 @@ public class ModuleService {
 
                 @Override
                 public Void visitConstructorDeclaration(JavaParser.ConstructorDeclarationContext ctx) {
-                    // Add dependency from `constructor` parameters
                     JavaParser.FormalParametersContext formalParameters = ctx.formalParameters();
                     if (formalParameters != null && formalParameters.formalParameterList() != null) {
                         formalParameters.formalParameterList().formalParameter().forEach(parameter -> {
@@ -233,7 +233,6 @@ public class ModuleService {
 
                 @Override
                 public Void visitRecordDeclaration(JavaParser.RecordDeclarationContext ctx) {
-                    // Add dependencies from record components
                     if (ctx.recordHeader().recordComponentList() != null) {
                         ctx.recordHeader().recordComponentList().recordComponent().forEach(recordComponent -> {
                             extractDependenciesFromType(recordComponent.typeType(), dependencies);
@@ -251,12 +250,10 @@ public class ModuleService {
 
                 @Override
                 public Void visitMethodDeclaration(JavaParser.MethodDeclarationContext ctx) {
-                    // Add dependencies from method return type and parameters
                     JavaParser.TypeTypeContext returnType = ctx.typeTypeOrVoid().typeType();
                     if (returnType != null) {
                         extractDependenciesFromType(returnType, dependencies);
                     }
-                    // Add dependencies from method parameters
                     if (ctx.formalParameters() != null && ctx.formalParameters().formalParameterList() != null) {
                         ctx.formalParameters().formalParameterList().formalParameter().forEach(parameter -> {
                             extractDependenciesFromType(parameter.typeType(), dependencies);
@@ -267,7 +264,6 @@ public class ModuleService {
 
                 @Override
                 public Void visitLocalVariableDeclaration(JavaParser.LocalVariableDeclarationContext ctx) {
-                    // Add dependencies from local variable declarations
                     extractDependenciesFromType(ctx.typeType(), dependencies);
                     return super.visitLocalVariableDeclaration(ctx);
                 }
@@ -277,14 +273,13 @@ public class ModuleService {
                     // Add dependencies from `new` operator
                     JavaParser.CreatorContext creator = ctx.creator();
                     if (creator != null && creator.createdName() != null) {
-//                        String typeName = creator.createdName().getText();
+                        String typeName = creator.createdName().getText();
                         JavaParser.NonWildcardTypeArgumentsContext arguments = creator.nonWildcardTypeArguments();
                         if (arguments != null) {
-                            arguments.typeList().typeType().forEach(typeType -> extractDependenciesFromType(typeType, dependencies));
-//                            Dependency dependency = new Dependency(typeName, );
-//                            if (!isPrimitiveOrWrapper(typeName) && dependency.dependencyDoesNotExist(dependencies)) {
-//                                dependencies.add(dependency);
-//                            }
+                            Dependency dependency = new Dependency(typeName);
+                            if (!isPrimitiveOrWrapper(typeName) && dependency.dependencyDoesNotExist(dependencies)) {
+                                dependencies.add(dependency);
+                            }
                         }
                     }
                     return super.visitObjectCreationExpression(ctx);

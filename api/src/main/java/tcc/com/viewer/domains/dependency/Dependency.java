@@ -3,7 +3,6 @@ package tcc.com.viewer.domains.dependency;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import tcc.com.viewer.antlr4.JavaParser;
 
 import java.util.List;
 
@@ -12,7 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 public class Dependency {
     private String name;
-    private JavaParser.TypeTypeContext typeType;
 
     public boolean dependencyDoesNotExist(List<Dependency> dependencies) {
         for (Dependency dependency : dependencies) {
