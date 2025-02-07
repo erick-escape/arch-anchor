@@ -14,7 +14,7 @@ public class Dependency {
 
     public boolean dependencyDoesNotExist(List<Dependency> dependencies) {
         for (Dependency dependency : dependencies) {
-            if (dependency.getName().equals(this.name)) {
+            if (dependency.getName().contains(this.name)) {
                 return false;
             }
         }

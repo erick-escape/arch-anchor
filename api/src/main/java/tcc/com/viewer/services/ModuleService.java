@@ -172,13 +172,13 @@ public class ModuleService implements Serializable {
 
             // Traverse the AST to find dependencies
             context.accept(new JavaParserBaseVisitor<Void>() {
-//                @Override
-//                public Void visitImportDeclaration(tcc.com.viewer.antlr4.JavaParser.ImportDeclarationContext ctx) {
-//                    // Add dependencies from import statements
-//                    String dependencyName = ctx.qualifiedName().getText();
-//                    dependencies.add(new Dependency(dependencyName));
-//                    return null;
-//                }
+                @Override
+                public Void visitImportDeclaration(tcc.com.viewer.antlr4.JavaParser.ImportDeclarationContext ctx) {
+                    // Add dependencies from import statements
+                    String dependencyName = ctx.qualifiedName().getText();
+                    addDependencyIfValid(dependencyName, dependencies);
+                    return super.visitImportDeclaration(ctx);
+                }
 
                 @Override
                 public Void visitClassDeclaration(JavaParser.ClassDeclarationContext ctx) {
