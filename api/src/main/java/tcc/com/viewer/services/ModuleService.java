@@ -10,7 +10,7 @@ import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,7 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ModuleService {
+public class ModuleService implements Serializable {
     private final List<Module> modules = new ArrayList<>();
     private final JavaParserService javaParserService = new JavaParserService();
 
@@ -34,6 +34,40 @@ public class ModuleService {
                 "String"));
 
         return dependenciesToAvoid.contains(typeName);
+    }
+
+    public void saveModules(List<ModuleDTO> modulesList) {
+        try {
+            File file = new File("modules.bin");
+            ObjectOutput objectOutput = new ObjectOutputStream(new FileOutputStream(file));
+
+            objectOutput.writeObject(modulesList);
+            objectOutput.close();
+        } catch (FileNotFoundException e) {
+            System.out.println("file not found: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<ModuleDTO> getModulesFromFile() {
+        List<ModuleDTO> modulesList = Collections.emptyList();
+        try {
+            File file = new File("modules.bin");
+            ObjectInput objectInput = new ObjectInputStream(
+                    new FileInputStream(file));
+            modulesList = (List<ModuleDTO>) objectInput.readObject();
+            objectInput.close();
+        } catch (ClassNotFoundException e) {
+            System.out.println("Modules list does not exist: " + e.getMessage());
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("IOException: " + e.getMessage());
+        }
+
+        return modulesList;
     }
 
     private void calculateClassSimilarities(Module module) {
@@ -345,8 +379,11 @@ public class ModuleService {
         }
 
         // Convert modules to ModuleDTO
-        return modules.stream()
+        List<ModuleDTO> modulesList = modules.stream()
                 .map(this::toModuleDTO)
                 .collect(Collectors.toList());
+        this.saveModules(modulesList);
+
+        return modulesList;
     }
 }
