@@ -18,7 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ModuleService implements Serializable {
+public class ModuleService {
     private final List<Module> modules = new ArrayList<>();
     private final JavaParserService javaParserService = new JavaParserService();
 
