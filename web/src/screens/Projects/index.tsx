@@ -71,7 +71,7 @@ const ProjectsPage = () => {
                 <Table
                     dataSource={projects}
                     rowKey={(record) => record.name} // Use project name as unique key
-                    style={{ width: '80%' }} // Adjusts the table width
+                    style={{ width: '100%' }} // Adjusts the table width
                     columns={[
                         {
                             title: 'Project Name',
