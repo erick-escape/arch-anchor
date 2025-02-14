@@ -3,13 +3,13 @@ export const nodeStyle = {
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'flex-start',  // left-align items
-    padding: '10px',
+    padding: '20px',
     boxSizing: 'border-box',
     backgroundColor: 'black',
-    borderRadius: '4px',
+    borderRadius: '10px',
     boxShadow: '0 0 4px rgba(0,0,0,0.2)',
-    color: 'white',
-    textAlign: 'left'         // default text alignment
+    color: 'white'
+    // textAlign: 'left'         // default text alignment
     // width: 'auto',           // no fixed width
     // height: 'auto',          // no fixed height
     // overflow: 'visible',     // allow content to expand
