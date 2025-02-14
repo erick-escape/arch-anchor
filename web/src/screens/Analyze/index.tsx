@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { addEdge, Background, Controls, ReactFlow, useEdgesState, useNodesState } from '@xyflow/react';
+import { addEdge, Background, Controls, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import axios from 'axios';
-import { containerStyle, nodeStyle, reactFlowStyle } from './styles.ts';
+
+import { containerStyle, reactFlowStyle } from './styles.ts';
+import CustomNode from './nodeTypes.tsx';
+
+// 1) Provide a nodeTypes mapping
+const nodeTypes = {
+    customNode: CustomNode
+};
 
 const AnalyzePage = () => {
     const { projectName } = useParams();
@@ -19,12 +26,20 @@ const AnalyzePage = () => {
                 const response = await axios.post('/api/analyze', null, {
                     params: { projectName }
                 });
-                setModules(response.data);
-                setNodes(response.data.map((mod, index) => ({
-                    id: mod.name,
-                    data: { label: renderModule(mod) },
-                    position: { x: index * 200, y: 100 }
-                })));
+
+                const data = response.data;
+                setModules(data);
+
+                // 2) For each module, create a node with type 'customNode'
+                //    and pass the module object via data: { module: mod }
+                setNodes(
+                    data.map((mod, index) => ({
+                        id: mod.name,
+                        type: 'customNode',
+                        data: { module: mod }, // pass the actual data
+                        position: { x: index * 200, y: index } // AQUI QUE VOU MUDAR PARA AJUSTAR A POSIÇÃO INICIAL
+                    }))
+                );
             } catch (error) {
                 console.error('Failed to analyze project', error);
             } finally {
@@ -32,40 +47,23 @@ const AnalyzePage = () => {
             }
         };
         fetchAnalyzedModules();
-    }, [projectName]);
+    }, [projectName, setNodes]);
 
-    const renderModule = (mod) => (
-        <div style={nodeStyle}>
-            {/* Title: center-aligned */}
-            <div style={{ width: '100%', textAlign: 'center', fontWeight: 'bold' }}>
-                {mod.name}
-            </div>
-
-            {/* Ref Class: same line as label */}
-            <div>
-                <strong>Ref Class:</strong> {mod.refClass || 'N/A'}
-            </div>
-
-            {/* Similarity: same line as label */}
-            <div>
-                <strong>Similarity:</strong> {(mod.similarity * 100).toFixed(2)}%
-            </div>
-        </div>
-    );
-
-
+    // For grouping
     const onDrop = useCallback((event) => {
         event.preventDefault();
-        const { source, target } = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+        const { source, target } = JSON.parse(
+            event.dataTransfer.getData('application/reactflow')
+        );
         axios.post('/api/module/join', { parent: target, child: source })
             .then(() => {
                 console.log('Modules joined');
             })
-            .catch(err => console.error('Failed to join modules', err));
+            .catch((err) => console.error('Failed to join modules', err));
     }, []);
 
     const handleDelete = (nodeId) => {
-        setNodes(nodes.filter(node => node.id !== nodeId));
+        setNodes((nds) => nds.filter((node) => node.id !== nodeId));
     };
 
     return (
@@ -81,16 +79,25 @@ const AnalyzePage = () => {
                     onEdgesChange={onEdgesChange}
                     onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
                     onDrop={onDrop}
+                    nodeTypes={nodeTypes} // 3) Provide nodeTypes to ReactFlow
                     fitView
                     style={reactFlowStyle}
                 >
                     <Background variant="dots" gap={100} size={3} />
                     <Controls style={{ color: 'black' }} />
-                    {/*<MiniMap />*/}
+                    {/*<MiniMap/>*/}
                 </ReactFlow>
             )}
         </div>
     );
 };
 
-export default AnalyzePage;
+function AnalyzePageWithProvider() {
+    return (
+        <ReactFlowProvider>
+            <AnalyzePage />
+        </ReactFlowProvider>
+    );
+}
+
+export default AnalyzePageWithProvider;
