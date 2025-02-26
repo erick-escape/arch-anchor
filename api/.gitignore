@@ -35,3 +35,5 @@ build/
 ### uploads directory where I upload the java projects ###
 
 uploads/
+
+modules.bin
