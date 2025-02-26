@@ -93,11 +93,11 @@ public class ProjectController {
     @PostMapping("/analyze")
     public List<ModuleDTO> analyzeProject(@RequestParam String projectName) {
         try {
-            ModuleService moduleService = new ModuleService();
             Path projectPath = Paths.get(UPLOAD_DIR, projectName);
             if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
                 throw new RuntimeException("Project not found!");
             }
+            ModuleService moduleService = new ModuleService();
 
             return moduleService.analyze(projectPath.toString());
         } catch (Exception e) {
@@ -105,5 +105,4 @@ public class ProjectController {
             throw new RuntimeException("Project analysis failed!");
         }
     }
-
 }
