@@ -13,10 +13,10 @@ import java.util.*;
 public class TypeExtractorVisitorService extends JavaParserBaseVisitor<Void> {
     private final Path sourceFile;
     private String packageName = "";
-    private final List<String> imports = new ArrayList<>();
-    private final Set<String> declaredTypes = new HashSet<>();
-    private final Stack<String> currentTypeContext = new Stack<>();
+    private final List<String> explicitImports = new ArrayList<>();
+    private final Set<String> wildcardImports = new HashSet<>();
     private final Set<String> usedTypes = new HashSet<>();
+    private final Stack<String> currentTypeContext = new Stack<>();
 
     public TypeExtractorVisitorService(Path sourceFile) {
         this.sourceFile = sourceFile;
@@ -30,142 +30,130 @@ public class TypeExtractorVisitorService extends JavaParserBaseVisitor<Void> {
 
     @Override
     public Void visitImportDeclaration(JavaParser.ImportDeclarationContext ctx) {
-        imports.add(ctx.qualifiedName().getText());
-        return super.visitImportDeclaration(ctx);
+        String importPath = ctx.qualifiedName().getText();
+
+        // Handle static imports differently
+        if (ctx.STATIC() != null) {
+            // For simplicity, we're not resolving static imports here
+            return null;
+        }
+
+        // Handle wildcard imports
+        if (ctx.getText().endsWith(".*;")) {
+            wildcardImports.add(importPath + ".*");
+        } else {
+            // Regular explicit import
+            explicitImports.add(importPath);
+        }
+
+        return null;
     }
 
-    // Class, interface, enum, and record declarations
+    // All the visitor methods for types will call this
+    private void trackUsedType(String typeName) {
+        // Ignore primitive types, null, etc.
+        if (typeName == null || typeName.isEmpty() ||
+                isPrimitiveType(typeName) || isJavaKeyword(typeName)) {
+            return;
+        }
+
+        // Only add simple names (non-qualified)
+        if (!typeName.contains(".")) {
+            usedTypes.add(typeName);
+        }
+    }
+
+    private boolean isPrimitiveType(String typeName) {
+        return typeName.equals("boolean") || typeName.equals("byte") ||
+                typeName.equals("char") || typeName.equals("short") ||
+                typeName.equals("int") || typeName.equals("long") ||
+                typeName.equals("float") || typeName.equals("double") ||
+                typeName.equals("void");
+    }
+
+    private boolean isJavaKeyword(String typeName) {
+        // This is not comprehensive but includes many common keywords
+        return typeName.equals("this") || typeName.equals("super") ||
+                typeName.equals("null") || typeName.equals("true") ||
+                typeName.equals("false") || typeName.equals("new");
+    }
+
+    // Classes, interfaces, enums, records
     @Override
     public Void visitClassDeclaration(JavaParser.ClassDeclarationContext ctx) {
-        String className = ctx.identifier().getText();
-        addDeclaredType(className);
-
-        // Enter class context for nested types
-        currentTypeContext.push(className);
-
         // Handle "extends" clause
         if (ctx.EXTENDS() != null && ctx.typeType() != null) {
-            addUsedType(ctx.typeType());
+            processTypeType(ctx.typeType());
         }
 
         // Handle "implements" clause
         if (ctx.IMPLEMENTS() != null && ctx.typeList() != null) {
-            for (JavaParser.TypeListContext typeListContext : ctx.typeList()) {
-                addUsedType(typeListContext);
+            for (JavaParser.TypeListContext typeList : ctx.typeList()) {
+                processTypeList(typeList);
             }
         }
 
-        // Handle "permits" clause (for sealed classes)
+        // Handle "permits" clause
         if (ctx.PERMITS() != null && ctx.typeList(1) != null) {
-            addUsedType(ctx.typeList(1));
+            processTypeList(ctx.typeList(1));
         }
 
-        Void result = super.visitClassDeclaration(ctx);
-
-        // Exit class context
-        currentTypeContext.pop();
-
-        return result;
+        return super.visitClassDeclaration(ctx);
     }
 
     @Override
     public Void visitInterfaceDeclaration(JavaParser.InterfaceDeclarationContext ctx) {
-        String interfaceName = ctx.identifier().getText();
-        addDeclaredType(interfaceName);
-
-        // Enter interface context for nested types
-        currentTypeContext.push(interfaceName);
-
         // Handle "extends" clause
         if (ctx.EXTENDS() != null && ctx.typeList() != null) {
-            for (JavaParser.TypeListContext typeListContext : ctx.typeList()) {
-                addUsedType(typeListContext);
+            for (JavaParser.TypeListContext typeList : ctx.typeList()) {
+                processTypeList(typeList);
             }
         }
 
-        // Handle "permits" clause (for sealed interfaces)
-        if (ctx.PERMITS() != null && ctx.typeList(1) != null) {
-            addUsedType(ctx.typeList(1));
-        }
-
-        Void result = super.visitInterfaceDeclaration(ctx);
-
-        // Exit interface context
-        currentTypeContext.pop();
-
-        return result;
+        return super.visitInterfaceDeclaration(ctx);
     }
 
     @Override
     public Void visitEnumDeclaration(JavaParser.EnumDeclarationContext ctx) {
-        String enumName = ctx.identifier().getText();
-        addDeclaredType(enumName);
-
-        // Enter enum context for nested types
-        currentTypeContext.push(enumName);
-
         // Handle "implements" clause
         if (ctx.IMPLEMENTS() != null && ctx.typeList() != null) {
-            addUsedType(ctx.typeList());
+            processTypeList(ctx.typeList());
         }
 
-        Void result = super.visitEnumDeclaration(ctx);
-
-        // Exit enum context
-        currentTypeContext.pop();
-
-        return result;
+        return super.visitEnumDeclaration(ctx);
     }
 
     @Override
     public Void visitRecordDeclaration(JavaParser.RecordDeclarationContext ctx) {
-        String recordName = ctx.identifier().getText();
-        addDeclaredType(recordName);
-
-        // Enter record context for nested types
-        currentTypeContext.push(recordName);
-
         // Process record components
         if (ctx.recordHeader() != null &&
                 ctx.recordHeader().recordComponentList() != null) {
             for (JavaParser.RecordComponentContext component :
                     ctx.recordHeader().recordComponentList().recordComponent()) {
-                addUsedType(component.typeType());
+                processTypeType(component.typeType());
             }
         }
 
         // Handle "implements" clause
         if (ctx.IMPLEMENTS() != null && ctx.typeList() != null) {
-            addUsedType(ctx.typeList());
+            processTypeList(ctx.typeList());
         }
 
-        Void result = super.visitRecordDeclaration(ctx);
-
-        // Exit record context
-        currentTypeContext.pop();
-
-        return result;
+        return super.visitRecordDeclaration(ctx);
     }
 
-    // Method declarations
+    // Method and constructor declarations
     @Override
     public Void visitMethodDeclaration(JavaParser.MethodDeclarationContext ctx) {
         // Process return type
-        if (ctx.typeTypeOrVoid() != null) {
-            if (ctx.typeTypeOrVoid().typeType() != null) {
-                addUsedType(ctx.typeTypeOrVoid().typeType());
-            }
+        if (ctx.typeTypeOrVoid() != null && ctx.typeTypeOrVoid().typeType() != null) {
+            processTypeType(ctx.typeTypeOrVoid().typeType());
         }
 
-        // Process parameter types in the method signature
-        if (ctx.formalParameters() != null) {
-            visitFormalParameters(ctx.formalParameters());
-        }
-
-        // Process exceptions thrown by the method
+        // Process exceptions
         if (ctx.THROWS() != null && ctx.qualifiedNameList() != null) {
             for (JavaParser.QualifiedNameContext name : ctx.qualifiedNameList().qualifiedName()) {
-                addUsedType(name.getText());
+                trackUsedType(name.getText());
             }
         }
 
@@ -173,260 +161,115 @@ public class TypeExtractorVisitorService extends JavaParserBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitInterfaceCommonBodyDeclaration(JavaParser.InterfaceCommonBodyDeclarationContext ctx) {
-        // Process return type for interface methods
-        if (ctx.typeTypeOrVoid() != null) {
-            if (ctx.typeTypeOrVoid().typeType() != null) {
-                addUsedType(ctx.typeTypeOrVoid().typeType());
-            }
-        }
-
-        // Process parameter types
-        if (ctx.formalParameters() != null) {
-            visitFormalParameters(ctx.formalParameters());
-        }
-
-        // Process exceptions
-        if (ctx.THROWS() != null && ctx.qualifiedNameList() != null) {
-            for (JavaParser.QualifiedNameContext name : ctx.qualifiedNameList().qualifiedName()) {
-                addUsedType(name.getText());
-            }
-        }
-
-        return super.visitInterfaceCommonBodyDeclaration(ctx);
-    }
-
-    // Constructor declarations
-    @Override
     public Void visitConstructorDeclaration(JavaParser.ConstructorDeclarationContext ctx) {
-        // Process parameter types
-        if (ctx.formalParameters() != null) {
-            visitFormalParameters(ctx.formalParameters());
-        }
-
         // Process exceptions
         if (ctx.THROWS() != null && ctx.qualifiedNameList() != null) {
             for (JavaParser.QualifiedNameContext name : ctx.qualifiedNameList().qualifiedName()) {
-                addUsedType(name.getText());
+                trackUsedType(name.getText());
             }
         }
 
         return super.visitConstructorDeclaration(ctx);
     }
 
-    // Field declarations
+    // Variables, fields, and parameters
     @Override
     public Void visitFieldDeclaration(JavaParser.FieldDeclarationContext ctx) {
-        if (ctx.typeType() != null) {
-            addUsedType(ctx.typeType());
-        }
+        processTypeType(ctx.typeType());
         return super.visitFieldDeclaration(ctx);
     }
 
-    // Local variable declarations
     @Override
     public Void visitLocalVariableDeclaration(JavaParser.LocalVariableDeclarationContext ctx) {
         if (ctx.typeType() != null) {
-            addUsedType(ctx.typeType());
+            processTypeType(ctx.typeType());
         }
         return super.visitLocalVariableDeclaration(ctx);
     }
 
-    // Formal parameters
     @Override
-    public Void visitFormalParameters(JavaParser.FormalParametersContext ctx) {
-        // Process receiver parameter
-        if (ctx.receiverParameter() != null) {
-            addUsedType(ctx.receiverParameter().typeType());
+    public Void visitFormalParameter(JavaParser.FormalParameterContext ctx) {
+        processTypeType(ctx.typeType());
+        return super.visitFormalParameter(ctx);
+    }
+
+    // Handle class or interface types
+    @Override
+    public Void visitClassOrInterfaceType(JavaParser.ClassOrInterfaceTypeContext ctx) {
+        // Track the type identifier (the class name)
+        if (ctx.typeIdentifier() != null) {
+            trackUsedType(ctx.typeIdentifier().getText());
         }
 
-        // Process formal parameter list
-        if (ctx.formalParameterList() != null) {
-            return visitFormalParameterList(ctx.formalParameterList());
+        // Track each identifier in the qualified name
+        for (JavaParser.IdentifierContext id : ctx.identifier()) {
+            trackUsedType(id.getText());
+        }
+
+        // Process type arguments
+        for (JavaParser.TypeArgumentsContext args : ctx.typeArguments()) {
+            for (JavaParser.TypeArgumentContext arg : args.typeArgument()) {
+                if (arg.typeType() != null) {
+                    processTypeType(arg.typeType());
+                }
+            }
         }
 
         return null;
     }
 
+    // Handle expressions that may reference types
     @Override
-    public Void visitFormalParameterList(JavaParser.FormalParameterListContext ctx) {
-        // Process regular parameters
-        for (JavaParser.FormalParameterContext param : ctx.formalParameter()) {
-            addUsedType(param.typeType());
+    public Void visitCastExpression(JavaParser.CastExpressionContext ctx) {
+        for (JavaParser.TypeTypeContext type : ctx.typeType()) {
+            processTypeType(type);
         }
-
-        // Process varargs parameter
-        if (ctx.lastFormalParameter() != null) {
-            addUsedType(ctx.lastFormalParameter().typeType());
-        }
-
-        return null;
+        return super.visitCastExpression(ctx);
     }
 
-    // Catch clauses
+    @Override
+    public Void visitCreator(JavaParser.CreatorContext ctx) {
+        if (ctx.createdName() != null) {
+            for (JavaParser.IdentifierContext id : ctx.createdName().identifier()) {
+                trackUsedType(id.getText());
+            }
+        }
+        return super.visitCreator(ctx);
+    }
+
     @Override
     public Void visitCatchClause(JavaParser.CatchClauseContext ctx) {
         if (ctx.catchType() != null) {
             for (JavaParser.QualifiedNameContext name : ctx.catchType().qualifiedName()) {
-                addUsedType(name.getText());
+                trackUsedType(name.getText());
             }
         }
         return super.visitCatchClause(ctx);
     }
 
-    // Type parameters and bounds
     @Override
-    public Void visitTypeParameter(JavaParser.TypeParameterContext ctx) {
-        if (ctx.typeBound() != null) {
-            for (JavaParser.TypeTypeContext type : ctx.typeBound().typeType()) {
-                addUsedType(type);
-            }
-        }
-        return super.visitTypeParameter(ctx);
-    }
-
-    // Generic method invocations
-    @Override
-    public Void visitTypeArguments(JavaParser.TypeArgumentsContext ctx) {
-        for (JavaParser.TypeArgumentContext arg : ctx.typeArgument()) {
-            if (arg.typeType() != null) {
-                addUsedType(arg.typeType());
-            }
-        }
-        return super.visitTypeArguments(ctx);
-    }
-
-    // Cast expressions
-    @Override
-    public Void visitCastExpression(JavaParser.CastExpressionContext ctx) {
-        for (JavaParser.TypeTypeContext type : ctx.typeType()) {
-            addUsedType(type);
-        }
-        return super.visitCastExpression(ctx);
-    }
-
-    // Object creation expressions
-    @Override
-    public Void visitObjectCreationExpression(JavaParser.ObjectCreationExpressionContext ctx) {
-        if (ctx.creator() != null) {
-            // Handle created type
-            if (ctx.creator().createdName() != null) {
-                JavaParser.CreatedNameContext createdName = ctx.creator().createdName();
-
-                // For class types
-                for (int i = 0; i < createdName.identifier().size(); i++) {
-                    String identifier = createdName.identifier(i).getText();
-                    addUsedType(identifier);
-
-                    // Handle type arguments if present
-                    if (createdName.typeArgumentsOrDiamond(i) != null &&
-                            createdName.typeArgumentsOrDiamond(i).typeArguments() != null) {
-                        visitTypeArguments(createdName.typeArgumentsOrDiamond(i).typeArguments());
-                    }
-                }
-            }
-        }
-        return super.visitObjectCreationExpression(ctx);
-    }
-
-    // Instance of expressions
-    @Override
-    public Void visitInstanceOfOperatorExpression(JavaParser.InstanceOfOperatorExpressionContext ctx) {
+    public Void visitTypeArgument(JavaParser.TypeArgumentContext ctx) {
         if (ctx.typeType() != null) {
-            addUsedType(ctx.typeType());
+            processTypeType(ctx.typeType());
         }
-        return super.visitInstanceOfOperatorExpression(ctx);
+        return null;
     }
 
-    // Handle type references in method references
-    @Override
-    public Void visitMethodReferenceExpression(JavaParser.MethodReferenceExpressionContext ctx) {
-        if (ctx.typeType() != null) {
-            addUsedType(ctx.typeType());
-        }
-        if (ctx.classType() != null) {
-            // Process class type in method reference
-            addUsedType(ctx.classType().getText());
-        }
-        return super.visitMethodReferenceExpression(ctx);
-    }
-
-    // Handle lambda parameter types
-    @Override
-    public Void visitLambdaParameters(JavaParser.LambdaParametersContext ctx) {
-        if (ctx.formalParameterList() != null) {
-            visitFormalParameterList(ctx.formalParameterList());
-        }
-        return super.visitLambdaParameters(ctx);
-    }
-
-    // Helper methods for type handling
-    private void addDeclaredType(String typeName) {
-        if (currentTypeContext.isEmpty()) {
-            // Top-level type
-            declaredTypes.add(typeName);
-        } else {
-            // Nested type
-            String outerType = String.join("$", currentTypeContext);
-            declaredTypes.add(outerType + "$" + typeName);
-        }
-    }
-
-    private void addUsedType(JavaParser.TypeTypeContext ctx) {
+    // Helper methods to process complex type structures
+    private void processTypeType(JavaParser.TypeTypeContext ctx) {
         if (ctx == null) return;
 
         if (ctx.classOrInterfaceType() != null) {
-            // Handle class or interface type
-            JavaParser.ClassOrInterfaceTypeContext classType = ctx.classOrInterfaceType();
-
-            // Get the whole type name including all parts
-            StringBuilder typeName = new StringBuilder();
-
-            // Process identifier parts
-            for (int i = 0; i < classType.identifier().size(); i++) {
-                if (i > 0) typeName.append(".");
-                typeName.append(classType.identifier(i).getText());
-            }
-
-            // Add the type identifier (the last part)
-            if (classType.typeIdentifier() != null) {
-                if (!typeName.isEmpty()) typeName.append(".");
-                typeName.append(classType.typeIdentifier().getText());
-            }
-
-            addUsedType(typeName.toString());
-
-            // Process type arguments if present
-            if (classType.typeArguments() != null) {
-                for (JavaParser.TypeArgumentsContext typeArgumentsContext : classType.typeArguments()) {
-                    visitTypeArguments(typeArgumentsContext);
-                }
-            }
-
-            // For each nested part that has type arguments
-            for (int i = 0; i < classType.typeArguments().size(); i++) {
-                visitTypeArguments(classType.typeArguments(i));
-            }
-        } else if (ctx.primitiveType() != null) {
-            // Handle primitive type (no resolution needed)
-            // But we might want to track it for completeness
-            String primitiveName = ctx.primitiveType().getText();
-            // No need to add to usedTypes as primitives don't need resolution
+            visitClassOrInterfaceType(ctx.classOrInterfaceType());
         }
-
-        // Handle array types - they have the same base type
-        // No extra processing needed as we've already processed the base type
+        // Primitives don't need type resolution
     }
 
-    private void addUsedType(JavaParser.TypeListContext ctx) {
+    private void processTypeList(JavaParser.TypeListContext ctx) {
         if (ctx == null) return;
 
         for (JavaParser.TypeTypeContext type : ctx.typeType()) {
-            addUsedType(type);
+            processTypeType(type);
         }
-    }
-
-    private void addUsedType(String typeName) {
-        usedTypes.add(typeName);
     }
 }

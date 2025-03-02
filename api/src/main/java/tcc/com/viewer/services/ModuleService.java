@@ -30,7 +30,7 @@ public class ModuleService {
         } catch (FileNotFoundException e) {
             System.out.println("file not found: " + e.getMessage());
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("teste: " + e.getMessage());
         }
     }
 
@@ -164,6 +164,10 @@ public class ModuleService {
     }
 
     public List<ModuleDTO> analyze(String directoryPath) throws IOException {
+        TypeResolverService resolver = new TypeResolverService();
+
+        resolver.scanProject(Paths.get(directoryPath));
+
         List<Module> modules = this.getModules(directoryPath);
 
         for (Module module : modules) {
