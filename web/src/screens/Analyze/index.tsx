@@ -32,14 +32,56 @@ const AnalyzePage = () => {
 
                 // 2) For each module, create a node with type 'customNode'
                 //    and pass the module object via data: { module: mod }
-                setNodes(
-                    data.map((mod, index) => ({
-                        id: mod.name,
+                // Calculate positions using a concentric circle layout:
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const nodesArray = [];
+
+                if (data.length === 0) {
+                    // no nodes to display
+                } else if (data.length === 1) {
+                    // Only one node: put it in the center.
+                    nodesArray.push({
+                        id: data[0].name,
                         type: 'customNode',
-                        data: { module: mod }, // pass the actual data
-                        position: { x: index * 200, y: index } // AQUI QUE VOU MUDAR PARA AJUSTAR A POSIÇÃO INICIAL
-                    }))
-                );
+                        data: { module: data[0] },
+                        position: { x: centerX, y: centerY }
+                    });
+                } else {
+                    // Place the first node in the center.
+                    nodesArray.push({
+                        id: data[0].name,
+                        type: 'customNode',
+                        data: { module: data[0] },
+                        position: { x: centerX, y: centerY }
+                    });
+
+                    // Now, arrange remaining nodes in concentric rings.
+                    const ringGap = 200; // gap between rings (adjust as needed)
+                    let index = 1; // already placed the first node
+                    let ring = 1;
+
+                    while (index < data.length) {
+                        const ringRadius = ring * ringGap;
+                        // Estimate capacity for current ring:
+                        // Assume average node width of 150px => capacity = floor(circumference / 150)
+                        const capacity = Math.max(Math.floor((2 * Math.PI * ringRadius) / 150), 1);
+                        for (let i = 0; i < capacity && index < data.length; i++, index++) {
+                            const angle = (2 * Math.PI * i) / capacity;
+                            const x = centerX + ringRadius * Math.cos(angle);
+                            const y = centerY + ringRadius * Math.sin(angle);
+                            nodesArray.push({
+                                id: data[index].name,
+                                type: 'customNode',
+                                data: { module: data[index] },
+                                position: { x, y }
+                            });
+                        }
+                        ring++;
+                    }
+                }
+
+                setNodes(nodesArray);
             } catch (error) {
                 console.error('Failed to analyze project', error);
             } finally {
