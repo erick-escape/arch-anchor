@@ -57,7 +57,7 @@ public class TypeExtractorVisitorService extends JavaParserBaseVisitor<Void> {
             return;
         }
 
-        // Only add simple names (non-qualified)
+        // Only add simple names (nonqualified)
         if (!typeName.contains(".")) {
             usedTypes.add(typeName);
         }
@@ -254,6 +254,30 @@ public class TypeExtractorVisitorService extends JavaParserBaseVisitor<Void> {
         }
         return null;
     }
+
+//    @Override
+//    public Void visitAnnotation(JavaParser.AnnotationContext ctx) {
+//        // Extract the annotation type name
+//        if (ctx.qualifiedName() != null) {
+//            String annotationName = ctx.qualifiedName().getText();
+//            // Handle qualified names - extract just the class name
+//            if (annotationName.contains(".")) {
+//                String simpleName = annotationName.substring(annotationName.lastIndexOf('.') + 1);
+//                trackUsedType(simpleName);
+//            } else {
+//                trackUsedType(annotationName);
+//            }
+//        }
+//
+//        // Visit any arguments (might contain type references)
+//        if (ctx.elementValuePairs() != null) {
+//            return visitElementValuePairs(ctx.elementValuePairs());
+//        } else if (ctx.elementValue() != null) {
+//            return visitElementValue(ctx.elementValue());
+//        }
+//
+//        return null;
+//    }
 
     // Helper methods to process complex type structures
     private void processTypeType(JavaParser.TypeTypeContext ctx) {
