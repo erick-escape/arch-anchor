@@ -7,6 +7,7 @@ import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.services.parsers.ParserFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -18,7 +19,15 @@ import java.util.stream.Collectors;
 @Service
 public class ModuleService {
     private final List<Module> modules = new ArrayList<>();
-    private final JavaParserService javaParserService = new JavaParserService();
+    private final ParserFactory parserFactory = new ParserFactory();
+
+    // Define file extensions to consider for each language
+    private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of(
+            "java", List.of(".java"),
+            "python", List.of(".py"),
+            "javascript", List.of(".js", ".ts"),
+            "php", List.of(".php")
+    );
 
     public void saveModules(List<ModuleDTO> modulesList) {
         try {
@@ -67,22 +76,30 @@ public class ModuleService {
                 }
                 clazz.setSimilarity(totalSimilarity / (clazzes.size() - 1));
             }
-        } else {
+        } else if (clazzes.size() == 1) {
             Clazz clazz = clazzes.get(0);
             clazz.setSimilarity(1.0);
         }
+
         // Set refClass as the class with the highest similarity
-        Clazz refClass = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
-        module.setRefClass(refClass.getName());
+        if (!clazzes.isEmpty()) {
+            Clazz refClass = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
+            module.setRefClass(refClass.getName());
+        }
     }
 
     private void calculateModuleSimilarity(Module module) {
         Clazz[] clazzes = module.getClazzes();
-        double totalSimilarity = 0.0;
-        for (Clazz clazz : clazzes) {
-            totalSimilarity += clazz.getSimilarity();
+
+        if (clazzes.length > 0) {
+            double totalSimilarity = 0.0;
+            for (Clazz clazz : clazzes) {
+                totalSimilarity += clazz.getSimilarity();
+            }
+            module.setSimilarity(totalSimilarity / clazzes.length);
+        } else {
+            module.setSimilarity(0.0);
         }
-        module.setSimilarity(totalSimilarity / clazzes.length);
     }
 
     private double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
@@ -112,24 +129,49 @@ public class ModuleService {
         );
     }
 
-    private List<Clazz> getClasses(Path modulePath) throws IOException {
-        List<Clazz> classes = new ArrayList<>();
+    private List<Clazz> getClazzes(Path modulePath) throws IOException {
+        List<Clazz> clazzes = new ArrayList<>();
 
         Files.list(modulePath)
                 .filter(Files::isRegularFile)
-                .filter(file -> file.toString().endsWith(".java"))
-                .forEach(javaFilePath -> {
-                    Clazz clazz = new Clazz(
-                            javaFilePath.getFileName().toString().replace(".java", ""),
-                            this.javaParserService.getDependencies(javaFilePath).toArray(new Dependency[0]),
-                            0.0, // Similarity will be calculated later
-                            modulePath.getFileName().toString(), // firstModule
-                            modulePath.getFileName().toString() // currentModule
-                    );
-                    classes.add(clazz);
+                .filter(this::isSupportedSourceFile)
+                .forEach(filePath -> {
+                    try {
+                        // Get dependencies using the appropriate parser
+                        List<Dependency> dependencies = parserFactory
+                                .getParser(filePath)
+                                .getDependencies(filePath);
+
+                        String fileName = filePath.getFileName().toString();
+                        String className = removeFileExtension(fileName);
+
+                        Clazz clazz = new Clazz(
+                                className,
+                                dependencies.toArray(new Dependency[0]),
+                                0.0, // Similarity will be calculated later
+                                modulePath.getFileName().toString(), // firstModule
+                                modulePath.getFileName().toString() // currentModule
+                        );
+                        clazzes.add(clazz);
+                    } catch (UnsupportedOperationException e) {
+                        // If the language parser is not yet implemented, log and skip
+                        System.out.println("Skipping unsupported file: " + filePath);
+                    }
                 });
 
-        return classes;
+        return clazzes;
+    }
+
+    private boolean isSupportedSourceFile(Path filePath) {
+        String path = filePath.toString().toLowerCase();
+        return LANGUAGE_EXTENSIONS.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(path::endsWith);
+    }
+
+    private String removeFileExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        return lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
     }
 
     public List<Module> getModules(String projectDirectory) throws IOException {
@@ -138,16 +180,24 @@ public class ModuleService {
             return this.modules; // Return empty list if 'src' does not exist or is not a directory
         }
 
-        Files.walk(srcPath) // Only consider directories directly under 'src'
+        // Clear existing modules
+        this.modules.clear();
+
+        // Find all directories that might contain source files
+        Files.walk(srcPath)
                 .filter(Files::isDirectory)
                 .forEach(modulePath -> {
                     try {
-                        List<Clazz> clazzes = getClasses(modulePath);
+                        List<Clazz> clazzes = getClazzes(modulePath);
                         if (!clazzes.isEmpty()) {
+                            // Determine module name based on directory structure
+                            String moduleName = srcPath.relativize(modulePath).toString();
+                            if (moduleName.isEmpty()) {
+                                moduleName = modulePath.getFileName().toString();
+                            }
+
                             Module module = new Module(
-                                    modulePath.getParent().getFileName().toString() +
-                                            '/' +
-                                            modulePath.getFileName().toString(),
+                                    moduleName,
                                     null, // refClass will be calculated later
                                     clazzes.toArray(new Clazz[0]),
                                     new Dependency[0], // Dependencies will be calculated later
@@ -164,10 +214,6 @@ public class ModuleService {
     }
 
     public List<ModuleDTO> analyze(String directoryPath) throws IOException {
-        TypeResolverService resolver = new TypeResolverService();
-
-        resolver.scanProject(Paths.get(directoryPath));
-
         List<Module> modules = this.getModules(directoryPath);
 
         for (Module module : modules) {

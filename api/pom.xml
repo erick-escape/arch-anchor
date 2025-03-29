@@ -12,7 +12,7 @@
     <artifactId>viewer</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>viewer</name>
-    <description>This is a project to analyze and visualize java code in a friendly way using antlr4.</description>
+    <description>This is a project to analyze and visualize your programming projects.</description>
     <url/>
     <licenses>
         <license/>
@@ -27,8 +27,17 @@
         <url/>
     </scm>
     <properties>
-        <java.version>17</java.version>
+        <java.version>23</java.version>
     </properties>
+
+    <!-- Eclipse Repository -->
+    <repositories>
+        <repository>
+            <id>eclipse</id>
+            <url>https://repo.eclipse.org/content/groups/releases/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <!--		<dependency>-->
         <!--			<groupId>org.springframework.boot</groupId>-->
@@ -70,6 +79,51 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.12.0</version>
+        </dependency>
+
+        <!--        &lt;!&ndash; Eclipse JDT Core - using available version &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.eclipse.jdt</groupId>-->
+        <!--            <artifactId>org.eclipse.jdt.core</artifactId>-->
+        <!--            <version>3.30.0</version>-->
+        <!--        </dependency>-->
+
+        <!--        &lt;!&ndash; Eclipse Platform Runtime - brings in Core Resources and Equinox Common &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.eclipse.platform</groupId>-->
+        <!--            <artifactId>org.eclipse.core.runtime</artifactId>-->
+        <!--            <version>3.24.100</version>-->
+        <!--        </dependency>-->
+        <!-- Make sure to use these exact compatible dependencies -->
+        <!-- Core Eclipse JDT dependencies - add these to your pom.xml -->
+        <dependency>
+            <groupId>org.eclipse.jdt</groupId>
+            <artifactId>org.eclipse.jdt.core</artifactId>
+            <version>3.33.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.platform</groupId>
+            <artifactId>org.eclipse.equinox.common</artifactId>
+            <version>3.16.200</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.platform</groupId>
+            <artifactId>org.eclipse.core.contenttype</artifactId>
+            <version>3.8.200</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.platform</groupId>
+            <artifactId>org.eclipse.core.jobs</artifactId>
+            <version>3.13.200</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.platform</groupId>
+            <artifactId>org.eclipse.core.runtime</artifactId>
+            <version>3.26.100</version>
         </dependency>
     </dependencies>
 
