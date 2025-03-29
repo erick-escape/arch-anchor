@@ -114,13 +114,29 @@ public class TypeResolverService {
         Set<String> wildcardImports = visitor.getWildcardImports();
         Map<String, String> resolvedWildcardTypes = new HashMap<>();
 
-        // For each used type, try to resolve it from wildcard imports
+        // For each used type, try to resolve it
         for (String typeName : usedTypes) {
             // Skip fully qualified names
             if (typeName.contains(".")) continue;
 
-            // Skip already resolved types
-            if (typeResolutions.containsKey(typeName)) continue;
+            // Handle already resolved types differently
+            if (typeResolutions.containsKey(typeName)) {
+                String resolvedType = typeResolutions.get(typeName);
+
+                // Check if this resolved type could have come from any of our wildcard imports
+                for (String wildcardImport : wildcardImports) {
+                    String packagePath = wildcardImport.substring(0, wildcardImport.length() - 2); // Remove ".*"
+
+                    if (resolvedType.startsWith(packagePath + ".")) {
+                        // This type could have come from this wildcard import
+                        resolvedWildcardTypes.put(typeName, resolvedType);
+                        break;
+                    }
+                }
+
+                // Continue to next type since we've already handled this one
+                continue;
+            }
 
             // First check if it's from the same package
             if (packageToTypes.containsKey(packageName) &&
