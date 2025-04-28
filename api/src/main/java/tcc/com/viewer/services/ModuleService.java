@@ -119,11 +119,16 @@ public class ModuleService {
         return new ModuleDTO(
                 module.getName(),
                 module.getRefClass(),
-                Arrays.stream(module.getClazzes())
-                        .map(clazz -> new ClazzResponseDTO(clazz.getName(),
-                                Arrays.stream(clazz.getDependencies()).map(d -> new DependencyDTO(d.getName())).toArray(DependencyDTO[]::new),
-                                clazz.getSimilarity()))
-                        .toArray(ClazzResponseDTO[]::new),
+                Arrays.stream(module.getClazzes()).map(
+                        clazz -> new ClazzResponseDTO(
+                                clazz.getName(),
+                                Arrays.stream(clazz.getDependencies())
+                                        .map(d -> new DependencyDTO(d.getName()))
+                                        .toArray(DependencyDTO[]::new),
+                                clazz.getSimilarity(),
+                                clazz.getFirstModule(),
+                                clazz.getCurrentModule()
+                        )).toArray(ClazzResponseDTO[]::new),
                 Arrays.stream(module.getDependencies()).map(d -> new DependencyDTO(d.getName())).toArray(DependencyDTO[]::new),
                 module.getSimilarity()
         );
