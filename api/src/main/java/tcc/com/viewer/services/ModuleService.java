@@ -30,37 +30,33 @@ public class ModuleService {
     );
 
     public void saveModules(List<ModuleDTO> modulesList) {
-        try {
-            File file = new File("modules.bin");
-            ObjectOutput objectOutput = new ObjectOutputStream(new FileOutputStream(file));
+        if (modulesList == null) {
+            throw new IllegalArgumentException("Modules list cannot be null");
+        }
 
+        File file = new File("modules.bin");
+        try (ObjectOutputStream objectOutput = new ObjectOutputStream(new FileOutputStream(file))) {
             objectOutput.writeObject(modulesList);
-            objectOutput.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("file not found: " + e.getMessage());
         } catch (IOException e) {
-            System.out.println("teste: " + e.getMessage());
+            throw new RuntimeException("Error saving modules to file: " + e.getMessage(), e);
         }
     }
 
     @SuppressWarnings("unchecked")
     public List<ModuleDTO> getModulesFromFile() {
-        List<ModuleDTO> modulesList = Collections.emptyList();
-        try {
-            File file = new File("modules.bin");
-            ObjectInput objectInput = new ObjectInputStream(
-                    new FileInputStream(file));
-            modulesList = (List<ModuleDTO>) objectInput.readObject();
-            objectInput.close();
-        } catch (ClassNotFoundException e) {
-            System.out.println("Modules list does not exist: " + e.getMessage());
-        } catch (FileNotFoundException e) {
-            System.out.println("File not found: " + e.getMessage());
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+        File file = new File("modules.bin");
+
+        if (!file.exists() || file.length() == 0) {
+            return new ArrayList<>();
         }
 
-        return modulesList;
+        try (ObjectInputStream objectInput = new ObjectInputStream(new FileInputStream(file))) {
+            return (List<ModuleDTO>) objectInput.readObject();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Error reading modules: Class not found", e);
+        } catch (IOException e) {
+            throw new RuntimeException("Error reading modules from file: " + e.getMessage(), e);
+        }
     }
 
     private void calculateClassSimilarities(Module module) {
