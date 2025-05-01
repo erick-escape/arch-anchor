@@ -192,11 +192,7 @@ public class ModuleService {
                         List<Clazz> clazzes = getClazzes(modulePath);
                         if (!clazzes.isEmpty()) {
                             // Determine module name based on directory structure
-                            String moduleName = srcPath.relativize(modulePath).toString();
-                            if (moduleName.isEmpty()) {
-                                moduleName = modulePath.getFileName().toString();
-                            }
-
+                            String moduleName = modulePath.getParent().getFileName().toString() + '/' + modulePath.getFileName().toString();
                             Module module = new Module(
                                     moduleName,
                                     null, // refClass will be calculated later
