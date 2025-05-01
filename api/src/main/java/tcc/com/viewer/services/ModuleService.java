@@ -4,9 +4,9 @@ import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
-import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
-import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.mapstruct.ModuleMapper;
+import tcc.com.viewer.mapstruct.ModuleMapperImpl;
 import tcc.com.viewer.services.parsers.ParserFactory;
 
 import java.io.*;
@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class ModuleService {
     private final List<Module> modules = new ArrayList<>();
     private final ParserFactory parserFactory = new ParserFactory();
+    private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
     // Define file extensions to consider for each language
     private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of(
@@ -109,25 +110,6 @@ public class ModuleService {
         int secondDenominator = (a + c) == 0 ? 1 : (a + c);
 
         return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
-    }
-
-    private ModuleDTO toModuleDTO(Module module) {
-        return new ModuleDTO(
-                module.getName(),
-                module.getRefClass(),
-                Arrays.stream(module.getClazzes()).map(
-                        clazz -> new ClazzResponseDTO(
-                                clazz.getName(),
-                                Arrays.stream(clazz.getDependencies())
-                                        .map(d -> new DependencyDTO(d.getName()))
-                                        .toArray(DependencyDTO[]::new),
-                                clazz.getSimilarity(),
-                                clazz.getFirstModule(),
-                                clazz.getCurrentModule()
-                        )).toArray(ClazzResponseDTO[]::new),
-                Arrays.stream(module.getDependencies()).map(d -> new DependencyDTO(d.getName())).toArray(DependencyDTO[]::new),
-                module.getSimilarity()
-        );
     }
 
     private List<Clazz> getClazzes(Path modulePath) throws IOException {
@@ -221,7 +203,7 @@ public class ModuleService {
 
         // Convert modules to ModuleDTO
         List<ModuleDTO> modulesList = modules.stream()
-                .map(this::toModuleDTO)
+                .map(moduleMapper::toDto)
                 .collect(Collectors.toList());
         this.saveModules(modulesList);
 
