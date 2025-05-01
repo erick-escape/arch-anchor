@@ -6,6 +6,7 @@ import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import java.io.Serializable;
 
 public record ModuleDTO(
+        String id,
         String name,
         String refClass,
         ClazzResponseDTO[] clazzes,

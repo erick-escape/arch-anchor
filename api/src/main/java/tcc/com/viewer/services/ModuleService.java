@@ -59,7 +59,7 @@ public class ModuleService {
         }
     }
 
-    private void calculateClassSimilarities(Module module) {
+    public void calculateClassSimilarities(Module module) {
         List<Clazz> clazzes = List.of(module.getClazzes());
 
         if (clazzes.size() > 1) {
@@ -84,7 +84,7 @@ public class ModuleService {
         }
     }
 
-    private void calculateModuleSimilarity(Module module) {
+    public void calculateModuleSimilarity(Module module) {
         Clazz[] clazzes = module.getClazzes();
 
         if (clazzes.length > 0) {
@@ -194,6 +194,7 @@ public class ModuleService {
                             // Determine module name based on directory structure
                             String moduleName = modulePath.getParent().getFileName().toString() + '/' + modulePath.getFileName().toString();
                             Module module = new Module(
+                                    UUID.randomUUID().toString(),
                                     moduleName,
                                     null, // refClass will be calculated later
                                     clazzes.toArray(new Clazz[0]),

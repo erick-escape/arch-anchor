@@ -10,6 +10,7 @@ import tcc.com.viewer.domains.dependency.Dependency;
 @Setter
 @AllArgsConstructor
 public class Module {
+    private String id;
     private String name;
     private String refClass;
     private Clazz[] clazzes;
