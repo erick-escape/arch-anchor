@@ -42,3 +42,8 @@
 .read-the-docs {
     color: #888;
 }
+
+.highlight {
+    border: 2px solid #ff0072 !important;
+    box-shadow: 0 0 10px 5px rgba(255, 0, 114, 0.25);
+}

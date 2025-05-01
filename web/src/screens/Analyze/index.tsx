@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { addEdge, Background, Controls, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState } from '@xyflow/react';
+import { addEdge, Background, Controls, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import axios from 'axios';
 
 import { containerStyle, reactFlowStyle } from './styles.ts';
 import CustomNode from './nodeTypes.tsx';
+import { MergeConfirmPopup } from '../../components/Popup/MergeConfirmPopup.tsx';
 
 // 1) Provide a nodeTypes mapping
 const nodeTypes = {
@@ -18,91 +19,191 @@ const AnalyzePage = () => {
     const [modules, setModules] = useState([]);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const { getIntersectingNodes } = useReactFlow();
+
+    // State for the merge confirmation popup
+    const [mergePopup, setMergePopup] = useState({
+        show: false,
+        sourceNode: null,
+        targetNode: null
+    });
+
+    const showNodes = (data) => {
+        // Calculate positions using a concentric circle layout:
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const nodesArray = [];
+
+        if (data.length === 0) {
+            // no nodes to display
+        } else if (data.length === 1) {
+            // Only one node: put it in the center.
+            nodesArray.push({
+                id: data[0].id,
+                type: 'customNode',
+                data: { module: data[0] },
+                position: { x: centerX, y: centerY },
+                draggable: true
+            });
+        } else {
+            // Place the first node in the center.
+            nodesArray.push({
+                id: data[0].id,
+                name: data[0].name,
+                type: 'customNode',
+                data: { module: data[0] },
+                position: { x: centerX, y: centerY },
+                draggable: true
+            });
+
+            // Now, arrange remaining nodes in concentric rings.
+            const ringGap = 200; // gap between rings (adjust as needed)
+            let index = 1; // already placed the first node
+            let ring = 1;
+
+            while (index < data.length) {
+                const ringRadius = ring * ringGap;
+                // Estimate capacity for current ring:
+                // Assume average node width of 150px => capacity = floor(circumference / 150)
+                const capacity = Math.max(Math.floor((2 * Math.PI * ringRadius) / 150), 1);
+                for (let i = 0; i < capacity && index < data.length; i++, index++) {
+                    const angle = (2 * Math.PI * i) / capacity;
+                    const x = centerX + ringRadius * Math.cos(angle);
+                    const y = centerY + ringRadius * Math.sin(angle);
+                    nodesArray.push({
+                        id: data[index].id,
+                        name: data[index].name,
+                        type: 'customNode',
+                        data: { module: data[index] },
+                        position: { x, y },
+                        draggable: true
+                    });
+                }
+                ring++;
+            }
+        }
+
+        setNodes(nodesArray);
+    };
+
+    const fetchModules = async () => {
+        setLoading(true);
+        try {
+            const response = await axios.post('/api/analyze', null, {
+                params: { projectName }
+            });
+
+            const data = response.data;
+            setModules(data);
+
+            // For each module, create a node with type 'customNode'
+            //    and pass the module object via data: { module: mod }
+            showNodes(data);
+        } catch (error) {
+            console.error('Failed to analyze project', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchAnalyzedModules = async () => {
-            setLoading(true);
-            try {
-                const response = await axios.post('/api/analyze', null, {
-                    params: { projectName }
-                });
+        fetchModules();
+    }, [projectName]);
 
-                const data = response.data;
-                setModules(data);
+    // Handle confirmation from popup
+    const handleMergeConfirm = async () => {
+        if (!mergePopup.sourceNode || !mergePopup.targetNode) return;
 
-                // 2) For each module, create a node with type 'customNode'
-                //    and pass the module object via data: { module: mod }
-                // Calculate positions using a concentric circle layout:
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                const nodesArray = [];
+        const sourceModuleId = mergePopup.sourceNode.id;
+        const targetModuleId = mergePopup.targetNode.id;
 
-                if (data.length === 0) {
-                    // no nodes to display
-                } else if (data.length === 1) {
-                    // Only one node: put it in the center.
-                    nodesArray.push({
-                        id: data[0].name,
-                        type: 'customNode',
-                        data: { module: data[0] },
-                        position: { x: centerX, y: centerY }
-                    });
-                } else {
-                    // Place the first node in the center.
-                    nodesArray.push({
-                        id: data[0].name,
-                        type: 'customNode',
-                        data: { module: data[0] },
-                        position: { x: centerX, y: centerY }
-                    });
-
-                    // Now, arrange remaining nodes in concentric rings.
-                    const ringGap = 200; // gap between rings (adjust as needed)
-                    let index = 1; // already placed the first node
-                    let ring = 1;
-
-                    while (index < data.length) {
-                        const ringRadius = ring * ringGap;
-                        // Estimate capacity for current ring:
-                        // Assume average node width of 150px => capacity = floor(circumference / 150)
-                        const capacity = Math.max(Math.floor((2 * Math.PI * ringRadius) / 150), 1);
-                        for (let i = 0; i < capacity && index < data.length; i++, index++) {
-                            const angle = (2 * Math.PI * i) / capacity;
-                            const x = centerX + ringRadius * Math.cos(angle);
-                            const y = centerY + ringRadius * Math.sin(angle);
-                            nodesArray.push({
-                                id: data[index].name,
-                                type: 'customNode',
-                                data: { module: data[index] },
-                                position: { x, y }
-                            });
-                        }
-                        ring++;
-                    }
-                }
-
-                setNodes(nodesArray);
-            } catch (error) {
-                console.error('Failed to analyze project', error);
-            } finally {
-                setLoading(false);
-            }
+        // Store the target node's position before merging
+        const targetPosition = {
+            x: mergePopup.targetNode.position.x,
+            y: mergePopup.targetNode.position.y
         };
-        fetchAnalyzedModules();
-    }, [projectName, setNodes]);
 
-    // For grouping
-    const onDrop = useCallback((event) => {
-        event.preventDefault();
-        const { source, target } = JSON.parse(
-            event.dataTransfer.getData('application/reactflow')
+        try {
+            // Call the backend to merge modules
+            const response = await axios.post('/api/module/merge', null, {
+                params: {
+                    sourceId: sourceModuleId,
+                    targetId: targetModuleId
+                }
+            });
+
+            // Get the merged module from the response
+            const mergedModule = response.data;
+
+            // Create a new node for the merged module at the target's position
+            const mergedNode = {
+                id: mergedModule.id,
+                name: mergedModule.name,
+                type: 'customNode',
+                data: { module: mergedModule },
+                position: targetPosition,
+                draggable: true
+            };
+
+            // Update the nodes state by filtering out the source and target nodes
+            // and adding the new merged node
+            setNodes(prevNodes =>
+                prevNodes
+                    .filter(node => node.id !== sourceModuleId && node.id !== targetModuleId)
+                    .concat(mergedNode)
+            );
+
+            // Hide the popup
+            setMergePopup({ show: false, sourceNode: null, targetNode: null });
+        } catch (error) {
+            console.error('Failed to merge modules', error);
+            setMergePopup({ show: false, sourceNode: null, targetNode: null });
+        }
+    };
+
+    // Cancel merge
+    const handleMergeCancel = () => {
+        setMergePopup({ show: false, sourceNode: null, targetNode: null });
+    };
+
+    // Apply highlighting during dragging
+    const onNodeDrag = useCallback((event, node) => {
+        const intersections = getIntersectingNodes(node).map((n) => n.id);
+
+        setNodes((ns) =>
+            ns.map((n) => ({
+                ...n,
+                className: intersections.includes(n.id) ? 'highlight' : ''
+            }))
         );
-        axios.post('/api/module/join', { parent: target, child: source })
-            .then(() => {
-                console.log('Modules joined');
-            })
-            .catch((err) => console.error('Failed to join modules', err));
-    }, []);
+    }, [getIntersectingNodes, setNodes]);
+
+    // Handle merge on drag stop
+    const onNodeDragStop = useCallback((event, draggedNode) => {
+        const intersections = getIntersectingNodes(draggedNode).filter(
+            (n) => n.id !== draggedNode.id // Filter out the node itself
+        );
+
+        // Reset highlighting
+        setNodes((ns) =>
+            ns.map((n) => ({
+                ...n,
+                className: ''
+            }))
+        );
+
+        if (intersections.length > 0) {
+            // Take the first intersecting node as the target
+            const targetNode = intersections[0];
+
+            // Show the confirmation popup
+            setMergePopup({
+                show: true,
+                sourceNode: draggedNode,
+                targetNode: targetNode
+            });
+        }
+    }, [getIntersectingNodes, setNodes]);
 
     const handleDelete = (nodeId) => {
         setNodes((nds) => nds.filter((node) => node.id !== nodeId));
@@ -114,21 +215,45 @@ const AnalyzePage = () => {
             {loading ? (
                 <p>Loading...</p>
             ) : (
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
-                    onDrop={onDrop}
-                    nodeTypes={nodeTypes} // 3) Provide nodeTypes to ReactFlow
-                    fitView
-                    style={reactFlowStyle}
-                >
-                    <Background variant="dots" gap={100} size={3} />
-                    <Controls style={{ color: 'black' }} />
-                    {/*<MiniMap/>*/}
-                </ReactFlow>
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
+                        onNodeDrag={onNodeDrag}
+                        onNodeDragStop={onNodeDragStop}
+                        nodeTypes={nodeTypes}
+                        fitView
+                        style={reactFlowStyle}
+                    >
+                        <Background variant="dots" gap={100} size={3} />
+                        <Controls style={{ color: 'black' }} />
+                    </ReactFlow>
+
+                    {/* Popup layer outside ReactFlow but inside container */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            pointerEvents: 'none',
+                            zIndex: 9000
+                        }}
+                    >
+                        {mergePopup.show && mergePopup.sourceNode && mergePopup.targetNode && (
+                            <MergeConfirmPopup
+                                source={mergePopup.sourceNode.name}
+                                target={mergePopup.targetNode.name}
+                                onConfirm={handleMergeConfirm}
+                                onCancel={handleMergeCancel}
+                            />
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );
