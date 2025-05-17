@@ -1,12 +1,10 @@
-import { AttributeData } from './AttributeData.tsx';
-import { MethodData } from './MethodData.tsx';
-import { TypeData } from './Type.tsx';
+import { Dependency } from './Dependency.tsx';
 
 export interface ClassData {
-    id: number;
+    id: string;
     name: string;
-    methods: MethodData[];
-    attributes: AttributeData[];
-    types: TypeData[];
+    dependencies: Dependency[];
     similarity: number;
+    firstModule: string;
+    currentModule: string;
 }

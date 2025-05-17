@@ -1,11 +1,11 @@
 import { ClassData } from './ClassData.tsx';
-import { TypeData } from './Type.tsx';
+import { Dependency } from './Dependency.tsx';
 
 export interface ModuleData {
-    id: number;
+    id: string;
     name: string;
     refClass: string;
     classes: ClassData[];
-    types: TypeData[];
+    dependencies: Dependency[];
     similarity: number;
 }

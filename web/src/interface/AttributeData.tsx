@@ -1,7 +1,7 @@
-import { TypeData } from './Type.tsx';
+import { Dependency } from './Dependency.tsx';
 
 export interface AttributeData {
     id: number;
     name: string;
-    type: TypeData;
+    type: Dependency;
 }
