@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addEdge, Background, Controls, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, useReactFlow } from '@xyflow/react';
+import { ModuleData } from '../../interface/ModuleData';
 import '@xyflow/react/dist/style.css';
 import axios from 'axios';
 
 import { containerStyle, reactFlowStyle } from './styles.ts';
 import CustomNode from './nodeTypes.tsx';
 import { MergeConfirmPopup } from '../../components/Popup/MergeConfirmPopup.tsx';
+import Header from '../../components/Header/index.tsx';
+import Sidebar from '../../components/Sidebar/index.tsx';
 
 // 1) Provide a nodeTypes mapping
 const nodeTypes = {
@@ -16,10 +19,13 @@ const nodeTypes = {
 const AnalyzePage = () => {
     const { projectName } = useParams();
     const [loading, setLoading] = useState(false);
-    const [modules, setModules] = useState([]);
+    const [modules, setModules] = useState<ModuleData[]>();
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const { getIntersectingNodes } = useReactFlow();
+
+    // State for sidebar and layout
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // State for the merge confirmation popup
     const [mergePopup, setMergePopup] = useState({
@@ -92,10 +98,8 @@ const AnalyzePage = () => {
             const response = await axios.post('/api/analyze', null, {
                 params: { projectName }
             });
-
             const data = response.data;
             setModules(data);
-
             // For each module, create a node with type 'customNode'
             //    and pass the module object via data: { module: mod }
             showNodes(data);
@@ -109,6 +113,11 @@ const AnalyzePage = () => {
     useEffect(() => {
         fetchModules();
     }, [projectName]);
+
+    // Toggle sidebar
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+    };
 
     // Handle confirmation from popup
     const handleMergeConfirm = async () => {
@@ -152,6 +161,14 @@ const AnalyzePage = () => {
                     .filter(node => node.id !== sourceModuleId && node.id !== targetModuleId)
                     .concat(mergedNode)
             );
+
+            // Update modules state to reflect changes
+            setModules(prevModules => {
+                const updatedModules = prevModules.filter(
+                    mod => mod.id !== sourceModuleId && mod.id !== targetModuleId
+                );
+                return [...updatedModules, mergedModule];
+            });
 
             // Hide the popup
             setMergePopup({ show: false, sourceNode: null, targetNode: null });
@@ -210,51 +227,77 @@ const AnalyzePage = () => {
     };
 
     return (
-        <div style={containerStyle}>
-            <h3>Analyzed Modules for Project: {projectName}</h3>
-            {loading ? (
-                <p>Loading...</p>
-            ) : (
-                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
-                        onNodeDrag={onNodeDrag}
-                        onNodeDragStop={onNodeDragStop}
-                        nodeTypes={nodeTypes}
-                        fitView
-                        style={reactFlowStyle}
-                    >
-                        <Background variant="dots" gap={100} size={3} />
-                        <Controls style={{ color: 'black' }} />
-                    </ReactFlow>
+        <div style={{
+            ...containerStyle,
+            overflow: 'hidden' // Prevent scrolling when sidebar opens
+        }}>
+            <Header
+                projectName={projectName}
+                isSidebarOpen={isSidebarOpen}
+                onToggleSidebar={toggleSidebar}
+            />
 
-                    {/* Popup layer outside ReactFlow but inside container */}
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            pointerEvents: 'none',
-                            zIndex: 9000
-                        }}
-                    >
-                        {mergePopup.show && mergePopup.sourceNode && mergePopup.targetNode && (
-                            <MergeConfirmPopup
-                                source={mergePopup.sourceNode.name}
-                                target={mergePopup.targetNode.name}
-                                onConfirm={handleMergeConfirm}
-                                onCancel={handleMergeCancel}
-                            />
-                        )}
-                    </div>
-                </div>
-            )}
+            <div style={{
+                position: 'relative',
+                width: '100%',
+                height: 'calc(100vh - 60px)', // Adjust for header height
+                marginLeft: isSidebarOpen ? '300px' : '0',
+                transition: 'margin-left 0.3s ease'
+            }}>
+                {loading ? (
+                    <p>Loading...</p>
+                ) : (
+                    <>
+                        <ReactFlow
+                            nodes={nodes}
+                            edges={edges}
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
+                            onNodeDrag={onNodeDrag}
+                            onNodeDragStop={onNodeDragStop}
+                            nodeTypes={nodeTypes}
+                            fitView
+                            style={{
+                                ...reactFlowStyle,
+                                width: '100%',
+                                height: '100%'
+                            }}
+                        >
+                            <Background variant="dots" gap={100} size={3} />
+                            <Controls style={{ color: 'black' }} />
+                        </ReactFlow>
+
+                        {/* Popup layer outside ReactFlow but inside container */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                pointerEvents: 'none',
+                                zIndex: 9000
+                            }}
+                        >
+                            {mergePopup.show && mergePopup.sourceNode && mergePopup.targetNode && (
+                                <MergeConfirmPopup
+                                    source={mergePopup.sourceNode.name}
+                                    target={mergePopup.targetNode.name}
+                                    onConfirm={handleMergeConfirm}
+                                    onCancel={handleMergeCancel}
+                                />
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            <Sidebar
+                isOpen={isSidebarOpen}
+                modules={modules}
+                onRequestRefresh={fetchModules}
+            />
         </div>
     );
 };
