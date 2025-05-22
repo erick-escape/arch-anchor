@@ -4,6 +4,7 @@ import { ModuleData } from '../../interface/ModuleData';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faChevronLeft, faEllipsisVertical, faPencil, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
+import { ClazzData } from '../../interface/ClazzData.tsx';
 
 // Confirmation Modal Component
 const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel }: ConfirmationModalProps) => {
@@ -284,16 +285,16 @@ const ModuleListView = ({ modules, onModuleClick, onModuleRename, onModuleDelete
 
 // Module Detail View
 const ModuleDetailView = ({ module, onBack, onSplit }) => {
-    const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
+    const [selectedClazzes, setSelectedClazzes] = useState<string[]>([]);
     const [showSplitMenu, setShowSplitMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [expandedSections, setExpandedSections] = useState({
-        classes: true,
+        clazzes: true,
         dependencies: false
     });
 
-    const handleClassClick = (classId: number) => {
-        setSelectedClasses(prev => {
+    const handleClassClick = (classId: string) => {
+        setSelectedClazzes(prev => {
             if (prev.includes(classId)) {
                 return prev.filter(id => id !== classId);
             } else {
@@ -303,7 +304,7 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
     };
 
     const handleRightClick = (e: React.MouseEvent) => {
-        if (selectedClasses.length > 0) {
+        if (selectedClazzes.length > 0) {
             e.preventDefault();
             setMenuPosition({ x: e.clientX, y: e.clientY });
             setShowSplitMenu(true);
@@ -312,8 +313,8 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
 
     const handleSplit = async () => {
         try {
-            await onSplit(module.id, selectedClasses);
-            setSelectedClasses([]);
+            await onSplit(module.id, selectedClazzes);
+            setSelectedClazzes([]);
             setShowSplitMenu(false);
         } catch (error) {
             console.error('Failed to split module', error);
@@ -382,15 +383,15 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                             cursor: 'pointer',
                             padding: '5px 0',
                             borderBottom: '1px solid #333',
-                            marginBottom: expandedSections.classes ? '10px' : '0'
+                            marginBottom: expandedSections.clazzes ? '10px' : '0'
                         }}
-                        onClick={() => toggleSection('classes')}
+                        onClick={() => toggleSection('clazzes')}
                     >
-                        <div style={{ fontWeight: 'bold' }}>Classes</div>
-                        <div>{expandedSections.classes ? '' : '+'}</div>
+                        <div style={{ fontWeight: 'bold' }}>Clazzes</div>
+                        <div>{expandedSections.clazzes ? '' : '+'}</div>
                     </div>
 
-                    {expandedSections.classes && (
+                    {expandedSections.clazzes && (
                         <div
                             style={{
                                 background: 'black',
@@ -398,14 +399,14 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                             }}
                             onContextMenu={handleRightClick}
                         >
-                            {module.classes.map(classItem => (
+                            {module.clazzes.map((classItem: ClazzData) => (
                                 <div
                                     key={classItem.id}
                                     style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
                                         padding: '8px 10px',
-                                        backgroundColor: selectedClasses.includes(classItem.id) ? '#333' : 'transparent',
+                                        backgroundColor: selectedClazzes.includes(classItem.id) ? '#333' : 'transparent',
                                         cursor: 'pointer',
                                         ':hover': {
                                             backgroundColor: '#222'

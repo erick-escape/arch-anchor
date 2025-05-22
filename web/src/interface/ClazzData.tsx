@@ -1,6 +1,6 @@
 import { Dependency } from './Dependency.tsx';
 
-export interface ClassData {
+export interface ClazzData {
     id: string;
     name: string;
     dependencies: Dependency[];
