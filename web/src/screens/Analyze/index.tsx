@@ -222,8 +222,53 @@ const AnalyzePage = () => {
         }
     }, [getIntersectingNodes, setNodes]);
 
-    const handleDelete = (nodeId) => {
-        setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    const onDeleteRefresh = (deletedModuleId: string) => {
+        // Remove from sidebar data
+        setModules((prev) => prev.filter((m: ModuleData) => m.id !== deletedModuleId));
+        // Remove from React Flow nodes
+        setNodes((prev) => prev.filter((n) => n.id !== deletedModuleId));
+    };
+
+    const onRenameRefresh = (moduleId: string, newName: string) => {
+        // Update in sidebar data
+        setModules((prev) => prev.map((module) => {
+            if (module.id === moduleId) {
+                module.name = newName;
+            }
+            return module;
+        }));
+        // Update in React Flow nodes
+        setNodes((prev) => prev.map((node) => {
+            if (node.id === moduleId) {
+                node.name = newName;
+            }
+            return node;
+        }));
+    };
+
+    const onSplitRefresh = (oldModuleId: string, newModules: ModuleData[]) => {
+        // Find original node position
+        const oldNode = nodes.find((n) => n.id === oldModuleId);
+        const basePos = oldNode?.position || { x: 0, y: 0 };
+        const offset = 100;
+        // Build new nodes side by side
+        const splitNodes = newModules.map((mod, idx) => ({
+            id: mod.id,
+            type: 'customNode',
+            position: { x: basePos.x + (idx === 0 ? -offset : offset), y: basePos.y },
+            data: { module: mod }
+        }));
+
+        // Update sidebar data: remove old, add new
+        setModules((prev) => {
+            const filtered = prev.filter((m) => m.id !== oldModuleId);
+            return [...filtered, ...newModules];
+        });
+        // Update nodes: remove old, add new
+        setNodes((prev) => {
+            const filtered = prev.filter((n) => n.id !== oldModuleId);
+            return [...filtered, ...splitNodes];
+        });
     };
 
     return (
@@ -296,7 +341,9 @@ const AnalyzePage = () => {
             <Sidebar
                 isOpen={isSidebarOpen}
                 modules={modules}
-                onRequestRefresh={fetchModules}
+                onDeleteRefresh={onDeleteRefresh}
+                onRenameRefresh={onRenameRefresh}
+                onSplitRefresh={onSplitRefresh}
             />
         </div>
     );

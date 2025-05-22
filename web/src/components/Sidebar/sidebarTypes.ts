@@ -3,7 +3,9 @@ import { ModuleData } from '../../interface/ModuleData';
 export interface SidebarProps {
     isOpen: boolean;
     modules: ModuleData[];
-    onRequestRefresh: () => void;
+    onDeleteRefresh: (deletedModuleId: string) => void;
+    onRenameRefresh: (moduleId: string, newName: string) => void;
+    onSplitRefresh: (oldModuleId: string, newModules: ModuleData[]) => void;
 }
 
 export interface ModuleListViewProps {

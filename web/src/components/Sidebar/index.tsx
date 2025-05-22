@@ -495,7 +495,7 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
 };
 
 // Main Sidebar Component
-const Sidebar = ({ isOpen, modules, onRequestRefresh }: SidebarProps) => {
+const Sidebar = ({ isOpen, modules, onDeleteRefresh, onRenameRefresh, onSplitRefresh }: SidebarProps) => {
     const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
     const [selectedModule, setSelectedModule] = useState<ModuleData | null>(null);
     const [deleteConfirmation, setDeleteConfirmation] = useState({
@@ -513,7 +513,7 @@ const Sidebar = ({ isOpen, modules, onRequestRefresh }: SidebarProps) => {
         setSelectedModule(null);
     };
 
-    const handleModuleRename = async (moduleId: number, newName: string) => {
+    const handleModuleRename = async (moduleId: string, newName: string) => {
         try {
             await axios.post('/api/module/rename', null, {
                 params: {
@@ -521,14 +521,14 @@ const Sidebar = ({ isOpen, modules, onRequestRefresh }: SidebarProps) => {
                     newName
                 }
             });
-            onRequestRefresh();
+            onRenameRefresh(moduleId, newName);
         } catch (error) {
             console.error('Failed to rename module', error);
             throw error;
         }
     };
 
-    const handleModuleDelete = async (moduleId: number) => {
+    const handleModuleDelete = async (moduleId: string) => {
         setDeleteConfirmation({
             isOpen: true,
             moduleId
@@ -548,7 +548,7 @@ const Sidebar = ({ isOpen, modules, onRequestRefresh }: SidebarProps) => {
                 isOpen: false,
                 moduleId: null
             });
-            onRequestRefresh();
+            onDeleteRefresh(deleteConfirmation.moduleId);
 
             // If we're in detail view and deleted the current module, go back to list
             if (activeView === 'detail' && selectedModule?.id === deleteConfirmation.moduleId) {
@@ -566,15 +566,15 @@ const Sidebar = ({ isOpen, modules, onRequestRefresh }: SidebarProps) => {
         });
     };
 
-    const handleSplitModule = async (moduleId: number, classIds: number[]) => {
+    const handleSplitModule = async (moduleId: string, classIds: number[]) => {
         try {
-            await axios.post('/api/module/split', null, {
+            const response = await axios.post('/api/module/split', null, {
                 params: {
                     moduleId,
                     classIds: JSON.stringify(classIds)
                 }
             });
-            onRequestRefresh();
+            onSplitRefresh(moduleId, response.data.newModules);
             handleBackToList(); // Return to list view after split
         } catch (error) {
             console.error('Failed to split module', error);
