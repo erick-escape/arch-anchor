@@ -3,10 +3,7 @@ package tcc.com.viewer.controllers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
@@ -17,6 +14,7 @@ import tcc.com.viewer.mapstruct.ModuleMapper;
 import tcc.com.viewer.services.ModuleService;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -99,5 +97,59 @@ public class ModuleController {
         moduleService.calculateModuleSimilarity(newModule);
 
         return moduleMapper.toDto(newModule);
+    }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<Object> deleteModule(@RequestParam String moduleId) {
+        // Load existing modules
+        List<ModuleDTO> modules = moduleService.getModulesFromFile();
+        // Check if module exists
+        boolean moduleExists = modules.stream()
+                .anyMatch(module -> module.id().equals(moduleId));
+
+        if (!moduleExists) {
+            return ResponseEntity.notFound().build();
+        }
+        // Filter out the module with the matching ID
+        List<ModuleDTO> updatedModules = modules.stream()
+                .filter(module -> !module.id().equals(moduleId))
+                .collect(Collectors.toList());
+
+        // Save updated modules to file
+        moduleService.saveModules(updatedModules);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/rename")
+    public ResponseEntity<Object> renameModule(@RequestParam String moduleId, @RequestParam String newName) {
+        // Load existing modules
+        List<ModuleDTO> modules = moduleService.getModulesFromFile();
+
+        // Find the module to rename
+        Optional<ModuleDTO> moduleOptional = modules.stream()
+                .filter(dto -> dto.id().equals(moduleId))
+                .findFirst();
+
+        if (moduleOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Get the existing module DTO
+        ModuleDTO oldModuleDto = moduleOptional.get();
+
+        // Convert to entity, modify it, and convert back
+        Module moduleEntity = moduleMapper.toEntity(oldModuleDto);
+        moduleEntity.setName(newName);
+        ModuleDTO updatedModuleDto = moduleMapper.toDto(moduleEntity);
+
+        // Replace the old DTO in the list
+        int index = modules.indexOf(oldModuleDto);
+        modules.set(index, updatedModuleDto);
+
+        // Save updated modules to file
+        moduleService.saveModules(modules);
+        
+        return ResponseEntity.ok().build();
     }
 }
