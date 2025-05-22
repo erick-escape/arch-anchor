@@ -129,6 +129,7 @@ public class ModuleService {
                         String className = removeFileExtension(fileName);
 
                         Clazz clazz = new Clazz(
+                                UUID.randomUUID().toString(),
                                 className,
                                 dependencies.toArray(new Dependency[0]),
                                 0.0, // Similarity will be calculated later

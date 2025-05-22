@@ -9,6 +9,7 @@ import tcc.com.viewer.domains.dependency.Dependency;
 @Setter
 @AllArgsConstructor
 public class Clazz {
+    private String id;
     private String name;
     private Dependency[] dependencies;
     private Double similarity;
