@@ -82,7 +82,7 @@ public class ModuleService {
                 clazz.setSimilarity(totalSimilarity / (clazzes.size() - 1));
             }
         } else if (clazzes.size() == 1) {
-            Clazz clazz = clazzes.get(0);
+            Clazz clazz = clazzes.getFirst();
             clazz.setSimilarity(1.0);
         }
 

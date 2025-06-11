@@ -214,7 +214,7 @@ public class ModuleController {
 
         // Save updated modules to file
         moduleService.saveModules(modules);
-        
+
         return ResponseEntity.ok().build();
     }
 }
