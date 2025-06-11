@@ -72,16 +72,20 @@ public class ModuleController {
         // Concatenate names with pipe separator
         String newName = module1.name() + " | " + module2.name();
 
-        // Convert and merge classes without duplicates
+        // Safe conversion and merging of classes without duplicates
         Clazz[] mergedClasses = Stream.concat(
-                Arrays.stream(module1.clazzes()).map(clazzMapper::toEntity),
-                Arrays.stream(module2.clazzes()).map(clazzMapper::toEntity)
+                Arrays.stream(Optional.ofNullable(module1.clazzes()).orElse(new ClazzResponseDTO[0]))
+                        .map(clazzMapper::toEntity),
+                Arrays.stream(Optional.ofNullable(module2.clazzes()).orElse(new ClazzResponseDTO[0]))
+                        .map(clazzMapper::toEntity)
         ).distinct().toArray(Clazz[]::new);
 
-        // Convert and merge dependencies without duplicates
+        // Safe conversion and merging of dependencies without duplicates
         Dependency[] mergedDependencies = Stream.concat(
-                Arrays.stream(module1.dependencies()).map(dependencyMapper::toEntity),
-                Arrays.stream(module2.dependencies()).map(dependencyMapper::toEntity)
+                Arrays.stream(Optional.ofNullable(module1.dependencies()).orElse(new DependencyDTO[0]))
+                        .map(dependencyMapper::toEntity),
+                Arrays.stream(Optional.ofNullable(module2.dependencies()).orElse(new DependencyDTO[0]))
+                        .map(dependencyMapper::toEntity)
         ).distinct().toArray(Dependency[]::new);
 
         Module newModule = new Module(
