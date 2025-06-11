@@ -7,7 +7,11 @@ import org.springframework.web.bind.annotation.*;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
+import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
+import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.dto.module.SplitModuleRequest;
+import tcc.com.viewer.dto.module.SplitModuleResponse;
 import tcc.com.viewer.mapstruct.ClazzMapper;
 import tcc.com.viewer.mapstruct.DependencyMapper;
 import tcc.com.viewer.mapstruct.ModuleMapper;
@@ -101,6 +105,63 @@ public class ModuleController {
         moduleService.calculateModuleSimilarity(newModule);
 
         return moduleMapper.toDto(newModule);
+    }
+
+    @PostMapping("/split")
+    public ResponseEntity<SplitModuleResponse> splitModule(@RequestBody SplitModuleRequest request) {
+        try {
+            // Validate input
+            if (request.moduleId() == null || request.moduleId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (request.classIds() == null || request.classIds().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Load existing modules
+            List<ModuleDTO> modules = moduleService.getModulesFromFile();
+
+            // Find the target module
+            Optional<ModuleDTO> targetModuleOptional = modules.stream()
+                    .filter(module -> module.id().equals(request.moduleId()))
+                    .findFirst();
+
+            if (targetModuleOptional.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            ModuleDTO targetModule = targetModuleOptional.get();
+
+            // Validate that all classIds exist in the target module
+            Set<String> moduleClassIds = Arrays.stream(targetModule.clazzes())
+                    .map(ClazzResponseDTO::id)
+                    .collect(Collectors.toSet());
+
+            boolean allClassIdsExist = moduleClassIds.containsAll(request.classIds());
+
+            if (!allClassIdsExist) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Split the module
+            List<ModuleDTO> splitModules = moduleService.splitModule(targetModule, request.classIds());
+
+            // Remove original module and add split modules
+            List<ModuleDTO> updatedModules = modules.stream()
+                    .filter(module -> !module.id().equals(request.moduleId()))
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+            updatedModules.addAll(splitModules);
+
+            // Save updated modules
+            moduleService.saveModules(updatedModules);
+
+            return ResponseEntity.ok(new SplitModuleResponse(splitModules));
+        } catch (Exception pException) {
+            log.error("pException --> ", pException);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @DeleteMapping("/delete")

@@ -4,7 +4,10 @@ import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
+import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.mapstruct.ClazzMapper;
+import tcc.com.viewer.mapstruct.ClazzMapperImpl;
 import tcc.com.viewer.mapstruct.ModuleMapper;
 import tcc.com.viewer.mapstruct.ModuleMapperImpl;
 import tcc.com.viewer.services.parsers.ParserFactory;
@@ -21,6 +24,7 @@ public class ModuleService {
     private final List<Module> modules = new ArrayList<>();
     private final ParserFactory parserFactory = new ParserFactory();
     private final ModuleMapper moduleMapper = new ModuleMapperImpl();
+    private final ClazzMapper clazzMapper = new ClazzMapperImpl();
 
     // Define file extensions to consider for each language
     private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of(
@@ -114,6 +118,46 @@ public class ModuleService {
         int secondDenominator = (a + c) == 0 ? 1 : (a + c);
 
         return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
+    }
+
+    public List<ModuleDTO> splitModule(ModuleDTO originalModule, List<String> classIds) {
+        // Convert to entity for easier manipulation
+        Module originalModuleEntity = moduleMapper.toEntity(originalModule);
+
+        // Partition classes
+        Map<Boolean, List<ClazzResponseDTO>> partitionedClasses = Arrays.stream(originalModule.clazzes())
+                .collect(Collectors.partitioningBy(clazz -> classIds.contains(clazz.id())));
+
+        List<ClazzResponseDTO> retainedClasses = partitionedClasses.get(false);
+        List<ClazzResponseDTO> extractedClasses = partitionedClasses.get(true);
+
+        // Create the retained module (original with fewer classes)
+        Module retainedModuleEntity = new Module();
+        retainedModuleEntity.setId(originalModuleEntity.getId());
+        retainedModuleEntity.setName(originalModuleEntity.getName() + "_Retained");
+        retainedModuleEntity.setClazzes(retainedClasses.stream()
+                .map(clazzMapper::toEntity)
+                .toList().toArray(new Clazz[0]));
+
+        this.calculateClassSimilarities(retainedModuleEntity);
+        this.calculateModuleSimilarity(retainedModuleEntity);
+
+        // Create the new module (with extracted classes)
+        Module newModuleEntity = new Module();
+        newModuleEntity.setId(generateNewUUID());
+        newModuleEntity.setName(originalModuleEntity.getName() + "_Splited");
+        newModuleEntity.setClazzes(extractedClasses.stream()
+                .map(clazzMapper::toEntity)
+                .toList().toArray(new Clazz[0]));
+
+        this.calculateClassSimilarities(newModuleEntity);
+        this.calculateModuleSimilarity(newModuleEntity);
+
+        // Convert back to DTOs
+        ModuleDTO retainedDto = moduleMapper.toDto(retainedModuleEntity);
+        ModuleDTO newDto = moduleMapper.toDto(newModuleEntity);
+
+        return Arrays.asList(retainedDto, newDto);
     }
 
     private List<Clazz> getClazzes(Path modulePath) throws IOException {
