@@ -85,7 +85,7 @@ public class ModuleController {
         ).distinct().toArray(Dependency[]::new);
 
         Module newModule = new Module(
-                UUID.randomUUID().toString(),
+                moduleService.generateNewUUID(),
                 newName,
                 null, // refClass will be calculated later
                 mergedClasses,

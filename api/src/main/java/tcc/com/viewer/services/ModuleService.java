@@ -60,6 +60,10 @@ public class ModuleService {
         }
     }
 
+    public String generateNewUUID() {
+        return UUID.randomUUID().toString();
+    }
+    
     public void calculateClassSimilarities(Module module) {
         List<Clazz> clazzes = List.of(module.getClazzes());
 
@@ -129,7 +133,7 @@ public class ModuleService {
                         String className = removeFileExtension(fileName);
 
                         Clazz clazz = new Clazz(
-                                UUID.randomUUID().toString(),
+                                generateNewUUID(),
                                 className,
                                 dependencies.toArray(new Dependency[0]),
                                 0.0, // Similarity will be calculated later
@@ -177,7 +181,7 @@ public class ModuleService {
                             // Determine module name based on directory structure
                             String moduleName = modulePath.getParent().getFileName().toString() + '/' + modulePath.getFileName().toString();
                             Module module = new Module(
-                                    UUID.randomUUID().toString(),
+                                    generateNewUUID(),
                                     moduleName,
                                     null, // refClass will be calculated later
                                     clazzes.toArray(new Clazz[0]),
