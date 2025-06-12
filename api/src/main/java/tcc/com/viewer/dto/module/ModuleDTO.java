@@ -8,7 +8,7 @@ import java.io.Serializable;
 public record ModuleDTO(
         String id,
         String name,
-        String refClass,
+        ClazzResponseDTO[] refClazzes,
         ClazzResponseDTO[] clazzes,
         DependencyDTO[] dependencies,
         Double similarity) implements Serializable {

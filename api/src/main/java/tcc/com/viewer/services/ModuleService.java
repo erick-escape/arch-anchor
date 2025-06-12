@@ -67,7 +67,7 @@ public class ModuleService {
     public String generateNewUUID() {
         return UUID.randomUUID().toString();
     }
-    
+
     public void calculateClassSimilarities(Module module) {
         List<Clazz> clazzes = List.of(module.getClazzes());
 
@@ -89,7 +89,8 @@ public class ModuleService {
         // Set refClass as the class with the highest similarity
         if (!clazzes.isEmpty()) {
             Clazz refClass = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
-            module.setRefClass(refClass.getName());
+            List<Clazz> refClasses = List.of(refClass);
+            module.setRefClazzes(refClasses);
         }
     }
 
@@ -227,7 +228,7 @@ public class ModuleService {
                             Module module = new Module(
                                     generateNewUUID(),
                                     moduleName,
-                                    null, // refClass will be calculated later
+                                    null, // refClazzes will be calculated later
                                     clazzes.toArray(new Clazz[0]),
                                     new Dependency[0], // Dependencies will be calculated later
                                     0.0 // Similarity will be calculated later
@@ -257,5 +258,52 @@ public class ModuleService {
         this.saveModules(modulesList);
 
         return modulesList;
+    }
+
+    public ModuleDTO setRefClazzes(String moduleId, List<String> refClazzIds) {
+        // Load all modules
+        List<ModuleDTO> modules = getModulesFromFile();
+
+        // Find the target module by moduleId
+        Optional<ModuleDTO> targetModuleOptional = modules.stream()
+                .filter(module -> moduleId.equals(module.id()))
+                .findFirst();
+
+        if (targetModuleOptional.isEmpty()) {
+            return null; // Module not found
+        }
+
+        ModuleDTO targetModule = targetModuleOptional.get();
+
+        // Find the requested reference classes from the module's classes
+        List<ClazzResponseDTO> refClazzes = Arrays.stream(targetModule.clazzes())
+                .filter(clazz -> refClazzIds.contains(clazz.id()))
+                .sorted((c1, c2) -> Double.compare(c2.similarity(), c1.similarity())) // Sort descending by similarity
+                .toList();
+
+        // Validate that all requested class IDs were found
+        if (refClazzes.size() != refClazzIds.size()) {
+            throw new IllegalArgumentException("Some requested class IDs were not found in the module");
+        }
+
+        // Create updated module with new reference classes
+        ModuleDTO updatedModule = new ModuleDTO(
+                targetModule.id(),
+                targetModule.name(),
+                refClazzes.toArray(new ClazzResponseDTO[0]),
+                targetModule.clazzes(),
+                targetModule.dependencies(),
+                targetModule.similarity()
+        );
+
+        // Replace the module in the list
+        List<ModuleDTO> updatedModules = modules.stream()
+                .map(module -> module.id().equals(moduleId) ? updatedModule : module)
+                .collect(Collectors.toList());
+
+        // Save updated modules to file
+        saveModules(updatedModules);
+
+        return updatedModule;
     }
 }

@@ -10,6 +10,7 @@ import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.dto.module.SetRefClazzesRequest;
 import tcc.com.viewer.dto.module.SplitModuleRequest;
 import tcc.com.viewer.dto.module.SplitModuleResponse;
 import tcc.com.viewer.mapstruct.ClazzMapper;
@@ -216,5 +217,31 @@ public class ModuleController {
         moduleService.saveModules(modules);
 
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/ref-clazzes")
+    public ResponseEntity<ModuleDTO> setRefClazzes(@RequestBody SetRefClazzesRequest request) {
+        try {
+            // Validate input
+            if (request.moduleId() == null || request.moduleId().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (request.classIds() == null || request.classIds().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Call service to set reference classes
+            ModuleDTO updatedModule = moduleService.setRefClazzes(request.moduleId(), request.classIds());
+
+            if (updatedModule == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok(updatedModule);
+        } catch (Exception pException) {
+            log.error("Error setting reference classes: ", pException);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
