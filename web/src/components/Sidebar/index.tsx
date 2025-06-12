@@ -417,7 +417,7 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                                     onClick={() => handleClassClick(classItem.id)}
                                 >
                                     <div>{classItem.name}</div>
-                                    <div>{classItem.similarity.toFixed(2)}</div>
+                                    <div>{(classItem.similarity * 100).toFixed(2)}%</div>
                                 </div>
                             ))}
 
@@ -487,7 +487,7 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
 
                 <div>
                     <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Module Similarity:</div>
-                    <div>{module.similarity.toFixed(2)}</div>
+                    <div>{(module.similarity * 100).toFixed(2)}%</div>
                 </div>
             </div>
         </div>
