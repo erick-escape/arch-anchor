@@ -566,16 +566,26 @@ const Sidebar = ({ isOpen, modules, onDeleteRefresh, onRenameRefresh, onSplitRef
         });
     };
 
-    const handleSplitModule = async (moduleId: string, classIds: number[]) => {
+    const handleSplitModule = async (moduleId: string, classIds: string[]) => {
         try {
-            const response = await axios.post('/api/module/split', null, {
-                params: {
-                    moduleId,
-                    classIds: JSON.stringify(classIds)
-                }
+            const response = await axios.post('/api/module/split', {
+                moduleId,
+                classIds
             });
-            onSplitRefresh(moduleId, response.data.newModules);
-            handleBackToList(); // Return to list view after split
+
+            // Map response to ModuleData interface
+            const newModules: ModuleData[] = response.data.newModules.map((moduleDto: ModuleData) => ({
+                id: moduleDto.id,
+                name: moduleDto.name,
+                refClass: moduleDto.refClass,
+                clazzes: moduleDto.clazzes,
+                dependencies: moduleDto.dependencies,
+                similarity: moduleDto.similarity
+            }));
+
+            // Call refresh helper
+            onSplitRefresh(moduleId, newModules);
+            handleBackToList();
         } catch (error) {
             console.error('Failed to split module', error);
             throw error;

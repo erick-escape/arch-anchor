@@ -212,7 +212,6 @@ const AnalyzePage = () => {
         if (intersections.length > 0) {
             // Take the first intersecting node as the target
             const targetNode = intersections[0];
-
             // Show the confirmation popup
             setMergePopup({
                 show: true,
@@ -254,6 +253,7 @@ const AnalyzePage = () => {
         // Build new nodes side by side
         const splitNodes = newModules.map((mod, idx) => ({
             id: mod.id,
+            name: mod.name,
             type: 'customNode',
             position: { x: basePos.x + (idx === 0 ? -offset : offset), y: basePos.y },
             data: { module: mod }
