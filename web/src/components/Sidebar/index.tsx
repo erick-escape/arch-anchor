@@ -284,11 +284,12 @@ const ModuleListView = ({ modules, onModuleClick, onModuleRename, onModuleDelete
 };
 
 // Module Detail View
-const ModuleDetailView = ({ module, onBack, onSplit }) => {
+const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes }) => {
     const [selectedClazzes, setSelectedClazzes] = useState<string[]>([]);
-    const [showSplitMenu, setShowSplitMenu] = useState(false);
+    const [showContextMenu, setShowContextMenu] = useState(false);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
     const [expandedSections, setExpandedSections] = useState({
+        refClazzes: true,
         clazzes: true,
         dependencies: false
     });
@@ -303,11 +304,18 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
         });
     };
 
-    const handleRightClick = (e: React.MouseEvent) => {
-        if (selectedClazzes.length > 0) {
-            e.preventDefault();
+    const handleRightClick = (e: React.MouseEvent, classId?: string) => {
+        e.preventDefault();
+
+        // If right-clicking on a class that's not already selected, add it to selection
+        if (classId && !selectedClazzes.includes(classId)) {
+            setSelectedClazzes(prev => [...prev, classId]);
+        }
+
+        // Show context menu if we have selected classes or if clicking on a class
+        if (selectedClazzes.length > 0 || classId) {
             setMenuPosition({ x: e.clientX, y: e.clientY });
-            setShowSplitMenu(true);
+            setShowContextMenu(true);
         }
     };
 
@@ -315,15 +323,25 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
         try {
             await onSplit(module.id, selectedClazzes);
             setSelectedClazzes([]);
-            setShowSplitMenu(false);
+            setShowContextMenu(false);
         } catch (error) {
             console.error('Failed to split module', error);
         }
     };
 
+    const handleSetRefClazzes = async () => {
+        try {
+            await onSetRefClazzes(module.id, selectedClazzes);
+            setSelectedClazzes([]);
+            setShowContextMenu(false);
+        } catch (error) {
+            console.error('Failed to set reference classes', error);
+        }
+    };
+
     useEffect(() => {
         const handleClickOutside = () => {
-            setShowSplitMenu(false);
+            setShowContextMenu(false);
         };
 
         document.addEventListener('click', handleClickOutside);
@@ -369,10 +387,52 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                 overflowY: 'auto',
                 padding: '15px'
             }}>
-                <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Reference Class:</div>
-                    <div style={{ color: '#4CAF50' }}>{module.refClass}</div>
-                </div>
+                {/* Reference Classes Section */}
+                {module.refClazzes && module.refClazzes.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                padding: '5px 0',
+                                borderBottom: '1px solid #333',
+                                marginBottom: expandedSections.refClazzes ? '10px' : '0'
+                            }}
+                            onClick={() => toggleSection('refClazzes')}
+                        >
+                            <div style={{ fontWeight: 'bold' }}>Reference Classes</div>
+                            <div>{expandedSections.refClazzes ? '' : '+'}</div>
+                        </div>
+
+                        {expandedSections.refClazzes && (
+                            <div
+                                style={{
+                                    background: 'black',
+                                    borderRadius: '4px'
+                                }}
+                            >
+                                {module.refClazzes.map((classItem: ClazzData) => (
+                                    <div
+                                        key={classItem.id}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            padding: '8px 10px',
+                                            color: '#4CAF50', // Green text for reference classes
+                                            borderRadius: '4px',
+                                            marginBottom: '2px'
+                                        }}
+                                    >
+                                        <div>{classItem.name}</div>
+                                        <div>{(classItem.similarity * 100).toFixed(2)}%</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div style={{ marginBottom: '20px' }}>
                     <div
@@ -397,7 +457,6 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                                 background: 'black',
                                 borderRadius: '4px'
                             }}
-                            onContextMenu={handleRightClick}
                         >
                             {module.clazzes.map((classItem: ClazzData) => (
                                 <div
@@ -415,13 +474,14 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                                         marginBottom: '2px'
                                     }}
                                     onClick={() => handleClassClick(classItem.id)}
+                                    onContextMenu={(e) => handleRightClick(e, classItem.id)}
                                 >
                                     <div>{classItem.name}</div>
                                     <div>{(classItem.similarity * 100).toFixed(2)}%</div>
                                 </div>
                             ))}
 
-                            {showSplitMenu && (
+                            {showContextMenu && (
                                 <div style={{
                                     position: 'fixed',
                                     top: menuPosition.y,
@@ -431,6 +491,18 @@ const ModuleDetailView = ({ module, onBack, onSplit }) => {
                                     borderRadius: '4px',
                                     zIndex: 1000
                                 }}>
+                                    <div
+                                        style={{
+                                            padding: '8px 12px',
+                                            cursor: 'pointer',
+                                            ':hover': {
+                                                backgroundColor: '#333'
+                                            }
+                                        }}
+                                        onClick={handleSetRefClazzes}
+                                    >
+                                        Set as Ref Classes
+                                    </div>
                                     <div
                                         style={{
                                             padding: '8px 12px',
@@ -592,6 +664,27 @@ const Sidebar = ({ isOpen, modules, onDeleteRefresh, onRenameRefresh, onSplitRef
         }
     };
 
+    const handleSetRefClazzes = async (moduleId: string, classIds: string[]) => {
+        try {
+            const response = await axios.post('/api/module/ref-clazzes', {
+                moduleId,
+                classIds
+            });
+
+            // Update the selected module with the new reference classes
+            if (selectedModule && selectedModule.id === moduleId) {
+                const updatedModule = {
+                    ...selectedModule,
+                    refClazzes: response.data.refClazzes
+                };
+                setSelectedModule(updatedModule);
+            }
+        } catch (error) {
+            console.error('Failed to set reference classes', error);
+            throw error;
+        }
+    };
+
     return (
         <>
             <div style={{
@@ -620,6 +713,7 @@ const Sidebar = ({ isOpen, modules, onDeleteRefresh, onRenameRefresh, onSplitRef
                             module={selectedModule}
                             onBack={handleBackToList}
                             onSplit={handleSplitModule}
+                            onSetRefClazzes={handleSetRefClazzes}
                         />
                     )
                 )}

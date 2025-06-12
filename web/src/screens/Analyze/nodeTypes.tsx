@@ -44,7 +44,8 @@ function CustomNode({ data }) {
                 {module.name}
             </div>
             <div>
-                <strong>Ref Class:</strong> {module.refClass || 'N/A'}
+                {/*Shows the reference class with the highest similarity.*/}
+                <strong>Ref Class:</strong> {module.refClazzes[0].name || 'N/A'}
             </div>
             <div>
                 <strong>Similarity:</strong> {(module.similarity * 100).toFixed(2)}%
