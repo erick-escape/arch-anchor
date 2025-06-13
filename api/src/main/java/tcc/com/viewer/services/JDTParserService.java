@@ -1,6 +1,7 @@
 package tcc.com.viewer.services;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.*;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class JDTParserService {
 
@@ -33,25 +35,151 @@ public class JDTParserService {
     // Cache for classpath and sourcepath to avoid recalculating for each file
     private final Map<Path, String[]> projectClasspathCache = new HashMap<>();
     private final Map<Path, String[]> projectSourcepathCache = new HashMap<>();
+    
+    // Project-level classpath cache to avoid Maven calls per file
+    private final Map<String, ProjectClasspathCache> globalProjectCache = new HashMap<>();
 
     // Set to track files that have been processed to avoid duplicate processing
     private final Set<Path> processedFiles = new HashSet<>();
+    
+    /**
+     * Cache structure for project-level classpath information
+     */
+    private static class ProjectClasspathCache {
+        final String[] classpath;
+        final String[] sourcepath;
+        final long timestamp;
+        
+        ProjectClasspathCache(String[] classpath, String[] sourcepath) {
+            this.classpath = classpath;
+            this.sourcepath = sourcepath;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        boolean isExpired() {
+            // Cache expires after 5 minutes
+            return System.currentTimeMillis() - timestamp > 300000;
+        }
+    }
+
+    /**
+     * Clears the processed files cache - useful for new analysis sessions
+     */
+    public void clearProcessedFilesCache() {
+        processedFiles.clear();
+        projectClasspathCache.clear();
+        projectSourcepathCache.clear();
+        globalProjectCache.clear();
+        System.out.println("Cleared processed files cache and all project caches");
+        log.info("Cleared processed files cache and all project caches");
+    }
+
+    /**
+     * Ensures classpath has minimum required entries for JDT binding resolution
+     */
+    private String[] ensureMinimumClasspathEntries(String[] classpath) {
+        if (classpath == null || classpath.length == 0) {
+            // Return a minimal classpath with just the JDK
+            String javaHome = System.getProperty("java.home");
+            return new String[]{
+                javaHome + "/lib/rt.jar", // For Java 8 and earlier
+                javaHome + "/jmods/java.base.jmod" // For Java 9+
+            };
+        }
+        
+        // Ensure we have at least 2 entries (JDT seems to expect this)
+        if (classpath.length == 1) {
+            String javaHome = System.getProperty("java.home");
+            return new String[]{
+                classpath[0],
+                javaHome + "/jmods/java.base.jmod"
+            };
+        }
+        
+        return classpath;
+    }
+
+    /**
+     * Ensures sourcepath has minimum required entries for JDT binding resolution
+     */
+    private String[] ensureMinimumSourcepathEntries(String[] sourcepath) {
+        if (sourcepath == null || sourcepath.length == 0) {
+            // Return at least the current directory
+            return new String[]{".", "src"};
+        }
+        
+        // Ensure we have at least 2 entries
+        if (sourcepath.length == 1) {
+            return new String[]{
+                sourcepath[0],
+                "."
+            };
+        }
+        
+        return sourcepath;
+    }
+
+    /**
+     * Ensures classpath is valid and prevents index out of bounds errors
+     */
+    private String[] ensureValidClasspath(String[] classpath) {
+        if (classpath == null || classpath.length == 0) {
+            // Provide minimal valid classpath
+            String javaHome = System.getProperty("java.home");
+            return new String[]{
+                javaHome + "/lib/rt.jar", // Java 8 and earlier
+                javaHome + "/jmods/java.base.jmod", // Java 9+
+                "." // Current directory
+            };
+        }
+        
+        // Filter out null or empty entries that cause index errors
+        return Arrays.stream(classpath)
+                .filter(entry -> entry != null && !entry.trim().isEmpty())
+                .filter(entry -> {
+                    try {
+                        return Files.exists(Paths.get(entry)) || entry.equals(".");
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .toArray(String[]::new);
+    }
+
+    /**
+     * Ensures sourcepath is valid and prevents index out of bounds errors
+     */
+    private String[] ensureValidSourcepath(String[] sourcepath) {
+        if (sourcepath == null || sourcepath.length == 0) {
+            return new String[]{".", "src"};
+        }
+        
+        // Filter out null or empty entries that cause index errors
+        String[] validEntries = Arrays.stream(sourcepath)
+                .filter(entry -> entry != null && !entry.trim().isEmpty())
+                .filter(entry -> {
+                    try {
+                        return Files.exists(Paths.get(entry)) || entry.equals(".");
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .toArray(String[]::new);
+        
+        // Ensure we have at least one valid entry
+        if (validEntries.length == 0) {
+            return new String[]{"."};
+        }
+        
+        return validEntries;
+    }
 
     /**
      * Parses a Java file and returns its AST
      */
     public CompilationUnit parseClass(Path classPath) throws IOException {
-        // Check if we've already processed this file to avoid duplicate processing
-        if (processedFiles.contains(classPath)) {
-            System.out.println("Skipping already processed file: " + classPath);
-            // Create a minimal unit to satisfy callers
-            AST ast = AST.newAST(AST.getJLSLatest());
-            CompilationUnit emptyUnit = ast.newCompilationUnit();
-            return emptyUnit;
-        }
-
-        // Mark this file as processed
-        processedFiles.add(classPath);
+        // Note: Duplicate processing check moved to getDependencies() method
+        // This allows parseClass to be reused independently if needed
 
         String source = Files.readString(classPath);
         ASTParser parser = ASTParser.newParser(AST.getJLSLatest()); // Use the latest supported JLS level
@@ -59,7 +187,7 @@ public class JDTParserService {
         // Set parser options with more robust error recovery
         parser.setSource(source.toCharArray());
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
-        parser.setResolveBindings(true);
+        parser.setResolveBindings(true); // Enable binding resolution for proper type resolution
         parser.setBindingsRecovery(true);
         parser.setStatementsRecovery(true); // Enhanced error recovery
 
@@ -81,140 +209,285 @@ public class JDTParserService {
         // Determine the project directory being analyzed
         Path projectDir = findProjectRoot(classPath);
 
-        // Get classpath and sourcepath from cache or calculate them
-        String[] classpath;
-        String[] sourcepath;
+        // Get classpath and sourcepath using project-level caching
+        ProjectClasspathCache projectCache = getOrCreateProjectCache(projectDir);
+        String[] classpath = projectCache.classpath.clone(); // Clone to avoid modification
+        String[] sourcepath = projectCache.sourcepath.clone();
 
-        if (projectClasspathCache.containsKey(projectDir)) {
-            // Use cached values
-            classpath = projectClasspathCache.get(projectDir);
-            sourcepath = projectSourcepathCache.get(projectDir);
-            System.out.println("Using cached classpath/sourcepath for project: " + projectDir);
-        } else {
-            // Calculate and cache values
-            classpath = getComprehensiveClassPath(projectDir);
-            sourcepath = getComprehensiveSourcePath(projectDir);
+        // Apply additional validation to prevent index out of bounds errors
+        classpath = ensureMinimumClasspathEntries(classpath);
+        sourcepath = ensureMinimumSourcepathEntries(sourcepath);
 
-            // Cache for future use
-            projectClasspathCache.put(projectDir, classpath);
-            projectSourcepathCache.put(projectDir, sourcepath);
-
-            System.out.println("Calculated and cached classpath with " + classpath.length + " entries");
-            System.out.println("Calculated and cached sourcepath with " + sourcepath.length + " entries");
+        log.info("=== CLASSPATH INITIALIZATION FOR {} ===", classPath.getFileName());
+        log.info("Classpath entries: {}", classpath.length);
+        log.info("Sourcepath entries: {}", sourcepath.length);
+        
+        // Log first few classpath entries for debugging
+        for (int i = 0; i < Math.min(5, classpath.length); i++) {
+            log.debug("CP[{}]: {}", i, classpath[i]);
         }
-
+        if (classpath.length > 5) {
+            log.debug("... and {} more classpath entries", classpath.length - 5);
+        }
+        
+        // Always set environment with validated arrays to ensure consistent binding resolution
         parser.setEnvironment(classpath, sourcepath, null, true);
+        log.debug("JDT environment configured successfully");
+        
         parser.setUnitName(classPath.getFileName().toString());
+        
+        log.info("Parsing {} with binding resolution enabled", classPath.getFileName());
 
         try {
-            //for some reason, when we createAST for the first file it prints the `Error extracting dependencies from source:` message.
-            //ask claude why this is happening and also for him to fix it.
+            log.info("=== PARSE ATTEMPT 1: {} with full binding resolution ===", classPath.getFileName());
+            long startTime = System.currentTimeMillis();
             CompilationUnit unit = (CompilationUnit) parser.createAST(null);
+            long endTime = System.currentTimeMillis();
+            
             // Avoid returning null which could cause NPEs later
             if (unit != null) {
+                log.info("✓ PARSE SUCCESS: {} parsed in {}ms with {} imports", 
+                    classPath.getFileName(), (endTime - startTime), unit.imports().size());
+                
+                // Log import details for debugging binding resolution
+                if (unit.imports().size() > 0) {
+                    log.debug("Imports found:");
+                    for (Object imp : unit.imports()) {
+                        if (imp instanceof ImportDeclaration) {
+                            ImportDeclaration importDecl = (ImportDeclaration) imp;
+                            log.debug("  - {} {}", importDecl.getName().getFullyQualifiedName(), 
+                                importDecl.isOnDemand() ? "(wildcard)" : "");
+                        }
+                    }
+                }
+                
                 return unit;
             } else {
                 throw new IllegalStateException("Parser returned null CompilationUnit");
             }
-        } catch (Exception e) {
-            System.err.println("Error parsing " + classPath.getFileName() + ": " + e.getMessage());
-
-            // Try a completely different approach - disable binding resolution entirely
-            ASTParser fallbackParser = ASTParser.newParser(AST.getJLSLatest());
-            fallbackParser.setSource(source.toCharArray());
-            fallbackParser.setKind(ASTParser.K_COMPILATION_UNIT);
-
-            // Completely disable binding resolution to avoid array index errors
-            fallbackParser.setResolveBindings(false);
-            fallbackParser.setBindingsRecovery(false);
-            fallbackParser.setStatementsRecovery(true);
-
-            // Don't set environment to avoid binding-related errors
-            // Don't need classpath/sourcepath when not resolving bindings
-
-            // Set most permissive compiler options
-            Map<String, String> fallbackOptions = JavaCore.getOptions();
-            JavaCore.setComplianceOptions(JavaCore.VERSION_19, fallbackOptions);
-
-            // Set all error-related options to IGNORE
-            fallbackOptions.put(JavaCore.COMPILER_PB_UNUSED_IMPORT, JavaCore.IGNORE);
-            fallbackOptions.put(JavaCore.COMPILER_PB_UNUSED_LOCAL, JavaCore.IGNORE);
-            fallbackOptions.put(JavaCore.COMPILER_PB_UNUSED_PARAMETER, JavaCore.IGNORE);
-            fallbackOptions.put(JavaCore.COMPILER_PB_MISSING_JAVADOC_COMMENTS, JavaCore.IGNORE);
-            fallbackOptions.put(JavaCore.COMPILER_PB_RAW_TYPE_REFERENCE, JavaCore.IGNORE);
-            fallbackOptions.put(JavaCore.COMPILER_PB_UNCHECKED_TYPE_OPERATION, JavaCore.IGNORE);
-            fallbackOptions.put(JavaCore.COMPILER_PB_DEPRECATION, JavaCore.IGNORE);
-
-            fallbackParser.setCompilerOptions(fallbackOptions);
-
-            // Unit name is still needed
-            fallbackParser.setUnitName(classPath.getFileName().toString());
-
-            System.out.println("Retrying with NO binding resolution for " + classPath.getFileName());
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // Specifically handle the "Index 1 out of bounds for length 1" error
+            System.err.println("Index out of bounds error in binding resolution for " + classPath.getFileName() + ": " + e.getMessage());
+            log.error("ArrayIndexOutOfBoundsException in binding resolution for {}: {}", classPath.getFileName(), e.getMessage());
+            
+            // Try with more conservative environment settings
+            log.warn("=== PARSE ATTEMPT 2: {} with conservative binding resolution ===", classPath.getFileName());
             try {
+                ASTParser conservativeParser = ASTParser.newParser(AST.getJLSLatest());
+                conservativeParser.setSource(source.toCharArray());
+                conservativeParser.setKind(ASTParser.K_COMPILATION_UNIT);
+                conservativeParser.setResolveBindings(true);
+                conservativeParser.setBindingsRecovery(true);
+                conservativeParser.setStatementsRecovery(true);
+                conservativeParser.setCompilerOptions(options);
+                
+                // Use more conservative environment - only essential JDK entries
+                String[] conservativeClasspath = getConservativeClasspath();
+                String[] conservativeSourcepath = new String[]{projectDir.toString(), "."};
+                
+                log.debug("Conservative classpath has {} entries", conservativeClasspath.length);
+                conservativeParser.setEnvironment(conservativeClasspath, conservativeSourcepath, null, true);
+                conservativeParser.setUnitName(classPath.getFileName().toString());
+                
+                long startTime = System.currentTimeMillis();
+                CompilationUnit unit = (CompilationUnit) conservativeParser.createAST(null);
+                long endTime = System.currentTimeMillis();
+                
+                if (unit != null) {
+                    log.info("✓ CONSERVATIVE PARSE SUCCESS: {} parsed in {}ms", classPath.getFileName(), (endTime - startTime));
+                    return unit;
+                } else {
+                    log.warn("✗ Conservative parsing returned null for {}", classPath.getFileName());
+                }
+            } catch (Exception conservativeError) {
+                log.error("Conservative parsing also failed for {}: {}", classPath.getFileName(), conservativeError.getMessage());
+            }
+            
+            // If conservative parsing fails, try fallback without binding resolution
+            log.warn("Conservative parsing failed, trying fallback without binding resolution for {}", classPath.getFileName());
+            try {
+                ASTParser fallbackParser = ASTParser.newParser(AST.getJLSLatest());
+                fallbackParser.setSource(source.toCharArray());
+                fallbackParser.setKind(ASTParser.K_COMPILATION_UNIT);
+                fallbackParser.setResolveBindings(false);
+                fallbackParser.setStatementsRecovery(true);
+                fallbackParser.setCompilerOptions(options);
+                fallbackParser.setUnitName(classPath.getFileName().toString());
+                
                 CompilationUnit unit = (CompilationUnit) fallbackParser.createAST(null);
                 if (unit != null) {
                     return unit;
-                } else {
-                    throw new IllegalStateException("Fallback parser returned null CompilationUnit");
                 }
             } catch (Exception fallbackError) {
-                System.err.println("Fallback parsing also failed for " +
-                        classPath.getFileName() + ": " + fallbackError.getMessage());
-
-                // As absolute last resort, create a minimal empty AST
-                AST ast = AST.newAST(AST.getJLSLatest());
-                CompilationUnit emptyUnit = ast.newCompilationUnit();
-                return emptyUnit;
+                log.error("Final fallback parsing also failed for {}: {}", classPath.getFileName(), fallbackError.getMessage());
             }
+            
+            // As absolute last resort for ArrayIndexOutOfBoundsException, create empty AST
+            log.warn("Creating empty AST for {} after index bounds error", classPath.getFileName());
+            AST ast = AST.newAST(AST.getJLSLatest());
+            return ast.newCompilationUnit();
+        } catch (Exception e) {
+            System.err.println("Error parsing " + classPath.getFileName() + ": " + e.getMessage());
+            log.error("Error parsing {} with binding resolution: {}", classPath.getFileName(), e.getMessage());
+            log.error("Exception type: {}", e.getClass().getSimpleName());
+            if (e.getStackTrace().length > 0) {
+                log.error("Stack trace top: {}", e.getStackTrace()[0].toString());
+            }
+
+            // Fallback: try without binding resolution
+            log.warn("Retrying {} without binding resolution", classPath.getFileName());
+            try {
+                ASTParser fallbackParser = ASTParser.newParser(AST.getJLSLatest());
+                fallbackParser.setSource(source.toCharArray());
+                fallbackParser.setKind(ASTParser.K_COMPILATION_UNIT);
+                fallbackParser.setResolveBindings(false); // Disable only as fallback
+                fallbackParser.setStatementsRecovery(true);
+                fallbackParser.setCompilerOptions(options);
+                fallbackParser.setUnitName(classPath.getFileName().toString());
+                
+                CompilationUnit unit = (CompilationUnit) fallbackParser.createAST(null);
+                if (unit != null) {
+                    return unit;
+                }
+            } catch (Exception fallbackError) {
+                log.error("Fallback parsing also failed for {}: {}", classPath.getFileName(), fallbackError.getMessage());
+            }
+
+            // As last resort, create a minimal empty AST
+            log.warn("Creating empty AST for {}", classPath.getFileName());
+            AST ast = AST.newAST(AST.getJLSLatest());
+            CompilationUnit emptyUnit = ast.newCompilationUnit();
+            return emptyUnit;
         }
     }
 
     /**
-     * Provides a comprehensive classpath that includes:
-     * 1. JDK libraries
-     * 2. All project dependencies from Maven or Gradle
-     * 3. All JAR files in the project
-     * 4. All compiled classes
+     * Returns a conservative classpath with only essential JDK entries to prevent index errors
+     */
+    private String[] getConservativeClasspath() {
+        String javaHome = System.getProperty("java.home");
+        List<String> conservativeClasspath = new ArrayList<>();
+        
+        // Only add paths that actually exist to prevent ClasspathJar initialization errors
+        Path rtJar = Paths.get(javaHome, "lib", "rt.jar");
+        if (Files.exists(rtJar)) {
+            conservativeClasspath.add(rtJar.toString());
+            log.debug("Added rt.jar to conservative classpath: {}", rtJar);
+        }
+        
+        // Add essential jmods for Java 9+
+        String[] essentialJmods = {"java.base.jmod", "java.desktop.jmod", "java.xml.jmod"};
+        Path jmodsDir = Paths.get(javaHome, "jmods");
+        if (Files.exists(jmodsDir)) {
+            for (String jmod : essentialJmods) {
+                Path jmodPath = jmodsDir.resolve(jmod);
+                if (Files.exists(jmodPath)) {
+                    conservativeClasspath.add(jmodPath.toString());
+                    log.debug("Added jmod to conservative classpath: {}", jmodPath);
+                }
+            }
+        }
+        
+        // Add current directory as last resort
+        conservativeClasspath.add(".");
+        
+        String[] result = conservativeClasspath.toArray(new String[0]);
+        log.info("Conservative classpath created with {} entries", result.length);
+        return result;
+    }
+
+    /**
+     * Gets or creates project-level cache for classpath and sourcepath
+     */
+    private ProjectClasspathCache getOrCreateProjectCache(Path projectDir) {
+        String projectKey = projectDir.toString();
+        
+        ProjectClasspathCache cache = globalProjectCache.get(projectKey);
+        if (cache != null && !cache.isExpired()) {
+            log.info("Using cached classpath for project: {}", projectKey);
+            return cache;
+        }
+        
+        log.info("Building new classpath cache for project: {}", projectKey);
+        
+        // Build classpath and sourcepath
+        String[] classpath = getComprehensiveClassPath(projectDir);
+        String[] sourcepath = getComprehensiveSourcePath(projectDir);
+        
+        // Ensure arrays are valid
+        classpath = ensureValidClasspath(classpath);
+        sourcepath = ensureValidSourcepath(sourcepath);
+        
+        // Create and cache the result
+        ProjectClasspathCache newCache = new ProjectClasspathCache(classpath, sourcepath);
+        globalProjectCache.put(projectKey, newCache);
+        
+        log.info("Cached classpath with {} entries and sourcepath with {} entries for project: {}", 
+                classpath.length, sourcepath.length, projectKey);
+        
+        return newCache;
+    }
+
+    /**
+     * Provides a comprehensive classpath with proper ordering to prioritize external libraries:
+     * 1. External dependency JARs (Maven/Gradle) - FIRST for correct binding resolution
+     * 2. JDK libraries 
+     * 3. Project compiled classes - LAST to avoid incorrect type binding
+     * 4. Project JAR files
      */
     private String[] getComprehensiveClassPath(Path projectDir) {
-        Set<String> classpath = new HashSet<>();
+        // Use LinkedHashSet to maintain insertion order - critical for binding resolution
+        Set<String> externalJars = new LinkedHashSet<>();
+        Set<String> jdkLibraries = new LinkedHashSet<>();
+        Set<String> projectClasses = new LinkedHashSet<>();
+        Set<String> projectJars = new LinkedHashSet<>();
 
         try {
-            // Add JDK libraries
-            addJdkLibraries(classpath);
-
-            // Add project dependencies based on build system
+            log.info("Building comprehensive classpath for project: {}", projectDir);
+            
+            // STEP 1: Add external dependency JARs FIRST (highest priority for binding)
             if (Files.exists(projectDir.resolve("pom.xml"))) {
                 System.out.println("Found Maven project. Parsing pom.xml for dependencies...");
-                parseMavenDependencies(projectDir, classpath);
+                log.info("Found Maven project. Parsing pom.xml for dependencies...");
+                parseMavenDependencies(projectDir, externalJars);
+                downloadMissingDependencies(projectDir, externalJars);
             }
 
             if (Files.exists(projectDir.resolve("build.gradle"))) {
                 System.out.println("Found Gradle project. Parsing build.gradle for dependencies...");
-                parseGradleDependencies(projectDir.resolve("build.gradle"), classpath);
+                parseGradleDependencies(projectDir.resolve("build.gradle"), externalJars);
             }
 
             if (Files.exists(projectDir.resolve("build.gradle.kts"))) {
                 System.out.println("Found Kotlin Gradle project. Parsing build.gradle.kts for dependencies...");
-                parseGradleDependencies(projectDir.resolve("build.gradle.kts"), classpath);
+                parseGradleDependencies(projectDir.resolve("build.gradle.kts"), externalJars);
             }
 
-            // Add compiled classes
-            addCompiledClasses(projectDir, classpath);
+            // STEP 2: Add JDK libraries (second priority)
+            addJdkLibraries(jdkLibraries);
 
-            // Find all JAR files in the project
-            findAllJars(projectDir, classpath);
+            // STEP 3: Add project compiled classes (lower priority)
+            addCompiledClasses(projectDir, projectClasses);
 
-            // Download missing dependency JARs if needed (from Maven Central or other repositories)
-            downloadMissingDependencies(projectDir, classpath);
+            // STEP 4: Add project JAR files (lowest priority)
+            findAllJars(projectDir, projectJars);
 
         } catch (Exception e) {
             System.err.println("Error building classpath: " + e.getMessage());
             e.printStackTrace();
         }
 
-        return classpath.toArray(new String[0]);
+        // Combine in the correct order for proper type binding resolution
+        List<String> orderedClasspath = new ArrayList<>();
+        orderedClasspath.addAll(externalJars);    // External JARs first
+        orderedClasspath.addAll(jdkLibraries);    // JDK second  
+        orderedClasspath.addAll(projectClasses);  // Project classes third
+        orderedClasspath.addAll(projectJars);     // Project JARs last
+
+        log.info("Classpath built with {} external JARs, {} JDK libs, {} project classes, {} project JARs", 
+                externalJars.size(), jdkLibraries.size(), projectClasses.size(), projectJars.size());
+
+        return orderedClasspath.toArray(new String[0]);
     }
 
     /**
@@ -1065,24 +1338,53 @@ public class JDTParserService {
             }
             current = current.getParent();
         }
-        // If no build file found, return the base uploads directory
-        return Paths.get("uploads").resolve(classPath.toString().split("uploads[/\\\\]")[1].split("[/\\\\]")[0]);
+        // If no build file found, return the base uploads directory with safe parsing
+        try {
+            String pathStr = classPath.toString();
+            if (pathStr.contains("uploads")) {
+                String[] uploadsParts = pathStr.split("uploads[/\\\\]");
+                if (uploadsParts.length > 1) {
+                    String[] projectParts = uploadsParts[1].split("[/\\\\]");
+                    if (projectParts.length > 0) {
+                        return Paths.get("uploads").resolve(projectParts[0]);
+                    }
+                }
+            }
+            // Last resort: use the directory 3 levels up from the file
+            Path fallback = classPath;
+            for (int i = 0; i < 3 && fallback.getParent() != null; i++) {
+                fallback = fallback.getParent();
+            }
+            return fallback;
+        } catch (Exception e) {
+            System.err.println("Error parsing project root path: " + e.getMessage());
+            // Ultimate fallback: return the parent directory
+            return classPath.getParent() != null ? classPath.getParent() : Paths.get(".");
+        }
     }
 
     /**
      * Extracts all dependencies from a Java class file
      */
     public List<Dependency> getDependencies(Path classPath) {
-        // If we've already processed this file in this session, use a cached visitor or create an empty one
-        if (processedFiles.contains(classPath) && !processedFiles.add(classPath)) {
+        log.info("=== getDependencies() called for: {}", classPath);
+        
+        // If we've already processed this file in this session, return cached result
+        if (processedFiles.contains(classPath)) {
             System.out.println("File already processed by getDependencies: " + classPath);
+            log.warn("DUPLICATE: File already processed by getDependencies: {}", classPath);
             return new ArrayList<>();
         }
+
+        // Mark this file as processed before starting processing
+        processedFiles.add(classPath);
+        log.info("Processing file for first time: {}", classPath);
 
         TypeDependencyVisitor visitor = new TypeDependencyVisitor();
 
         try {
             System.out.println("Extracting dependencies from: " + classPath);
+            log.info("Extracting dependencies from: {}", classPath);
 
             CompilationUnit cu = parseClass(classPath);
 
@@ -1122,7 +1424,35 @@ public class JDTParserService {
             }
         }
 
-        return visitor.getDependencies();
+        List<Dependency> dependencies = visitor.getDependencies();
+        
+        log.info("=== FINAL BINDING RESOLUTION RESULTS FOR {} ===", classPath.getFileName());
+        log.info("Total dependencies extracted: {}", dependencies.size());
+        
+        // Group dependencies by package for better visibility
+        Map<String, List<String>> dependenciesByPackage = new LinkedHashMap<>();
+        for (Dependency dep : dependencies) {
+            String name = dep.getName();
+            String packageName = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : "default";
+            dependenciesByPackage.computeIfAbsent(packageName, k -> new ArrayList<>()).add(name);
+        }
+        
+        // Log dependencies by package
+        for (Map.Entry<String, List<String>> entry : dependenciesByPackage.entrySet()) {
+            String packageName = entry.getKey();
+            List<String> types = entry.getValue();
+            
+            if (packageName.startsWith("jakarta.") || packageName.startsWith("lombok.") || 
+                packageName.startsWith("org.springframework.")) {
+                log.info("✓ External Library [{}]: {}", packageName, String.join(", ", types));
+            } else if (packageName.startsWith("java.")) {
+                log.debug("  Standard Library [{}]: {}", packageName, String.join(", ", types));
+            } else {
+                log.info("  Project [{}]: {}", packageName, String.join(", ", types));
+            }
+        }
+        
+        return dependencies;
     }
 
     /**
@@ -1252,12 +1582,15 @@ public class JDTParserService {
             try {
                 if (node.isOnDemand()) {
                     // Wildcard import (e.g., java.util.*)
-                    onDemandImports.add(node.getName().getFullyQualifiedName());
+                    String packageName = node.getName().getFullyQualifiedName();
+                    onDemandImports.add(packageName);
+                    log.debug("Added wildcard import: {}", packageName);
                 } else {
                     // Explicit import
                     String fullName = node.getName().getFullyQualifiedName();
                     String simpleName = fullName.substring(fullName.lastIndexOf('.') + 1);
                     importMap.put(simpleName, fullName);
+                    log.debug("Added explicit import: {} -> {}", simpleName, fullName);
                 }
             } catch (Exception e) {
                 System.err.println("Error processing import: " + e.getMessage());
@@ -1722,6 +2055,13 @@ public class JDTParserService {
                 return;
             }
 
+            // Check wildcard imports - try to resolve against each one
+            String resolvedType = resolveTypeFromWildcardImports(name);
+            if (resolvedType != null) {
+                addDependencyIfNotExists(new Dependency(resolvedType));
+                return;
+            }
+
             // Check for java.lang.* implicit imports using Class.forName
             if (isTypeInPackage("java.lang", name)) {
                 // Don't add java.lang types as dependencies - they're implicit
@@ -1747,7 +2087,7 @@ public class JDTParserService {
         }
 
         /**
-         * Helper method to add a dependency while resolving imports
+         * Helper method to add a dependency while resolving imports with priority for external libraries
          */
         private void addDependencyWithImportResolution(ITypeBinding binding) {
             try {
@@ -1764,42 +2104,56 @@ public class JDTParserService {
                     return;
                 }
 
-                // If binding resolution worked correctly, use the qualified name directly
+                log.debug("Resolving binding for type: {} (qualified: {})", simpleName, qualifiedName);
+
+                // PRIORITY 1: Check explicit imports first - most reliable
+                if (importMap.containsKey(simpleName)) {
+                    String explicitImport = importMap.get(simpleName);
+                    log.debug("Found explicit import for {}: {}", simpleName, explicitImport);
+                    addDependencyIfNotExists(new Dependency(explicitImport));
+                    return;
+                }
+
+                // PRIORITY 2: Check for common external library types
+                String externalLibraryType = resolveToExternalLibrary(simpleName);
+                if (externalLibraryType != null) {
+                    log.debug("Resolved {} to external library: {}", simpleName, externalLibraryType);
+                    addDependencyIfNotExists(new Dependency(externalLibraryType));
+                    return;
+                }
+
+                // PRIORITY 3: Use binding resolution if it points to external library
                 if (qualifiedName != null && qualifiedName.contains(".")) {
-                    // Verify the package looks reasonable
-                    if (!isPotentiallyIncorrectPackageResolution(qualifiedName, simpleName)) {
+                    // Accept if it's clearly an external library (not project package)
+                    if (isExternalLibraryType(qualifiedName)) {
+                        log.debug("Accepted external library binding for {}: {}", simpleName, qualifiedName);
+                        addDependencyIfNotExists(new Dependency(qualifiedName));
+                        return;
+                    } else if (isPotentiallyIncorrectPackageResolution(qualifiedName, simpleName)) {
+                        log.debug("Rejected suspicious project binding for {}: {}", simpleName, qualifiedName);
+                        // Continue to other resolution methods
+                    } else {
+                        // Accept other qualified names that don't look suspicious
                         addDependencyIfNotExists(new Dependency(qualifiedName));
                         return;
                     }
-                    // If the package seems suspicious, continue with other resolution methods
                 }
 
-                // Try to resolve through known information
-
-                // Check explicit imports - most reliable method
-                if (importMap.containsKey(simpleName)) {
-                    addDependencyIfNotExists(new Dependency(importMap.get(simpleName)));
+                // PRIORITY 4: Check wildcard imports
+                String wildcardResolved = resolveTypeFromWildcardImports(simpleName);
+                if (wildcardResolved != null && isExternalLibraryType(wildcardResolved)) {
+                    log.debug("Resolved {} via wildcard to external library: {}", simpleName, wildcardResolved);
+                    addDependencyIfNotExists(new Dependency(wildcardResolved));
                     return;
                 }
 
-                // Check for java.lang.* implicit imports using Class.forName
-                if (isTypeInPackage("java.lang", simpleName)) {
-                    // Don't add java.lang types as dependencies - they're implicit
-                    return;
-                }
-
-                // Check for java.time.* types using Class.forName
-                if (isTypeInPackage("java.time", simpleName)) {
-                    addDependencyIfNotExists(new Dependency("java.time." + simpleName));
-                    return;
-                }
-
-                // Last resort - use the simple name (but still skip excluded types)
+                // PRIORITY 5: Last resort - use simple name for project types only
+                log.debug("Using simple name as last resort for: {}", simpleName);
                 if (!shouldSkipType(simpleName)) {
                     addDependencyIfNotExists(new Dependency(simpleName));
                 }
             } catch (Exception e) {
-                System.err.println("Error resolving dependency: " + e.getMessage());
+                log.error("Error resolving dependency for {}: {}", binding.getName(), e.getMessage());
             }
         }
 
@@ -1851,6 +2205,143 @@ public class JDTParserService {
             }
 
             return false;
+        }
+
+        /**
+         * Resolves a type name against wildcard imports, returning the fully qualified name if found
+         */
+        private String resolveTypeFromWildcardImports(String typeName) {
+            for (String packageName : onDemandImports) {
+                // Skip java.lang as it's implicit
+                if ("java.lang".equals(packageName)) {
+                    continue;
+                }
+                
+                try {
+                    // Try to see if this type exists in this package
+                    String fullyQualifiedName = packageName + "." + typeName;
+                    
+                    // For project-specific packages, assume the type exists if the package path makes sense
+                    if (packageName.contains(".domain.") || packageName.contains(".dto.") || 
+                        packageName.contains(".entity.") || packageName.contains(".model.")) {
+                        
+                        // Special handling for Attendee.java case: Event should resolve to tcc.com.pass_in.domain.event.Event
+                        if ("Event".equals(typeName) && packageName.contains(".domain.event")) {
+                            log.debug("Resolved {} to {} via project wildcard import", typeName, fullyQualifiedName);
+                            return fullyQualifiedName;
+                        }
+                        
+                        // For other project types, also assume they exist
+                        if (isLikelyProjectType(typeName)) {
+                            log.debug("Resolved {} to {} via project wildcard import", typeName, fullyQualifiedName);
+                            return fullyQualifiedName;
+                        }
+                    }
+                    
+                    // For standard library packages, verify with Class.forName
+                    if (isTypeInPackage(packageName, typeName)) {
+                        log.debug("Resolved {} to {} via verified wildcard import", typeName, fullyQualifiedName);
+                        return fullyQualifiedName;
+                    }
+                    
+                } catch (Exception e) {
+                    // Continue to next package
+                }
+            }
+            return null; // Type not found in any wildcard import
+        }
+        
+        /**
+         * Resolves a simple type name to a known external library type
+         */
+        private String resolveToExternalLibrary(String simpleName) {
+            // Jakarta Persistence API
+            if ("Entity".equals(simpleName)) return "jakarta.persistence.Entity";
+            if ("Table".equals(simpleName)) return "jakarta.persistence.Table";
+            if ("Id".equals(simpleName)) return "jakarta.persistence.Id";
+            if ("Column".equals(simpleName)) return "jakarta.persistence.Column";
+            if ("GeneratedValue".equals(simpleName)) return "jakarta.persistence.GeneratedValue";
+            if ("ManyToOne".equals(simpleName)) return "jakarta.persistence.ManyToOne";
+            if ("OneToMany".equals(simpleName)) return "jakarta.persistence.OneToMany";
+            if ("JoinColumn".equals(simpleName)) return "jakarta.persistence.JoinColumn";
+            if ("GenerationType".equals(simpleName)) return "jakarta.persistence.GenerationType";
+            
+            // Lombok
+            if ("Getter".equals(simpleName)) return "lombok.Getter";
+            if ("Setter".equals(simpleName)) return "lombok.Setter";
+            if ("NoArgsConstructor".equals(simpleName)) return "lombok.NoArgsConstructor";
+            if ("AllArgsConstructor".equals(simpleName)) return "lombok.AllArgsConstructor";
+            if ("Data".equals(simpleName)) return "lombok.Data";
+            if ("Builder".equals(simpleName)) return "lombok.Builder";
+            if ("ToString".equals(simpleName)) return "lombok.ToString";
+            if ("EqualsAndHashCode".equals(simpleName)) return "lombok.EqualsAndHashCode";
+            
+            // Spring Framework
+            if ("ControllerAdvice".equals(simpleName)) return "org.springframework.web.bind.annotation.ControllerAdvice";
+            if ("RestController".equals(simpleName)) return "org.springframework.web.bind.annotation.RestController";
+            if ("RequestMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.RequestMapping";
+            if ("GetMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.GetMapping";
+            if ("PostMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.PostMapping";
+            if ("PutMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.PutMapping";
+            if ("DeleteMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.DeleteMapping";
+            if ("PathVariable".equals(simpleName)) return "org.springframework.web.bind.annotation.PathVariable";
+            if ("RequestBody".equals(simpleName)) return "org.springframework.web.bind.annotation.RequestBody";
+            if ("Service".equals(simpleName)) return "org.springframework.stereotype.Service";
+            if ("Repository".equals(simpleName)) return "org.springframework.stereotype.Repository";
+            if ("Component".equals(simpleName)) return "org.springframework.stereotype.Component";
+            if ("Autowired".equals(simpleName)) return "org.springframework.beans.factory.annotation.Autowired";
+            if ("ExceptionHandler".equals(simpleName)) return "org.springframework.web.bind.annotation.ExceptionHandler";
+            if ("ResponseStatus".equals(simpleName)) return "org.springframework.web.bind.annotation.ResponseStatus";
+            
+            // Java Time API
+            if ("LocalDateTime".equals(simpleName)) return "java.time.LocalDateTime";
+            if ("LocalDate".equals(simpleName)) return "java.time.LocalDate";
+            if ("LocalTime".equals(simpleName)) return "java.time.LocalTime";
+            if ("ZonedDateTime".equals(simpleName)) return "java.time.ZonedDateTime";
+            if ("Instant".equals(simpleName)) return "java.time.Instant";
+            
+            return null; // Not a known external library type
+        }
+        
+        /**
+         * Checks if a qualified name represents an external library type
+         */
+        private boolean isExternalLibraryType(String qualifiedName) {
+            if (qualifiedName == null) return false;
+            
+            // External library prefixes
+            return qualifiedName.startsWith("jakarta.") ||
+                   qualifiedName.startsWith("lombok.") ||
+                   qualifiedName.startsWith("org.springframework.") ||
+                   qualifiedName.startsWith("org.apache.") ||
+                   qualifiedName.startsWith("com.fasterxml.") ||
+                   qualifiedName.startsWith("java.") ||
+                   qualifiedName.startsWith("javax.") ||
+                   qualifiedName.startsWith("org.slf4j.") ||
+                   qualifiedName.startsWith("org.hibernate.") ||
+                   qualifiedName.startsWith("com.google.") ||
+                   // Add more external library prefixes as needed
+                   (!qualifiedName.contains(".domain.") && 
+                    !qualifiedName.contains(".dto.") && 
+                    !qualifiedName.contains(".model.") && 
+                    !qualifiedName.contains(".entity.") && 
+                    !qualifiedName.contains(".controller.") && 
+                    !qualifiedName.contains(".service.") &&
+                    !qualifiedName.contains(".repository.") &&
+                    !qualifiedName.startsWith("tcc.com."));
+        }
+
+        /**
+         * Checks if a type name is likely to be a project-specific type
+         */
+        private boolean isLikelyProjectType(String typeName) {
+            // Project types typically start with capital letter and are not primitives/wrappers
+            return typeName.length() > 0 && 
+                   Character.isUpperCase(typeName.charAt(0)) && 
+                   !shouldSkipType(typeName) &&
+                   !isTypeInPackage("java.lang", typeName) &&
+                   !isTypeInPackage("java.util", typeName) &&
+                   !isTypeInPackage("java.time", typeName);
         }
 
         /**

@@ -1,5 +1,6 @@
 package tcc.com.viewer.services;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
@@ -19,6 +20,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ModuleService {
     private final List<Module> modules = new ArrayList<>();
@@ -39,9 +41,13 @@ public class ModuleService {
             throw new IllegalArgumentException("Modules list cannot be null");
         }
 
+        System.out.println("MODULOS ANTES DE SALVAR --> " + modulesList);
+        log.info("Modules before saving it: {}", modulesList);
         File file = new File("modules.bin");
         try (ObjectOutputStream objectOutput = new ObjectOutputStream(new FileOutputStream(file))) {
             objectOutput.writeObject(modulesList);
+            System.out.println("MODULOS DEPOIS DE SALVAR --> " + getModulesFromFile());
+            log.info("Modules after saving it: {}", modulesList);
         } catch (IOException e) {
             throw new RuntimeException("Error saving modules to file: " + e.getMessage(), e);
         }
@@ -68,6 +74,35 @@ public class ModuleService {
         return UUID.randomUUID().toString();
     }
 
+    /**
+     * Generates a deterministic UUID based on a string input to prevent duplicate modules
+     */
+    private String generateDeterministicUUID(String input) {
+        try {
+            // Use a hash of the input string to generate a consistent UUID
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] hash = md.digest(input.getBytes("UTF-8"));
+            
+            // Convert the hash bytes to a UUID format
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            
+            String hashString = sb.toString();
+            // Format as UUID: 8-4-4-4-12
+            return String.format("%s-%s-%s-%s-%s",
+                hashString.substring(0, 8),
+                hashString.substring(8, 12),
+                hashString.substring(12, 16),
+                hashString.substring(16, 20),
+                hashString.substring(20, 32));
+        } catch (Exception e) {
+            // Fallback to random UUID if hashing fails
+            return UUID.randomUUID().toString();
+        }
+    }
+
     public void calculateClassSimilarities(Module module) {
         List<Clazz> clazzes = List.of(module.getClazzes());
 
@@ -82,7 +117,7 @@ public class ModuleService {
                 clazz.setSimilarity(totalSimilarity / (clazzes.size() - 1));
             }
         } else if (clazzes.size() == 1) {
-            Clazz clazz = clazzes.getFirst();
+            Clazz clazz = clazzes.get(0);
             clazz.setSimilarity(1.0);
         }
 
@@ -207,6 +242,23 @@ public class ModuleService {
         return lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
     }
 
+    /**
+     * Checks if a directory is a leaf directory that directly contains Java files
+     * (not just subdirectories)
+     */
+    private boolean isLeafDirectoryWithJavaFiles(Path directory) {
+        try {
+            // Check if this directory directly contains Java files
+            boolean hasJavaFiles = Files.list(directory)
+                    .filter(Files::isRegularFile)
+                    .anyMatch(path -> path.toString().toLowerCase().endsWith(".java"));
+
+            return hasJavaFiles;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     public List<Module> getModules(String projectDirectory) throws IOException {
         Path srcPath = Paths.get(projectDirectory, "src"); // Start from 'src' directory
         if (!Files.exists(srcPath) || !Files.isDirectory(srcPath)) {
@@ -216,24 +268,38 @@ public class ModuleService {
         // Clear existing modules
         this.modules.clear();
 
-        // Find all directories that might contain source files
+        // Find only leaf directories that actually contain Java files (not intermediate directories)
         Files.walk(srcPath)
                 .filter(Files::isDirectory)
+                .filter(this::isLeafDirectoryWithJavaFiles) // Only process directories that directly contain Java files
                 .forEach(modulePath -> {
                     try {
                         List<Clazz> clazzes = getClazzes(modulePath);
                         if (!clazzes.isEmpty()) {
                             // Determine module name based on directory structure
                             String moduleName = modulePath.getParent().getFileName().toString() + '/' + modulePath.getFileName().toString();
-                            Module module = new Module(
-                                    generateNewUUID(),
-                                    moduleName,
-                                    null, // refClazzes will be calculated later
-                                    clazzes.toArray(new Clazz[0]),
-                                    new Dependency[0], // Dependencies will be calculated later
-                                    0.0 // Similarity will be calculated later
-                            );
-                            this.modules.add(module);
+                            
+                            // Generate deterministic UUID based on module path to prevent duplicates
+                            String moduleId = generateDeterministicUUID(modulePath.toString());
+                            
+                            // Check if module already exists to prevent duplicates
+                            boolean moduleExists = this.modules.stream()
+                                    .anyMatch(existingModule -> existingModule.getId().equals(moduleId));
+                            
+                            if (!moduleExists) {
+                                Module module = new Module(
+                                        moduleId,
+                                        moduleName,
+                                        null, // refClazzes will be calculated later
+                                        clazzes.toArray(new Clazz[0]),
+                                        new Dependency[0], // Dependencies will be calculated later
+                                        0.0 // Similarity will be calculated later
+                                );
+                                this.modules.add(module);
+                                log.info("Added new module: {} with ID: {}", moduleName, moduleId);
+                            } else {
+                                log.warn("Module already exists, skipping: {} with ID: {}", moduleName, moduleId);
+                            }
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -244,6 +310,9 @@ public class ModuleService {
     }
 
     public List<ModuleDTO> analyze(String directoryPath) throws IOException {
+        // Clear parser cache for fresh analysis to prevent duplicate processing
+        parserFactory.clearProcessingCache();
+
         List<Module> modules = this.getModules(directoryPath);
 
         for (Module module : modules) {

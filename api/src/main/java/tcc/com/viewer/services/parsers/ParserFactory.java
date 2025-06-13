@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ParserFactory {
 
     private final Map<String, LanguageParser> parsers = new ConcurrentHashMap<>();
+    private final JDTParserService jdtParserService = new JDTParserService();
 
     // Default constructor for Spring
     public ParserFactory() {
@@ -63,11 +64,18 @@ public class ParserFactory {
         }
         
         if (filePathStr.endsWith(".java")) {
-            JavaParser javaParser = new JavaParser(new JDTParserService());
+            JavaParser javaParser = new JavaParser(jdtParserService);
             registerParser(javaParser);
             return javaParser;
         }
 
         throw new UnsupportedOperationException("No parser available for file: " + filePath);
+    }
+    
+    /**
+     * Clears the processing cache for fresh analysis
+     */
+    public void clearProcessingCache() {
+        jdtParserService.clearProcessedFilesCache();
     }
 }
