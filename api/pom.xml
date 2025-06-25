@@ -94,36 +94,36 @@
         <!--            <artifactId>org.eclipse.core.runtime</artifactId>-->
         <!--            <version>3.24.100</version>-->
         <!--        </dependency>-->
-        <!-- Make sure to use these exact compatible dependencies -->
-        <!-- Core Eclipse JDT dependencies - add these to your pom.xml -->
+        <!-- Latest Eclipse JDT dependencies for better Java 17+ support and binding resolution -->
+        <!-- Core Eclipse JDT dependencies - upgraded to latest versions -->
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>org.eclipse.jdt.core</artifactId>
-            <version>3.33.0</version>
+            <version>3.38.0</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.equinox.common</artifactId>
-            <version>3.16.200</version>
+            <version>3.18.200</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.core.contenttype</artifactId>
-            <version>3.8.200</version>
+            <version>3.9.200</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.core.jobs</artifactId>
-            <version>3.13.200</version>
+            <version>3.15.200</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.core.runtime</artifactId>
-            <version>3.26.100</version>
+            <version>3.29.0</version>
         </dependency>
 
         <!-- Maven Resolver API for dependency resolution -->
