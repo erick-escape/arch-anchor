@@ -21,6 +21,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -35,13 +36,13 @@ public class JDTParserService {
     // Cache for classpath and sourcepath to avoid recalculating for each file
     private final Map<Path, String[]> projectClasspathCache = new HashMap<>();
     private final Map<Path, String[]> projectSourcepathCache = new HashMap<>();
-    
+
     // Project-level classpath cache to avoid Maven calls per file
     private final Map<String, ProjectClasspathCache> globalProjectCache = new HashMap<>();
 
     // Set to track files that have been processed to avoid duplicate processing
     private final Set<Path> processedFiles = new HashSet<>();
-    
+
     /**
      * Cache structure for project-level classpath information
      */
@@ -49,13 +50,13 @@ public class JDTParserService {
         final String[] classpath;
         final String[] sourcepath;
         final long timestamp;
-        
+
         ProjectClasspathCache(String[] classpath, String[] sourcepath) {
             this.classpath = classpath;
             this.sourcepath = sourcepath;
             this.timestamp = System.currentTimeMillis();
         }
-        
+
         boolean isExpired() {
             // Cache expires after 5 minutes
             return System.currentTimeMillis() - timestamp > 300000;
@@ -75,75 +76,176 @@ public class JDTParserService {
     }
 
     /**
-     * Ensures classpath has minimum required entries for JDT binding resolution
-     */
-    private String[] ensureMinimumClasspathEntries(String[] classpath) {
-        if (classpath == null || classpath.length == 0) {
-            // Return a minimal classpath with just the JDK
-            String javaHome = System.getProperty("java.home");
-            return new String[]{
-                javaHome + "/lib/rt.jar", // For Java 8 and earlier
-                javaHome + "/jmods/java.base.jmod" // For Java 9+
-            };
-        }
-        
-        // Ensure we have at least 2 entries (JDT seems to expect this)
-        if (classpath.length == 1) {
-            String javaHome = System.getProperty("java.home");
-            return new String[]{
-                classpath[0],
-                javaHome + "/jmods/java.base.jmod"
-            };
-        }
-        
-        return classpath;
-    }
-
-    /**
-     * Ensures sourcepath has minimum required entries for JDT binding resolution
-     */
-    private String[] ensureMinimumSourcepathEntries(String[] sourcepath) {
-        if (sourcepath == null || sourcepath.length == 0) {
-            // Return at least the current directory
-            return new String[]{".", "src"};
-        }
-        
-        // Ensure we have at least 2 entries
-        if (sourcepath.length == 1) {
-            return new String[]{
-                sourcepath[0],
-                "."
-            };
-        }
-        
-        return sourcepath;
-    }
-
-    /**
      * Ensures classpath is valid and prevents index out of bounds errors
      */
     private String[] ensureValidClasspath(String[] classpath) {
         if (classpath == null || classpath.length == 0) {
-            // Provide minimal valid classpath
-            String javaHome = System.getProperty("java.home");
-            return new String[]{
-                javaHome + "/lib/rt.jar", // Java 8 and earlier
-                javaHome + "/jmods/java.base.jmod", // Java 9+
-                "." // Current directory
-            };
+            // Provide minimal valid classpath with JDT-safe entries
+            return getMinimumJdtCompatibleClasspath();
         }
-        
-        // Filter out null or empty entries that cause index errors
-        return Arrays.stream(classpath)
+
+        // Don't filter out non-existent entries - JDT needs them for binding resolution
+        // Only filter out null or empty entries
+        List<String> validEntries = Arrays.stream(classpath)
                 .filter(entry -> entry != null && !entry.trim().isEmpty())
-                .filter(entry -> {
-                    try {
-                        return Files.exists(Paths.get(entry)) || entry.equals(".");
-                    } catch (Exception e) {
-                        return false;
-                    }
-                })
-                .toArray(String[]::new);
+                .collect(Collectors.toList());
+
+        // Ensure we have minimum entries for JDT binding resolution
+        if (validEntries.size() < 3) {
+            String[] minimumClasspath = getMinimumJdtCompatibleClasspath();
+            for (String entry : minimumClasspath) {
+                if (!validEntries.contains(entry)) {
+                    validEntries.add(entry);
+                }
+            }
+        }
+
+        return validEntries.toArray(new String[0]);
+    }
+
+    /**
+     * Provides minimum classpath entries that JDT binding resolution can safely traverse
+     */
+    private String[] getMinimumJdtCompatibleClasspath() {
+        String javaHome = System.getProperty("java.home");
+        List<String> entries = new ArrayList<>();
+
+        // PRIORITY 1: Add comprehensive JDK libraries for Java standard library resolution
+        // Java 9+ modular JDK
+        entries.add(javaHome + "/jmods/java.base.jmod");
+        entries.add(javaHome + "/jmods/java.logging.jmod");
+        entries.add(javaHome + "/jmods/java.datatransfer.jmod");
+        entries.add(javaHome + "/jmods/java.desktop.jmod");
+        entries.add(javaHome + "/jmods/java.instrument.jmod");
+        entries.add(javaHome + "/jmods/java.management.jmod");
+        entries.add(javaHome + "/jmods/java.prefs.jmod");
+        entries.add(javaHome + "/jmods/java.rmi.jmod");
+        entries.add(javaHome + "/jmods/java.security.jgss.jmod");
+        entries.add(javaHome + "/jmods/java.security.sasl.jmod");
+        entries.add(javaHome + "/jmods/java.sql.jmod");
+        entries.add(javaHome + "/jmods/java.naming.jmod");
+        entries.add(javaHome + "/jmods/java.net.http.jmod");
+        entries.add(javaHome + "/jmods/java.xml.jmod");
+
+        // Java 8 fallback (rt.jar contains all standard library classes)
+        entries.add(javaHome + "/lib/rt.jar");
+        entries.add(javaHome + "/lib/jce.jar");
+        entries.add(javaHome + "/lib/jsse.jar");
+
+        // PRIORITY 2: Add current directory for project classes
+        entries.add(".");
+
+        // PRIORITY 3: Add essential Spring Boot libraries paths (placeholder for JDT traversal)
+        String userHome = System.getProperty("user.home");
+        String m2Repo = userHome + "/.m2/repository";
+        entries.add(m2Repo + "/org/springframework/boot/spring-boot/3.3.4/spring-boot-3.3.4.jar");
+        entries.add(m2Repo + "/org/springframework/spring-core/6.1.13/spring-core-6.1.13.jar");
+        entries.add(m2Repo + "/org/springframework/spring-web/6.1.13/spring-web-6.1.13.jar");
+        entries.add(m2Repo + "/jakarta/persistence/jakarta.persistence-api/3.1.0/jakarta.persistence-api-3.1.0.jar");
+
+        log.debug("Created minimum JDT-compatible classpath with {} entries", entries.size());
+        return entries.toArray(new String[0]);
+    }
+
+    /**
+     * Adds essential Spring Boot dependencies needed for proper type binding resolution
+     */
+    private void addEssentialSpringBootDependencies(Path projectDir, Set<String> classpath) {
+        try {
+            String springBootVersion = extractSpringBootVersionFromPom(projectDir);
+            if (springBootVersion == null) {
+                springBootVersion = "3.3.4"; // Default fallback
+            }
+
+            log.info("Adding essential Spring Boot {} dependencies for binding resolution", springBootVersion);
+
+            // Get the Maven repository path
+            String userHome = System.getProperty("user.home");
+            Path m2Repo = Paths.get(userHome, ".m2", "repository");
+
+            // Core Spring Boot dependencies
+            addMavenJarToClasspath(m2Repo, "org/springframework/boot", "spring-boot", springBootVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework/boot", "spring-boot-autoconfigure", springBootVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework/boot", "spring-boot-starter", springBootVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework/boot", "spring-boot-starter-web", springBootVersion, classpath);
+
+            // Determine Spring Framework version based on Spring Boot version
+            String springVersion = getSpringVersionForSpringBoot(springBootVersion);
+
+            // Core Spring Framework dependencies
+            addMavenJarToClasspath(m2Repo, "org/springframework", "spring-core", springVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework", "spring-context", springVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework", "spring-beans", springVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework", "spring-web", springVersion, classpath);
+            addMavenJarToClasspath(m2Repo, "org/springframework", "spring-webmvc", springVersion, classpath);
+
+            // Jakarta EE dependencies (Spring Boot 3.x uses Jakarta instead of javax)
+            if (springBootVersion.startsWith("3.")) {
+                addMavenJarToClasspath(m2Repo, "jakarta/persistence", "jakarta.persistence-api", "3.1.0", classpath);
+                addMavenJarToClasspath(m2Repo, "jakarta/servlet", "jakarta.servlet-api", "6.0.0", classpath);
+            }
+
+            // Lombok dependency
+            addMavenJarToClasspath(m2Repo, "org/projectlombok", "lombok", "1.18.28", classpath);
+
+            log.info("Added {} essential Spring Boot dependencies", classpath.size());
+
+        } catch (Exception e) {
+            log.warn("Failed to add essential Spring Boot dependencies: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Extracts Spring Boot version from the project's pom.xml
+     */
+    private String extractSpringBootVersionFromPom(Path projectDir) {
+        try {
+            Path pomFile = projectDir.resolve("pom.xml");
+            if (!Files.exists(pomFile)) {
+                return null;
+            }
+
+            String pomContent = Files.readString(pomFile);
+
+            // Look for Spring Boot starter parent version
+            if (pomContent.contains("spring-boot-starter-parent")) {
+                // Extract version from parent declaration
+                Pattern parentVersionPattern = Pattern.compile(
+                        "<parent>.*?<groupId>org\\.springframework\\.boot</groupId>.*?" +
+                                "<artifactId>spring-boot-starter-parent</artifactId>.*?" +
+                                "<version>([^<]+)</version>.*?</parent>",
+                        Pattern.DOTALL
+                );
+                Matcher matcher = parentVersionPattern.matcher(pomContent);
+                if (matcher.find()) {
+                    return matcher.group(1);
+                }
+            }
+
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to extract Spring Boot version: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Maps Spring Boot version to corresponding Spring Framework version
+     */
+    private String getSpringVersionForSpringBoot(String springBootVersion) {
+        if (springBootVersion.startsWith("3.3")) {
+            return "6.1.13";
+        } else if (springBootVersion.startsWith("3.2")) {
+            return "6.1.0";
+        } else if (springBootVersion.startsWith("3.1")) {
+            return "6.0.9";
+        } else if (springBootVersion.startsWith("3.0")) {
+            return "6.0.0";
+        } else if (springBootVersion.startsWith("2.")) {
+            return "5.3.21";
+        } else {
+            return "6.1.13"; // Default to latest
+        }
     }
 
     /**
@@ -153,7 +255,7 @@ public class JDTParserService {
         if (sourcepath == null || sourcepath.length == 0) {
             return new String[]{".", "src"};
         }
-        
+
         // Filter out null or empty entries that cause index errors
         String[] validEntries = Arrays.stream(sourcepath)
                 .filter(entry -> entry != null && !entry.trim().isEmpty())
@@ -165,12 +267,12 @@ public class JDTParserService {
                     }
                 })
                 .toArray(String[]::new);
-        
+
         // Ensure we have at least one valid entry
         if (validEntries.length == 0) {
             return new String[]{"."};
         }
-        
+
         return validEntries;
     }
 
@@ -193,7 +295,7 @@ public class JDTParserService {
 
         // Set up compiler options with more lenient settings
         Map<String, String> options = JavaCore.getOptions();
-        JavaCore.setComplianceOptions(JavaCore.VERSION_19, options); // Adjust version as needed
+        JavaCore.setComplianceOptions(JavaCore.VERSION_17, options); // Use Java 17 for better compatibility
 
         // Configure error handling to be more tolerant
         options.put(JavaCore.COMPILER_PB_UNUSED_IMPORT, JavaCore.IGNORE);
@@ -214,14 +316,13 @@ public class JDTParserService {
         String[] classpath = projectCache.classpath.clone(); // Clone to avoid modification
         String[] sourcepath = projectCache.sourcepath.clone();
 
-        // Apply additional validation to prevent index out of bounds errors
-        classpath = ensureMinimumClasspathEntries(classpath);
-        sourcepath = ensureMinimumSourcepathEntries(sourcepath);
+        // Classpath and sourcepath are already validated in getOrCreateProjectCache
+        // No additional processing needed here
 
         log.info("=== CLASSPATH INITIALIZATION FOR {} ===", classPath.getFileName());
         log.info("Classpath entries: {}", classpath.length);
         log.info("Sourcepath entries: {}", sourcepath.length);
-        
+
         // Log first few classpath entries for debugging
         for (int i = 0; i < Math.min(5, classpath.length); i++) {
             log.debug("CP[{}]: {}", i, classpath[i]);
@@ -229,13 +330,13 @@ public class JDTParserService {
         if (classpath.length > 5) {
             log.debug("... and {} more classpath entries", classpath.length - 5);
         }
-        
+
         // Always set environment with validated arrays to ensure consistent binding resolution
         parser.setEnvironment(classpath, sourcepath, null, true);
         log.debug("JDT environment configured successfully");
-        
+
         parser.setUnitName(classPath.getFileName().toString());
-        
+
         log.info("Parsing {} with binding resolution enabled", classPath.getFileName());
 
         try {
@@ -243,24 +344,24 @@ public class JDTParserService {
             long startTime = System.currentTimeMillis();
             CompilationUnit unit = (CompilationUnit) parser.createAST(null);
             long endTime = System.currentTimeMillis();
-            
+
             // Avoid returning null which could cause NPEs later
             if (unit != null) {
-                log.info("✓ PARSE SUCCESS: {} parsed in {}ms with {} imports", 
-                    classPath.getFileName(), (endTime - startTime), unit.imports().size());
-                
+                log.info("✓ PARSE SUCCESS: {} parsed in {}ms with {} imports",
+                        classPath.getFileName(), (endTime - startTime), unit.imports().size());
+
                 // Log import details for debugging binding resolution
                 if (unit.imports().size() > 0) {
                     log.debug("Imports found:");
                     for (Object imp : unit.imports()) {
                         if (imp instanceof ImportDeclaration) {
                             ImportDeclaration importDecl = (ImportDeclaration) imp;
-                            log.debug("  - {} {}", importDecl.getName().getFullyQualifiedName(), 
-                                importDecl.isOnDemand() ? "(wildcard)" : "");
+                            log.debug("  - {} {}", importDecl.getName().getFullyQualifiedName(),
+                                    importDecl.isOnDemand() ? "(wildcard)" : "");
                         }
                     }
                 }
-                
+
                 return unit;
             } else {
                 throw new IllegalStateException("Parser returned null CompilationUnit");
@@ -269,7 +370,7 @@ public class JDTParserService {
             // Specifically handle the "Index 1 out of bounds for length 1" error
             System.err.println("Index out of bounds error in binding resolution for " + classPath.getFileName() + ": " + e.getMessage());
             log.error("ArrayIndexOutOfBoundsException in binding resolution for {}: {}", classPath.getFileName(), e.getMessage());
-            
+
             // Try with more conservative environment settings
             log.warn("=== PARSE ATTEMPT 2: {} with conservative binding resolution ===", classPath.getFileName());
             try {
@@ -280,19 +381,19 @@ public class JDTParserService {
                 conservativeParser.setBindingsRecovery(true);
                 conservativeParser.setStatementsRecovery(true);
                 conservativeParser.setCompilerOptions(options);
-                
+
                 // Use more conservative environment - only essential JDK entries
                 String[] conservativeClasspath = getConservativeClasspath();
                 String[] conservativeSourcepath = new String[]{projectDir.toString(), "."};
-                
+
                 log.debug("Conservative classpath has {} entries", conservativeClasspath.length);
                 conservativeParser.setEnvironment(conservativeClasspath, conservativeSourcepath, null, true);
                 conservativeParser.setUnitName(classPath.getFileName().toString());
-                
+
                 long startTime = System.currentTimeMillis();
                 CompilationUnit unit = (CompilationUnit) conservativeParser.createAST(null);
                 long endTime = System.currentTimeMillis();
-                
+
                 if (unit != null) {
                     log.info("✓ CONSERVATIVE PARSE SUCCESS: {} parsed in {}ms", classPath.getFileName(), (endTime - startTime));
                     return unit;
@@ -302,7 +403,7 @@ public class JDTParserService {
             } catch (Exception conservativeError) {
                 log.error("Conservative parsing also failed for {}: {}", classPath.getFileName(), conservativeError.getMessage());
             }
-            
+
             // If conservative parsing fails, try fallback without binding resolution
             log.warn("Conservative parsing failed, trying fallback without binding resolution for {}", classPath.getFileName());
             try {
@@ -313,7 +414,7 @@ public class JDTParserService {
                 fallbackParser.setStatementsRecovery(true);
                 fallbackParser.setCompilerOptions(options);
                 fallbackParser.setUnitName(classPath.getFileName().toString());
-                
+
                 CompilationUnit unit = (CompilationUnit) fallbackParser.createAST(null);
                 if (unit != null) {
                     return unit;
@@ -321,7 +422,7 @@ public class JDTParserService {
             } catch (Exception fallbackError) {
                 log.error("Final fallback parsing also failed for {}: {}", classPath.getFileName(), fallbackError.getMessage());
             }
-            
+
             // As absolute last resort for ArrayIndexOutOfBoundsException, create empty AST
             log.warn("Creating empty AST for {} after index bounds error", classPath.getFileName());
             AST ast = AST.newAST(AST.getJLSLatest());
@@ -344,7 +445,7 @@ public class JDTParserService {
                 fallbackParser.setStatementsRecovery(true);
                 fallbackParser.setCompilerOptions(options);
                 fallbackParser.setUnitName(classPath.getFileName().toString());
-                
+
                 CompilationUnit unit = (CompilationUnit) fallbackParser.createAST(null);
                 if (unit != null) {
                     return unit;
@@ -367,14 +468,14 @@ public class JDTParserService {
     private String[] getConservativeClasspath() {
         String javaHome = System.getProperty("java.home");
         List<String> conservativeClasspath = new ArrayList<>();
-        
+
         // Only add paths that actually exist to prevent ClasspathJar initialization errors
         Path rtJar = Paths.get(javaHome, "lib", "rt.jar");
         if (Files.exists(rtJar)) {
             conservativeClasspath.add(rtJar.toString());
             log.debug("Added rt.jar to conservative classpath: {}", rtJar);
         }
-        
+
         // Add essential jmods for Java 9+
         String[] essentialJmods = {"java.base.jmod", "java.desktop.jmod", "java.xml.jmod"};
         Path jmodsDir = Paths.get(javaHome, "jmods");
@@ -387,10 +488,10 @@ public class JDTParserService {
                 }
             }
         }
-        
+
         // Add current directory as last resort
         conservativeClasspath.add(".");
-        
+
         String[] result = conservativeClasspath.toArray(new String[0]);
         log.info("Conservative classpath created with {} entries", result.length);
         return result;
@@ -401,37 +502,37 @@ public class JDTParserService {
      */
     private ProjectClasspathCache getOrCreateProjectCache(Path projectDir) {
         String projectKey = projectDir.toString();
-        
+
         ProjectClasspathCache cache = globalProjectCache.get(projectKey);
         if (cache != null && !cache.isExpired()) {
             log.info("Using cached classpath for project: {}", projectKey);
             return cache;
         }
-        
+
         log.info("Building new classpath cache for project: {}", projectKey);
-        
+
         // Build classpath and sourcepath
         String[] classpath = getComprehensiveClassPath(projectDir);
         String[] sourcepath = getComprehensiveSourcePath(projectDir);
-        
+
         // Ensure arrays are valid
         classpath = ensureValidClasspath(classpath);
         sourcepath = ensureValidSourcepath(sourcepath);
-        
+
         // Create and cache the result
         ProjectClasspathCache newCache = new ProjectClasspathCache(classpath, sourcepath);
         globalProjectCache.put(projectKey, newCache);
-        
-        log.info("Cached classpath with {} entries and sourcepath with {} entries for project: {}", 
+
+        log.info("Cached classpath with {} entries and sourcepath with {} entries for project: {}",
                 classpath.length, sourcepath.length, projectKey);
-        
+
         return newCache;
     }
 
     /**
      * Provides a comprehensive classpath with proper ordering to prioritize external libraries:
      * 1. External dependency JARs (Maven/Gradle) - FIRST for correct binding resolution
-     * 2. JDK libraries 
+     * 2. JDK libraries
      * 3. Project compiled classes - LAST to avoid incorrect type binding
      * 4. Project JAR files
      */
@@ -444,12 +545,13 @@ public class JDTParserService {
 
         try {
             log.info("Building comprehensive classpath for project: {}", projectDir);
-            
+
             // STEP 1: Add external dependency JARs FIRST (highest priority for binding)
             if (Files.exists(projectDir.resolve("pom.xml"))) {
                 System.out.println("Found Maven project. Parsing pom.xml for dependencies...");
                 log.info("Found Maven project. Parsing pom.xml for dependencies...");
                 parseMavenDependencies(projectDir, externalJars);
+                addEssentialSpringBootDependencies(projectDir, externalJars);
                 downloadMissingDependencies(projectDir, externalJars);
             }
 
@@ -484,7 +586,7 @@ public class JDTParserService {
         orderedClasspath.addAll(projectClasses);  // Project classes third
         orderedClasspath.addAll(projectJars);     // Project JARs last
 
-        log.info("Classpath built with {} external JARs, {} JDK libs, {} project classes, {} project JARs", 
+        log.info("Classpath built with {} external JARs, {} JDK libs, {} project classes, {} project JARs",
                 externalJars.size(), jdkLibraries.size(), projectClasses.size(), projectJars.size());
 
         return orderedClasspath.toArray(new String[0]);
@@ -1270,25 +1372,33 @@ public class JDTParserService {
      * Gets source paths for the project being analyzed
      */
     private String[] getComprehensiveSourcePath(Path projectDir) {
-        Set<String> sourcePath = new HashSet<>();
+        // Use LinkedHashSet to maintain order - important for JDT binding resolution
+        Set<String> sourcePath = new LinkedHashSet<>();
 
         try {
-            // Maven standard source directories
+            // PRIORITY 1: Add pass-in project sources FIRST (highest priority for binding)
+            Path passInSrcDir = projectDir.resolve("uploads/pass-in/src/main/java");
+            if (Files.exists(passInSrcDir)) {
+                sourcePath.add(passInSrcDir.toString());
+                log.info("Added pass-in project source directory: {}", passInSrcDir);
+            }
+
+            // PRIORITY 2: Maven standard source directories for main project
             addIfExists(sourcePath, projectDir.resolve(Paths.get("src", "main", "java")));
             addIfExists(sourcePath, projectDir.resolve(Paths.get("src", "test", "java")));
 
-            // Gradle standard source directories
-            addIfExists(sourcePath, projectDir.resolve(Paths.get("src", "main", "java")));
-            addIfExists(sourcePath, projectDir.resolve(Paths.get("src", "test", "java")));
+            // PRIORITY 3: Gradle standard source directories  
+            addIfExists(sourcePath, projectDir.resolve(Paths.get("src", "main", "kotlin")));
+            addIfExists(sourcePath, projectDir.resolve(Paths.get("src", "test", "kotlin")));
 
-            // Traditional Java source directory
+            // PRIORITY 4: Traditional Java source directory
             addIfExists(sourcePath, projectDir.resolve("src"));
 
-            // Find all directories containing Java files
+            // PRIORITY 5: Find all directories containing Java files (for complex project structures)
             Files.walkFileTree(projectDir, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                    // Skip some directories
+                    // Skip some directories to avoid noise
                     String dirName = dir.getFileName().toString();
                     if (dirName.equals("target") || dirName.equals("build") ||
                             dirName.equals(".git") || dirName.equals("lib") ||
@@ -1302,7 +1412,7 @@ public class JDTParserService {
                             sourcePath.add(dir.toString());
                         }
                     } catch (IOException e) {
-                        // Ignore errors
+                        // Ignore errors during directory scanning
                     }
 
                     return FileVisitResult.CONTINUE;
@@ -1310,9 +1420,10 @@ public class JDTParserService {
             });
 
         } catch (IOException e) {
-            System.err.println("Error scanning for source directories: " + e.getMessage());
+            log.warn("Error scanning for source directories: {}", e.getMessage());
         }
 
+        log.info("Configured {} source paths for binding resolution", sourcePath.size());
         return sourcePath.toArray(new String[0]);
     }
 
@@ -1368,7 +1479,7 @@ public class JDTParserService {
      */
     public List<Dependency> getDependencies(Path classPath) {
         log.info("=== getDependencies() called for: {}", classPath);
-        
+
         // If we've already processed this file in this session, return cached result
         if (processedFiles.contains(classPath)) {
             System.out.println("File already processed by getDependencies: " + classPath);
@@ -1425,10 +1536,10 @@ public class JDTParserService {
         }
 
         List<Dependency> dependencies = visitor.getDependencies();
-        
+
         log.info("=== FINAL BINDING RESOLUTION RESULTS FOR {} ===", classPath.getFileName());
         log.info("Total dependencies extracted: {}", dependencies.size());
-        
+
         // Group dependencies by package for better visibility
         Map<String, List<String>> dependenciesByPackage = new LinkedHashMap<>();
         for (Dependency dep : dependencies) {
@@ -1436,14 +1547,14 @@ public class JDTParserService {
             String packageName = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : "default";
             dependenciesByPackage.computeIfAbsent(packageName, k -> new ArrayList<>()).add(name);
         }
-        
+
         // Log dependencies by package
         for (Map.Entry<String, List<String>> entry : dependenciesByPackage.entrySet()) {
             String packageName = entry.getKey();
             List<String> types = entry.getValue();
-            
-            if (packageName.startsWith("jakarta.") || packageName.startsWith("lombok.") || 
-                packageName.startsWith("org.springframework.")) {
+
+            if (packageName.startsWith("jakarta.") || packageName.startsWith("lombok.") ||
+                    packageName.startsWith("org.springframework.")) {
                 log.info("✓ External Library [{}]: {}", packageName, String.join(", ", types));
             } else if (packageName.startsWith("java.")) {
                 log.debug("  Standard Library [{}]: {}", packageName, String.join(", ", types));
@@ -1451,7 +1562,7 @@ public class JDTParserService {
                 log.info("  Project [{}]: {}", packageName, String.join(", ", types));
             }
         }
-        
+
         return dependencies;
     }
 
@@ -1486,22 +1597,55 @@ public class JDTParserService {
 
             // Extract class, annotation and interface references
             Pattern typePattern = Pattern.compile(
-                    "(?:@|extends|implements|class|interface|enum)\\s+([A-Z][A-Za-z0-9_]*)");
+                    "(?:@|extends|implements|class|interface|enum)\\s+([A-Z][A-Za-z0-9_<>,\\s]*)");
             Matcher typeMatcher = typePattern.matcher(source);
             while (typeMatcher.find()) {
-                String typeName = typeMatcher.group(1);
-                visitor.addDependencyFromName(typeName);
+                String typeName = typeMatcher.group(1).trim();
+                
+                // Handle parameterized types in extends/implements clauses
+                if (typeName.contains("<")) {
+                    parseParameterizedTypeFromString(typeName, visitor);
+                } else {
+                    visitor.addDependencyFromName(typeName);
+                }
             }
 
             // Extract type references in field/variable declarations
             Pattern fieldPattern = Pattern.compile(
-                    "(?:private|protected|public|\\s)\\s+([A-Z][A-Za-z0-9_<>]*)\\s+\\w+");
+                    "(?:private|protected|public|\\s)\\s+([A-Z][A-Za-z0-9_<>,\\s]*)\\s+\\w+");
             Matcher fieldMatcher = fieldPattern.matcher(source);
             while (fieldMatcher.find()) {
-                String typeName = fieldMatcher.group(1);
-                // Skip generic parameter parts
-                if (!typeName.contains("<")) {
+                String typeName = fieldMatcher.group(1).trim();
+                
+                // Handle parameterized types by splitting them
+                if (typeName.contains("<")) {
+                    parseParameterizedTypeFromString(typeName, visitor);
+                } else {
                     visitor.addDependencyFromName(typeName);
+                }
+            }
+
+            // Extract record parameter types
+            Pattern recordPattern = Pattern.compile(
+                    "record\\s+\\w+\\s*\\(([^)]+)\\)");
+            Matcher recordMatcher = recordPattern.matcher(source);
+            while (recordMatcher.find()) {
+                String parameters = recordMatcher.group(1);
+                // Split by comma to get individual parameters
+                String[] params = parameters.split(",");
+                for (String param : params) {
+                    // Extract type from "Type paramName" pattern using regex to handle generics properly
+                    // Match everything up to the last word (which should be the parameter name)
+                    Pattern paramTypePattern = Pattern.compile("^(.+?)\\s+(\\w+)\\s*$");
+                    Matcher paramTypeMatcher = paramTypePattern.matcher(param.trim());
+                    if (paramTypeMatcher.find()) {
+                        String typeName = paramTypeMatcher.group(1).trim();
+                        if (typeName.contains("<")) {
+                            parseParameterizedTypeFromString(typeName, visitor);
+                        } else {
+                            visitor.addDependencyFromName(typeName);
+                        }
+                    }
                 }
             }
 
@@ -1558,6 +1702,8 @@ public class JDTParserService {
         private final List<Dependency> dependencies = new ArrayList<>();
         private final Map<String, String> importMap = new HashMap<>();
         private final Set<String> onDemandImports = new HashSet<>();
+        private String currentClassName; // Track current class being analyzed for self-reference exclusion
+        private String currentPackageName; // Track current package for same-package type resolution
 
         /**
          * Adds an import to the import map
@@ -1578,6 +1724,13 @@ public class JDTParserService {
         }
 
         @Override
+        public boolean visit(PackageDeclaration node) {
+            // Capture current package name for same-package type resolution
+            currentPackageName = node.getName().getFullyQualifiedName();
+            return super.visit(node);
+        }
+
+        @Override
         public boolean visit(ImportDeclaration node) {
             try {
                 if (node.isOnDemand()) {
@@ -1590,6 +1743,10 @@ public class JDTParserService {
                     String fullName = node.getName().getFullyQualifiedName();
                     String simpleName = fullName.substring(fullName.lastIndexOf('.') + 1);
                     importMap.put(simpleName, fullName);
+                    
+                    // Also add the import as a dependency (this was missing!)
+                    addDependencyIfNotExists(new Dependency(fullName));
+                    
                     log.debug("Added explicit import: {} -> {}", simpleName, fullName);
                 }
             } catch (Exception e) {
@@ -1601,6 +1758,11 @@ public class JDTParserService {
         @Override
         public boolean visit(TypeDeclaration node) {
             try {
+                // Set current class name for self-reference exclusion
+                if (currentClassName == null) {
+                    currentClassName = node.getName().getIdentifier();
+                }
+                
                 // Handle superclass
                 if (node.getSuperclassType() != null) {
                     try {
@@ -1976,12 +2138,17 @@ public class JDTParserService {
                     addDependencyFromName(name);
                 } else if (type.isParameterizedType()) {
                     ParameterizedType parameterizedType = (ParameterizedType) type;
+                    
+                    // Add the raw type first (e.g., JpaRepository)
                     addTypeFromAST(parameterizedType.getType());
 
-                    // Also add type arguments
+                    // Add each type argument as separate dependency (e.g., Event, String)
                     for (Object o : parameterizedType.typeArguments()) {
                         if (o instanceof Type) {
-                            addTypeFromAST((Type) o);
+                            Type argType = (Type) o;
+                            
+                            // Recursively handle the type argument
+                            addTypeFromAST(argType);
                         }
                     }
                 } else if (type.isArrayType()) {
@@ -2034,6 +2201,11 @@ public class JDTParserService {
                         addDependencyIfNotExists(new Dependency("java.time." + simpleName));
                         return;
                     }
+                    
+                    if (isTypeInPackage("java.text", simpleName)) {
+                        addDependencyIfNotExists(new Dependency("java.text." + simpleName));
+                        return;
+                    }
 
                     if (isTypeInPackage("java.util", simpleName)) {
                         addDependencyIfNotExists(new Dependency("java.util." + simpleName));
@@ -2049,13 +2221,13 @@ public class JDTParserService {
                 return;
             }
 
-            // Check explicit imports - most reliable method
+            // PRIORITY 1: Check explicit imports - most reliable method
             if (importMap.containsKey(name)) {
                 addDependencyIfNotExists(new Dependency(importMap.get(name)));
                 return;
             }
 
-            // Check wildcard imports - try to resolve against each one
+            // PRIORITY 2: Check wildcard imports - try to resolve against each one
             String resolvedType = resolveTypeFromWildcardImports(name);
             if (resolvedType != null) {
                 addDependencyIfNotExists(new Dependency(resolvedType));
@@ -2073,6 +2245,12 @@ public class JDTParserService {
                 addDependencyIfNotExists(new Dependency("java.time." + name));
                 return;
             }
+            
+            // Check for java.text.* types using Class.forName
+            if (isTypeInPackage("java.text", name)) {
+                addDependencyIfNotExists(new Dependency("java.text." + name));
+                return;
+            }
 
             // Check for java.util.* types using Class.forName
             if (isTypeInPackage("java.util", name)) {
@@ -2080,6 +2258,16 @@ public class JDTParserService {
                 return;
             }
 
+            // Try same-package resolution for types that look like classes
+            if (currentPackageName != null && !currentPackageName.isEmpty() &&
+                name.length() > 0 && Character.isUpperCase(name.charAt(0)) &&
+                !shouldSkipType(name)) {
+                
+                String samePackageType = currentPackageName + "." + name;
+                addDependencyIfNotExists(new Dependency(samePackageType));
+                return;
+            }
+            
             // Last resort - use the name as is if it's not a type to skip
             if (!shouldSkipType(name)) {
                 addDependencyIfNotExists(new Dependency(name));
@@ -2093,6 +2281,24 @@ public class JDTParserService {
             try {
                 // Skip primitive types
                 if (binding.isPrimitive()) {
+                    return;
+                }
+
+                // Handle parameterized types by adding the raw type and type arguments separately
+                if (binding.isParameterizedType()) {
+                    // Add the raw type first
+                    ITypeBinding rawType = binding.getErasure();
+                    if (rawType != null) {
+                        addDependencyWithImportResolution(rawType);
+                    }
+                    
+                    // Then add each type argument as a separate dependency
+                    for (ITypeBinding typeArg : binding.getTypeArguments()) {
+                        if (typeArg != null && !typeArg.isPrimitive()) {
+                            // Recursively handle nested generic types
+                            addDependencyWithImportResolution(typeArg);
+                        }
+                    }
                     return;
                 }
 
@@ -2115,7 +2321,7 @@ public class JDTParserService {
                 }
 
                 // PRIORITY 2: Check for common external library types
-                String externalLibraryType = resolveToExternalLibrary(simpleName);
+                String externalLibraryType = null;
                 if (externalLibraryType != null) {
                     log.debug("Resolved {} to external library: {}", simpleName, externalLibraryType);
                     addDependencyIfNotExists(new Dependency(externalLibraryType));
@@ -2160,8 +2366,21 @@ public class JDTParserService {
         /**
          * Checks if the type should be skipped (primitives, wrappers, etc.)
          */
-        private boolean shouldSkipType(String simpleName) {
-            // Skip primitive types
+        public boolean shouldSkipType(String typeName) {
+            if (typeName == null || typeName.isEmpty()) {
+                return true;
+            }
+            
+            // Extract simple name from fully qualified name for comparison
+            String simpleName = typeName.contains(".") ? 
+                typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
+            
+            // Skip 'var' keyword (not a real type)
+            if ("var".equals(simpleName) || "var".equals(typeName)) {
+                return true;
+            }
+            
+            // Skip primitive types (simple names)
             if (simpleName.equals("boolean") || simpleName.equals("byte") ||
                     simpleName.equals("char") || simpleName.equals("double") ||
                     simpleName.equals("float") || simpleName.equals("int") ||
@@ -2170,7 +2389,7 @@ public class JDTParserService {
                 return true;
             }
 
-            // Skip wrapper types
+            // Skip wrapper types and String (both simple and fully qualified)
             if (simpleName.equals("Boolean") || simpleName.equals("Byte") ||
                     simpleName.equals("Character") || simpleName.equals("Double") ||
                     simpleName.equals("Float") || simpleName.equals("Integer") ||
@@ -2178,12 +2397,44 @@ public class JDTParserService {
                     simpleName.equals("Void") || simpleName.equals("String")) {
                 return true;
             }
+            
+            // Skip fully qualified java.lang.* types
+            if (typeName.startsWith("java.lang.")) {
+                return true;
+            }
+            
+            // Skip java.util.* collection types that we don't want as dependencies
+            if (typeName.startsWith("java.util.") || 
+                (simpleName.equals("List") || simpleName.equals("Set") ||
+                 simpleName.equals("Map") || simpleName.equals("Collection") ||
+                 simpleName.equals("ArrayList") || simpleName.equals("LinkedList") ||
+                 simpleName.equals("HashSet") || simpleName.equals("TreeSet") ||
+                 simpleName.equals("HashMap") || simpleName.equals("TreeMap") ||
+                 simpleName.equals("Optional") || simpleName.equals("Stream") ||
+                 simpleName.equals("Iterator") || simpleName.equals("Comparator"))) {
+                return true;
+            }
 
             // Skip other common types we don't want to track
-            return simpleName.equals("Object") || simpleName.equals("Class") ||
+            if (simpleName.equals("Object") || simpleName.equals("Class") ||
                     simpleName.equals("Enum") || simpleName.equals("Override") ||
                     simpleName.equals("SuppressWarnings") || simpleName.equals("Deprecated") ||
-                    simpleName.equals("FunctionalInterface");
+                    simpleName.equals("FunctionalInterface") || simpleName.equals("Serializable")) {
+                return true;
+            }
+            
+            // Skip array type indicators
+            if (typeName.endsWith("[]") || typeName.contains("[]")) {
+                return true;
+            }
+            
+            // Skip if this is the current class being analyzed (self-reference)
+            if (currentClassName != null && 
+                (typeName.equals(currentClassName) || simpleName.equals(currentClassName))) {
+                return true;
+            }
+
+            return false;
         }
 
         /**
@@ -2211,124 +2462,83 @@ public class JDTParserService {
          * Resolves a type name against wildcard imports, returning the fully qualified name if found
          */
         private String resolveTypeFromWildcardImports(String typeName) {
+            // PRIORITY 1: Check standard library packages first (highest priority)
             for (String packageName : onDemandImports) {
-                // Skip java.lang as it's implicit
                 if ("java.lang".equals(packageName)) {
-                    continue;
+                    continue; // Skip java.lang as it's implicit
                 }
                 
-                try {
-                    // Try to see if this type exists in this package
-                    String fullyQualifiedName = packageName + "." + typeName;
+                // Prioritize standard library packages
+                if (packageName.startsWith("jakarta.") || packageName.startsWith("javax.") ||
+                    packageName.startsWith("org.springframework.") || packageName.startsWith("lombok.") ||
+                    packageName.startsWith("java.")) {
                     
-                    // For project-specific packages, assume the type exists if the package path makes sense
-                    if (packageName.contains(".domain.") || packageName.contains(".dto.") || 
+                    try {
+                        String fullyQualifiedName = packageName + "." + typeName;
+                        if (isTypeInPackage(packageName, typeName)) {
+                            log.debug("Resolved {} to {} via standard library wildcard import", typeName, fullyQualifiedName);
+                            return fullyQualifiedName;
+                        }
+                    } catch (Exception e) {
+                        // Continue to next package
+                    }
+                }
+            }
+            
+            // PRIORITY 2: Check project-specific packages (lower priority)
+            for (String packageName : onDemandImports) {
+                if (packageName.contains(".domain.") || packageName.contains(".dto.") ||
                         packageName.contains(".entity.") || packageName.contains(".model.")) {
-                        
-                        // Special handling for Attendee.java case: Event should resolve to tcc.com.pass_in.domain.event.Event
+
+                    try {
+                        String fullyQualifiedName = packageName + "." + typeName;
+
+                        // Special handling for Event in domain.event package
                         if ("Event".equals(typeName) && packageName.contains(".domain.event")) {
                             log.debug("Resolved {} to {} via project wildcard import", typeName, fullyQualifiedName);
                             return fullyQualifiedName;
                         }
-                        
+
                         // For other project types, also assume they exist
                         if (isLikelyProjectType(typeName)) {
                             log.debug("Resolved {} to {} via project wildcard import", typeName, fullyQualifiedName);
                             return fullyQualifiedName;
                         }
+                    } catch (Exception e) {
+                        // Continue to next package
                     }
-                    
-                    // For standard library packages, verify with Class.forName
-                    if (isTypeInPackage(packageName, typeName)) {
-                        log.debug("Resolved {} to {} via verified wildcard import", typeName, fullyQualifiedName);
-                        return fullyQualifiedName;
-                    }
-                    
-                } catch (Exception e) {
-                    // Continue to next package
                 }
             }
+            
             return null; // Type not found in any wildcard import
         }
-        
-        /**
-         * Resolves a simple type name to a known external library type
-         */
-        private String resolveToExternalLibrary(String simpleName) {
-            // Jakarta Persistence API
-            if ("Entity".equals(simpleName)) return "jakarta.persistence.Entity";
-            if ("Table".equals(simpleName)) return "jakarta.persistence.Table";
-            if ("Id".equals(simpleName)) return "jakarta.persistence.Id";
-            if ("Column".equals(simpleName)) return "jakarta.persistence.Column";
-            if ("GeneratedValue".equals(simpleName)) return "jakarta.persistence.GeneratedValue";
-            if ("ManyToOne".equals(simpleName)) return "jakarta.persistence.ManyToOne";
-            if ("OneToMany".equals(simpleName)) return "jakarta.persistence.OneToMany";
-            if ("JoinColumn".equals(simpleName)) return "jakarta.persistence.JoinColumn";
-            if ("GenerationType".equals(simpleName)) return "jakarta.persistence.GenerationType";
-            
-            // Lombok
-            if ("Getter".equals(simpleName)) return "lombok.Getter";
-            if ("Setter".equals(simpleName)) return "lombok.Setter";
-            if ("NoArgsConstructor".equals(simpleName)) return "lombok.NoArgsConstructor";
-            if ("AllArgsConstructor".equals(simpleName)) return "lombok.AllArgsConstructor";
-            if ("Data".equals(simpleName)) return "lombok.Data";
-            if ("Builder".equals(simpleName)) return "lombok.Builder";
-            if ("ToString".equals(simpleName)) return "lombok.ToString";
-            if ("EqualsAndHashCode".equals(simpleName)) return "lombok.EqualsAndHashCode";
-            
-            // Spring Framework
-            if ("ControllerAdvice".equals(simpleName)) return "org.springframework.web.bind.annotation.ControllerAdvice";
-            if ("RestController".equals(simpleName)) return "org.springframework.web.bind.annotation.RestController";
-            if ("RequestMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.RequestMapping";
-            if ("GetMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.GetMapping";
-            if ("PostMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.PostMapping";
-            if ("PutMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.PutMapping";
-            if ("DeleteMapping".equals(simpleName)) return "org.springframework.web.bind.annotation.DeleteMapping";
-            if ("PathVariable".equals(simpleName)) return "org.springframework.web.bind.annotation.PathVariable";
-            if ("RequestBody".equals(simpleName)) return "org.springframework.web.bind.annotation.RequestBody";
-            if ("Service".equals(simpleName)) return "org.springframework.stereotype.Service";
-            if ("Repository".equals(simpleName)) return "org.springframework.stereotype.Repository";
-            if ("Component".equals(simpleName)) return "org.springframework.stereotype.Component";
-            if ("Autowired".equals(simpleName)) return "org.springframework.beans.factory.annotation.Autowired";
-            if ("ExceptionHandler".equals(simpleName)) return "org.springframework.web.bind.annotation.ExceptionHandler";
-            if ("ResponseStatus".equals(simpleName)) return "org.springframework.web.bind.annotation.ResponseStatus";
-            
-            // Java Time API
-            if ("LocalDateTime".equals(simpleName)) return "java.time.LocalDateTime";
-            if ("LocalDate".equals(simpleName)) return "java.time.LocalDate";
-            if ("LocalTime".equals(simpleName)) return "java.time.LocalTime";
-            if ("ZonedDateTime".equals(simpleName)) return "java.time.ZonedDateTime";
-            if ("Instant".equals(simpleName)) return "java.time.Instant";
-            
-            return null; // Not a known external library type
-        }
-        
+
         /**
          * Checks if a qualified name represents an external library type
          */
         private boolean isExternalLibraryType(String qualifiedName) {
             if (qualifiedName == null) return false;
-            
+
             // External library prefixes
             return qualifiedName.startsWith("jakarta.") ||
-                   qualifiedName.startsWith("lombok.") ||
-                   qualifiedName.startsWith("org.springframework.") ||
-                   qualifiedName.startsWith("org.apache.") ||
-                   qualifiedName.startsWith("com.fasterxml.") ||
-                   qualifiedName.startsWith("java.") ||
-                   qualifiedName.startsWith("javax.") ||
-                   qualifiedName.startsWith("org.slf4j.") ||
-                   qualifiedName.startsWith("org.hibernate.") ||
-                   qualifiedName.startsWith("com.google.") ||
-                   // Add more external library prefixes as needed
-                   (!qualifiedName.contains(".domain.") && 
-                    !qualifiedName.contains(".dto.") && 
-                    !qualifiedName.contains(".model.") && 
-                    !qualifiedName.contains(".entity.") && 
-                    !qualifiedName.contains(".controller.") && 
-                    !qualifiedName.contains(".service.") &&
-                    !qualifiedName.contains(".repository.") &&
-                    !qualifiedName.startsWith("tcc.com."));
+                    qualifiedName.startsWith("lombok.") ||
+                    qualifiedName.startsWith("org.springframework.") ||
+                    qualifiedName.startsWith("org.apache.") ||
+                    qualifiedName.startsWith("com.fasterxml.") ||
+                    qualifiedName.startsWith("java.") ||
+                    qualifiedName.startsWith("javax.") ||
+                    qualifiedName.startsWith("org.slf4j.") ||
+                    qualifiedName.startsWith("org.hibernate.") ||
+                    qualifiedName.startsWith("com.google.") ||
+                    // Add more external library prefixes as needed
+                    (!qualifiedName.contains(".domain.") &&
+                            !qualifiedName.contains(".dto.") &&
+                            !qualifiedName.contains(".model.") &&
+                            !qualifiedName.contains(".entity.") &&
+                            !qualifiedName.contains(".controller.") &&
+                            !qualifiedName.contains(".service.") &&
+                            !qualifiedName.contains(".repository.") &&
+                            !qualifiedName.startsWith("tcc.com."));
         }
 
         /**
@@ -2336,12 +2546,12 @@ public class JDTParserService {
          */
         private boolean isLikelyProjectType(String typeName) {
             // Project types typically start with capital letter and are not primitives/wrappers
-            return typeName.length() > 0 && 
-                   Character.isUpperCase(typeName.charAt(0)) && 
-                   !shouldSkipType(typeName) &&
-                   !isTypeInPackage("java.lang", typeName) &&
-                   !isTypeInPackage("java.util", typeName) &&
-                   !isTypeInPackage("java.time", typeName);
+            return typeName.length() > 0 &&
+                    Character.isUpperCase(typeName.charAt(0)) &&
+                    !shouldSkipType(typeName) &&
+                    !isTypeInPackage("java.lang", typeName) &&
+                    !isTypeInPackage("java.util", typeName) &&
+                    !isTypeInPackage("java.time", typeName);
         }
 
         /**
@@ -2375,20 +2585,109 @@ public class JDTParserService {
          */
         private void addTypeAndGenericsWithImportResolution(ITypeBinding binding) {
             try {
-                // Add the base type
-                addDependencyWithImportResolution(binding);
-
-                // Add generic type arguments if any
                 if (binding.isParameterizedType()) {
+                    // For parameterized types, add the raw type first
+                    ITypeBinding rawType = binding.getErasure();
+                    if (rawType != null) {
+                        addDependencyWithImportResolution(rawType);
+                    }
+                    
+                    // Then add each type argument as a separate dependency
                     for (ITypeBinding typeArg : binding.getTypeArguments()) {
                         if (typeArg != null && !typeArg.isPrimitive()) {
-                            addDependencyWithImportResolution(typeArg);
+                            // Recursively handle nested generic types
+                            addTypeAndGenericsWithImportResolution(typeArg);
                         }
                     }
+                } else {
+                    // For non-parameterized types, just add the type itself
+                    addDependencyWithImportResolution(binding);
                 }
             } catch (Exception e) {
                 System.err.println("Error resolving generic type: " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Parses parameterized types from source strings and adds each type component as a dependency.
+     * For example, "JpaRepository<Event,String>" becomes "JpaRepository", "Event", and "String".
+     */
+    private void parseParameterizedTypeFromString(String parameterizedType, TypeDependencyVisitor visitor) {
+        try {
+            if (parameterizedType == null || !parameterizedType.contains("<")) {
+                // Not a parameterized type, handle as regular type
+                visitor.addDependencyFromName(parameterizedType);
+                return;
+            }
+
+            // Extract the base type (before the <)
+            int angleStart = parameterizedType.indexOf('<');
+            String baseType = parameterizedType.substring(0, angleStart).trim();
+            
+            // Add the base type as a dependency
+            visitor.addDependencyFromName(baseType);
+
+            // Extract the type parameters (between < and >)
+            int angleEnd = parameterizedType.lastIndexOf('>');
+            if (angleEnd > angleStart) {
+                String typeParameters = parameterizedType.substring(angleStart + 1, angleEnd);
+                
+                // Split type parameters by comma, handling nested generics
+                List<String> parameters = splitTypeParameters(typeParameters);
+                
+                for (String parameter : parameters) {
+                    parameter = parameter.trim();
+                    if (!parameter.isEmpty() && !visitor.shouldSkipType(parameter)) {
+                        // Recursively handle nested parameterized types
+                        if (parameter.contains("<")) {
+                            parseParameterizedTypeFromString(parameter, visitor);
+                        } else {
+                            visitor.addDependencyFromName(parameter);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error parsing parameterized type '" + parameterizedType + "': " + e.getMessage());
+            // Fallback: add the original type name
+            visitor.addDependencyFromName(parameterizedType);
+        }
+    }
+
+    /**
+     * Splits type parameters correctly, handling nested generics.
+     * For example: "Event,String" -> ["Event", "String"]
+     * For nested: "List<String>,Event" -> ["List<String>", "Event"]
+     */
+    private List<String> splitTypeParameters(String typeParameters) {
+        List<String> parameters = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int depth = 0;
+        
+        for (char c : typeParameters.toCharArray()) {
+            if (c == '<') {
+                depth++;
+                current.append(c);
+            } else if (c == '>') {
+                depth--;
+                current.append(c);
+            } else if (c == ',' && depth == 0) {
+                // Only split on commas at the top level
+                if (current.length() > 0) {
+                    parameters.add(current.toString().trim());
+                    current = new StringBuilder();
+                }
+            } else {
+                current.append(c);
+            }
+        }
+        
+        // Add the last parameter
+        if (current.length() > 0) {
+            parameters.add(current.toString().trim());
+        }
+        
+        return parameters;
     }
 }

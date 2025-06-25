@@ -16,19 +16,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ParserFactory {
 
     private final Map<String, LanguageParser> parsers = new ConcurrentHashMap<>();
-    private final JDTParserService jdtParserService = new JDTParserService();
+    private final JDTParserService jdtParserService;
 
-    // Default constructor for Spring
-    public ParserFactory() {
-    }
-
-    // Constructor with parsers - useful for testing or manual initialization
-    public ParserFactory(List<LanguageParser> parsersList) {
-        if (parsersList != null) {
-            for (LanguageParser parser : parsersList) {
-                registerParser(parser);
-            }
-        }
+    // Constructor for Spring dependency injection
+    public ParserFactory(JDTParserService jdtParserService) {
+        this.jdtParserService = jdtParserService;
     }
 
     @Autowired(required = false)  // Make it optional in case no parsers are available
