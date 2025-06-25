@@ -20,6 +20,12 @@ import java.util.stream.Collectors;
 public class ProjectController {
     private static final String UPLOAD_DIR = "uploads";
 
+    private final ModuleService moduleService;
+
+    public ProjectController(ModuleService moduleService) {
+        this.moduleService = moduleService;
+    }
+
     @GetMapping("/projects")
     public ProjectsListResponseDTO listProjects() {
         File projectsDir = new File(UPLOAD_DIR);
@@ -97,7 +103,6 @@ public class ProjectController {
             if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
                 throw new RuntimeException("Project not found!");
             }
-            ModuleService moduleService = new ModuleService();
 
             return moduleService.analyze(projectPath.toString());
         } catch (Exception e) {

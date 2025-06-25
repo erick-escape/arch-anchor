@@ -24,9 +24,13 @@ import java.util.stream.Collectors;
 @Service
 public class ModuleService {
     private final List<Module> modules = new ArrayList<>();
-    private final ParserFactory parserFactory = new ParserFactory();
+    private final ParserFactory parserFactory;
     private final ModuleMapper moduleMapper = new ModuleMapperImpl();
     private final ClazzMapper clazzMapper = new ClazzMapperImpl();
+    
+    public ModuleService(ParserFactory parserFactory) {
+        this.parserFactory = parserFactory;
+    }
 
     // Define file extensions to consider for each language
     private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of(
@@ -41,13 +45,9 @@ public class ModuleService {
             throw new IllegalArgumentException("Modules list cannot be null");
         }
 
-        System.out.println("MODULOS ANTES DE SALVAR --> " + modulesList);
-        log.info("Modules before saving it: {}", modulesList);
         File file = new File("modules.bin");
         try (ObjectOutputStream objectOutput = new ObjectOutputStream(new FileOutputStream(file))) {
             objectOutput.writeObject(modulesList);
-            System.out.println("MODULOS DEPOIS DE SALVAR --> " + getModulesFromFile());
-            log.info("Modules after saving it: {}", modulesList);
         } catch (IOException e) {
             throw new RuntimeException("Error saving modules to file: " + e.getMessage(), e);
         }
