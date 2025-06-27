@@ -10,11 +10,12 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 public class Dependency {
-    private String name;
+    private String fullyQualifiedName;
+    private String originName;
 
     public boolean dependencyDoesNotExist(List<Dependency> dependencies) {
         for (Dependency dependency : dependencies) {
-            if (dependency.getName().contains(this.name)) {
+            if (dependency.getFullyQualifiedName().contains(this.fullyQualifiedName)) {
                 return false;
             }
         }

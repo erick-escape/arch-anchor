@@ -5,10 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tcc.com.viewer.domains.clazz.Clazz;
-import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
-import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
 import tcc.com.viewer.dto.module.SetRefClazzesRequest;
 import tcc.com.viewer.dto.module.SplitModuleRequest;
@@ -78,32 +76,25 @@ public class ModuleController {
         String newName = module1.name() + " | " + module2.name();
 
         // Safe conversion and merging of classes without duplicates
-        Clazz[] mergedClasses = Stream.concat(
+        List<Clazz> mergedClasses = Stream.concat(
                 Arrays.stream(Optional.ofNullable(module1.clazzes()).orElse(new ClazzResponseDTO[0]))
                         .map(clazzMapper::toEntity),
                 Arrays.stream(Optional.ofNullable(module2.clazzes()).orElse(new ClazzResponseDTO[0]))
                         .map(clazzMapper::toEntity)
-        ).distinct().toArray(Clazz[]::new);
-
-        // Safe conversion and merging of dependencies without duplicates
-        Dependency[] mergedDependencies = Stream.concat(
-                Arrays.stream(Optional.ofNullable(module1.dependencies()).orElse(new DependencyDTO[0]))
-                        .map(dependencyMapper::toEntity),
-                Arrays.stream(Optional.ofNullable(module2.dependencies()).orElse(new DependencyDTO[0]))
-                        .map(dependencyMapper::toEntity)
-        ).distinct().toArray(Dependency[]::new);
+        ).distinct().toList();
 
         Module newModule = new Module(
                 moduleService.generateNewUUID(),
                 newName,
                 null, // refClass will be calculated later
+                null, // allowedRules will be calculated later
                 mergedClasses,
-                mergedDependencies,
                 0.0 // Similarity will be calculated later
         );
         // Recalculate similarities using ModuleService
         moduleService.calculateClassSimilarities(newModule);
         moduleService.calculateModuleSimilarity(newModule);
+        moduleService.populateAllowedRules(newModule);
 
         return moduleMapper.toDto(newModule);
     }

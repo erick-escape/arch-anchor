@@ -5,12 +5,11 @@ import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
+import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
-import tcc.com.viewer.mapstruct.ClazzMapper;
-import tcc.com.viewer.mapstruct.ClazzMapperImpl;
-import tcc.com.viewer.mapstruct.ModuleMapper;
-import tcc.com.viewer.mapstruct.ModuleMapperImpl;
+import tcc.com.viewer.dto.rules.AllowedRuleDTO;
+import tcc.com.viewer.mapstruct.*;
 import tcc.com.viewer.services.parsers.ParserFactory;
 
 import java.io.*;
@@ -27,7 +26,8 @@ public class ModuleService {
     private final ParserFactory parserFactory;
     private final ModuleMapper moduleMapper = new ModuleMapperImpl();
     private final ClazzMapper clazzMapper = new ClazzMapperImpl();
-    
+    private final AllowedRuleMapper allowedRuleMapper = new AllowedRuleMapperImpl();
+
     public ModuleService(ParserFactory parserFactory) {
         this.parserFactory = parserFactory;
     }
@@ -82,21 +82,21 @@ public class ModuleService {
             // Use a hash of the input string to generate a consistent UUID
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
             byte[] hash = md.digest(input.getBytes("UTF-8"));
-            
+
             // Convert the hash bytes to a UUID format
             StringBuilder sb = new StringBuilder();
             for (byte b : hash) {
                 sb.append(String.format("%02x", b));
             }
-            
+
             String hashString = sb.toString();
             // Format as UUID: 8-4-4-4-12
             return String.format("%s-%s-%s-%s-%s",
-                hashString.substring(0, 8),
-                hashString.substring(8, 12),
-                hashString.substring(12, 16),
-                hashString.substring(16, 20),
-                hashString.substring(20, 32));
+                    hashString.substring(0, 8),
+                    hashString.substring(8, 12),
+                    hashString.substring(12, 16),
+                    hashString.substring(16, 20),
+                    hashString.substring(20, 32));
         } catch (Exception e) {
             // Fallback to random UUID if hashing fails
             return UUID.randomUUID().toString();
@@ -104,7 +104,7 @@ public class ModuleService {
     }
 
     public void calculateClassSimilarities(Module module) {
-        List<Clazz> clazzes = List.of(module.getClazzes());
+        List<Clazz> clazzes = module.getClazzes();
 
         if (clazzes.size() > 1) {
             for (Clazz clazz : clazzes) {
@@ -130,22 +130,22 @@ public class ModuleService {
     }
 
     public void calculateModuleSimilarity(Module module) {
-        Clazz[] clazzes = module.getClazzes();
+        List<Clazz> clazzes = module.getClazzes();
 
-        if (clazzes.length > 0) {
+        if (!clazzes.isEmpty()) {
             double totalSimilarity = 0.0;
             for (Clazz clazz : clazzes) {
                 totalSimilarity += clazz.getSimilarity();
             }
-            module.setSimilarity(totalSimilarity / clazzes.length);
+            module.setSimilarity(totalSimilarity / clazzes.size());
         } else {
             module.setSimilarity(0.0);
         }
     }
 
     private double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
-        Set<String> deps1 = Arrays.stream(clazz1.getDependencies()).map(Dependency::getName).collect(Collectors.toSet());
-        Set<String> deps2 = Arrays.stream(clazz2.getDependencies()).map(Dependency::getName).collect(Collectors.toSet());
+        Set<String> deps1 = Arrays.stream(clazz1.getDependencies()).map(Dependency::getFullyQualifiedName).collect(Collectors.toSet());
+        Set<String> deps2 = Arrays.stream(clazz2.getDependencies()).map(Dependency::getFullyQualifiedName).collect(Collectors.toSet());
 
         int a = (int) deps1.stream().filter(deps2::contains).count();
         int b = deps1.size() - a;
@@ -154,6 +154,31 @@ public class ModuleService {
         int secondDenominator = (a + c) == 0 ? 1 : (a + c);
 
         return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
+    }
+
+    public void populateAllowedRules(Module module) {
+        if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty()) {
+            module.setAllowedRules(new ArrayList<>());
+            return;
+        }
+
+        Set<String> uniqueOriginNames = new HashSet<>();
+
+        for (Clazz refClazz : module.getRefClazzes()) {
+            if (refClazz.getDependencies() != null) {
+                for (Dependency dependency : refClazz.getDependencies()) {
+                    if (dependency.getOriginName() != null && !dependency.getOriginName().isEmpty()) {
+                        uniqueOriginNames.add(dependency.getOriginName());
+                    }
+                }
+            }
+        }
+
+        List<AllowedRule> allowedRules = uniqueOriginNames.stream()
+                .map(AllowedRule::new)
+                .collect(Collectors.toList());
+
+        module.setAllowedRules(allowedRules);
     }
 
     public List<ModuleDTO> splitModule(ModuleDTO originalModule, List<String> classIds) {
@@ -173,7 +198,7 @@ public class ModuleService {
         retainedModuleEntity.setName(originalModuleEntity.getName() + "_Retained");
         retainedModuleEntity.setClazzes(retainedClasses.stream()
                 .map(clazzMapper::toEntity)
-                .toList().toArray(new Clazz[0]));
+                .toList());
 
         this.calculateClassSimilarities(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
@@ -184,7 +209,7 @@ public class ModuleService {
         newModuleEntity.setName(originalModuleEntity.getName() + "_Splited");
         newModuleEntity.setClazzes(extractedClasses.stream()
                 .map(clazzMapper::toEntity)
-                .toList().toArray(new Clazz[0]));
+                .toList());
 
         this.calculateClassSimilarities(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
@@ -276,23 +301,23 @@ public class ModuleService {
                     try {
                         List<Clazz> clazzes = getClazzes(modulePath);
                         if (!clazzes.isEmpty()) {
-                            // Determine module name based on directory structure
+                            // Determine module fullyQualifiedName based on directory structure
                             String moduleName = modulePath.getParent().getFileName().toString() + '/' + modulePath.getFileName().toString();
-                            
+
                             // Generate deterministic UUID based on module path to prevent duplicates
                             String moduleId = generateDeterministicUUID(modulePath.toString());
-                            
+
                             // Check if module already exists to prevent duplicates
                             boolean moduleExists = this.modules.stream()
                                     .anyMatch(existingModule -> existingModule.getId().equals(moduleId));
-                            
+
                             if (!moduleExists) {
                                 Module module = new Module(
                                         moduleId,
                                         moduleName,
                                         null, // refClazzes will be calculated later
-                                        clazzes.toArray(new Clazz[0]),
-                                        new Dependency[0], // Dependencies will be calculated later
+                                        null, // allowedRules will be calculated later
+                                        clazzes,
                                         0.0 // Similarity will be calculated later
                                 );
                                 this.modules.add(module);
@@ -318,6 +343,7 @@ public class ModuleService {
         for (Module module : modules) {
             this.calculateClassSimilarities(module);
             this.calculateModuleSimilarity(module);
+            this.populateAllowedRules(module);
         }
 
         // Convert modules to ModuleDTO
@@ -355,13 +381,23 @@ public class ModuleService {
             throw new IllegalArgumentException("Some requested class IDs were not found in the module");
         }
 
+        // Calculate allowed rules
+        Module moduleEntity = moduleMapper.toEntity(targetModule);
+        List<Clazz> modulesList = refClazzes.stream()
+                .map(clazzMapper::toEntity)
+                .toList();
+        moduleEntity.setRefClazzes(modulesList);
+        this.populateAllowedRules(moduleEntity);
+
         // Create updated module with new reference classes
         ModuleDTO updatedModule = new ModuleDTO(
                 targetModule.id(),
                 targetModule.name(),
                 refClazzes.toArray(new ClazzResponseDTO[0]),
+                (AllowedRuleDTO[]) moduleEntity.getAllowedRules().stream()
+                        .map(allowedRuleMapper::toDto)
+                        .toArray(),
                 targetModule.clazzes(),
-                targetModule.dependencies(),
                 targetModule.similarity()
         );
 

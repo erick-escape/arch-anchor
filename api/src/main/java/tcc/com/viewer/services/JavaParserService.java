@@ -70,7 +70,7 @@ public class JavaParserService {
 
     private void addDependencyIfValid(String typeName, List<Dependency> dependencies) {
         if (isNotPrimitiveOrWrapper(typeName)) {
-            Dependency dependency = new Dependency(typeName);
+            Dependency dependency = new Dependency(typeName, typeName);
             if (dependency.dependencyDoesNotExist(dependencies)) {
                 dependencies.add(dependency);
             }
@@ -215,7 +215,7 @@ public class JavaParserService {
                         String typeName = creator.createdName().getText();
                         JavaParser.NonWildcardTypeArgumentsContext arguments = creator.nonWildcardTypeArguments();
                         if (arguments != null) {
-                            Dependency dependency = new Dependency(typeName);
+                            Dependency dependency = new Dependency(typeName, typeName);
                             if (isNotPrimitiveOrWrapper(typeName) && dependency.dependencyDoesNotExist(dependencies)) {
                                 dependencies.add(dependency);
                             }

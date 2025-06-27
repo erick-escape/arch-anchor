@@ -11,6 +11,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import tcc.com.viewer.domains.dependency.Dependency;
+import tcc.com.viewer.util.PackageNameExtractor;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -42,6 +43,9 @@ public class JDTParserService {
 
     // Set to track files that have been processed to avoid duplicate processing
     private final Set<Path> processedFiles = new HashSet<>();
+
+    // Used to convert dependency FQN into its origin module
+    private final PackageNameExtractor packagePathConverter = new PackageNameExtractor();
 
     /**
      * Cache structure for project-level classpath information
@@ -1543,7 +1547,7 @@ public class JDTParserService {
         // Group dependencies by package for better visibility
         Map<String, List<String>> dependenciesByPackage = new LinkedHashMap<>();
         for (Dependency dep : dependencies) {
-            String name = dep.getName();
+            String name = dep.getFullyQualifiedName();
             String packageName = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : "default";
             dependenciesByPackage.computeIfAbsent(packageName, k -> new ArrayList<>()).add(name);
         }
@@ -1576,7 +1580,7 @@ public class JDTParserService {
             Matcher packageMatcher = packagePattern.matcher(source);
             if (packageMatcher.find()) {
                 String packageName = packageMatcher.group(1);
-                visitor.addDependencyIfNotExists(new Dependency(packageName));
+                visitor.addDependencyIfNotExists(new Dependency(packageName, packagePathConverter.extractPackageName(packageName)));
             }
 
             // Extract imports
@@ -1591,7 +1595,7 @@ public class JDTParserService {
                 } else {
                     String simpleName = importName.substring(importName.lastIndexOf('.') + 1);
                     visitor.addImport(simpleName, importName);
-                    visitor.addDependencyIfNotExists(new Dependency(importName));
+                    visitor.addDependencyIfNotExists(new Dependency(importName, packagePathConverter.extractPackageName(importName)));
                 }
             }
 
@@ -1601,7 +1605,7 @@ public class JDTParserService {
             Matcher typeMatcher = typePattern.matcher(source);
             while (typeMatcher.find()) {
                 String typeName = typeMatcher.group(1).trim();
-                
+
                 // Handle parameterized types in extends/implements clauses
                 if (typeName.contains("<")) {
                     parseParameterizedTypeFromString(typeName, visitor);
@@ -1616,7 +1620,7 @@ public class JDTParserService {
             Matcher fieldMatcher = fieldPattern.matcher(source);
             while (fieldMatcher.find()) {
                 String typeName = fieldMatcher.group(1).trim();
-                
+
                 // Handle parameterized types by splitting them
                 if (typeName.contains("<")) {
                     parseParameterizedTypeFromString(typeName, visitor);
@@ -1677,17 +1681,17 @@ public class JDTParserService {
                             visitor.addImport(simpleName, importName);
 
                             // Also add this as a dependency
-                            visitor.addDependencyIfNotExists(new Dependency(importName));
+                            visitor.addDependencyIfNotExists(new Dependency(importName, packagePathConverter.extractPackageName(importName)));
                         }
                     }
                 }
             }
 
-            // Try to extract the package name
+            // Try to extract the package fullyQualifiedName
             PackageDeclaration packageDecl = cu.getPackage();
             if (packageDecl != null) {
                 String packageName = packageDecl.getName().getFullyQualifiedName();
-                visitor.addDependencyIfNotExists(new Dependency(packageName));
+                visitor.addDependencyIfNotExists(new Dependency(packageName, packagePathConverter.extractPackageName(packageName)));
             }
         } catch (Exception e) {
             System.err.println("Error extracting imports directly: " + e.getMessage());
@@ -1704,6 +1708,8 @@ public class JDTParserService {
         private final Set<String> onDemandImports = new HashSet<>();
         private String currentClassName; // Track current class being analyzed for self-reference exclusion
         private String currentPackageName; // Track current package for same-package type resolution
+        // Used to convert dependency FQN into its origin module
+        private final PackageNameExtractor packagePathConverter = new PackageNameExtractor();
 
         /**
          * Adds an import to the import map
@@ -1725,7 +1731,7 @@ public class JDTParserService {
 
         @Override
         public boolean visit(PackageDeclaration node) {
-            // Capture current package name for same-package type resolution
+            // Capture current package fullyQualifiedName for same-package type resolution
             currentPackageName = node.getName().getFullyQualifiedName();
             return super.visit(node);
         }
@@ -1743,10 +1749,10 @@ public class JDTParserService {
                     String fullName = node.getName().getFullyQualifiedName();
                     String simpleName = fullName.substring(fullName.lastIndexOf('.') + 1);
                     importMap.put(simpleName, fullName);
-                    
+
                     // Also add the import as a dependency (this was missing!)
-                    addDependencyIfNotExists(new Dependency(fullName));
-                    
+                    addDependencyIfNotExists(new Dependency(fullName, packagePathConverter.extractPackageName(fullName)));
+
                     log.debug("Added explicit import: {} -> {}", simpleName, fullName);
                 }
             } catch (Exception e) {
@@ -1758,11 +1764,11 @@ public class JDTParserService {
         @Override
         public boolean visit(TypeDeclaration node) {
             try {
-                // Set current class name for self-reference exclusion
+                // Set current class fullyQualifiedName for self-reference exclusion
                 if (currentClassName == null) {
                     currentClassName = node.getName().getIdentifier();
                 }
-                
+
                 // Handle superclass
                 if (node.getSuperclassType() != null) {
                     try {
@@ -1770,7 +1776,7 @@ public class JDTParserService {
                         if (binding != null) {
                             addDependencyWithImportResolution(binding);
                         } else {
-                            // Fallback: try to get name from AST
+                            // Fallback: try to get fullyQualifiedName from AST
                             addTypeFromAST(node.getSuperclassType());
                         }
                     } catch (Exception e) {
@@ -1788,7 +1794,7 @@ public class JDTParserService {
                         if (binding != null) {
                             addDependencyWithImportResolution(binding);
                         } else {
-                            // Fallback: try to get name from AST
+                            // Fallback: try to get fullyQualifiedName from AST
                             addTypeFromAST(interfaceType);
                         }
                     } catch (Exception e) {
@@ -1904,13 +1910,13 @@ public class JDTParserService {
                 if (binding != null) {
                     addTypeAndGenericsWithImportResolution(binding);
                 } else {
-                    // Fallback: use the annotation's name
+                    // Fallback: use the annotation's fullyQualifiedName
                     String name = node.getTypeName().getFullyQualifiedName();
                     addDependencyFromName(name);
                 }
             } catch (Exception e) {
                 System.err.println("Error processing single member annotation: " + e.getMessage());
-                // Fallback: try to extract the name directly
+                // Fallback: try to extract the fullyQualifiedName directly
                 try {
                     String name = node.getTypeName().getFullyQualifiedName();
                     addDependencyFromName(name);
@@ -1932,13 +1938,13 @@ public class JDTParserService {
                 if (binding != null) {
                     addTypeAndGenericsWithImportResolution(binding);
                 } else {
-                    // Fallback: use the annotation's name
+                    // Fallback: use the annotation's fullyQualifiedName
                     String name = node.getTypeName().getFullyQualifiedName();
                     addDependencyFromName(name);
                 }
             } catch (Exception e) {
                 System.err.println("Error processing marker annotation: " + e.getMessage());
-                // Fallback: try to extract the name directly
+                // Fallback: try to extract the fullyQualifiedName directly
                 try {
                     String name = node.getTypeName().getFullyQualifiedName();
                     addDependencyFromName(name);
@@ -1960,13 +1966,13 @@ public class JDTParserService {
                 if (binding != null) {
                     addTypeAndGenericsWithImportResolution(binding);
                 } else {
-                    // Fallback: use the annotation's name
+                    // Fallback: use the annotation's fullyQualifiedName
                     String name = node.getTypeName().getFullyQualifiedName();
                     addDependencyFromName(name);
                 }
             } catch (Exception e) {
                 System.err.println("Error processing normal annotation: " + e.getMessage());
-                // Fallback: try to extract the name directly
+                // Fallback: try to extract the fullyQualifiedName directly
                 try {
                     String name = node.getTypeName().getFullyQualifiedName();
                     addDependencyFromName(name);
@@ -2138,7 +2144,7 @@ public class JDTParserService {
                     addDependencyFromName(name);
                 } else if (type.isParameterizedType()) {
                     ParameterizedType parameterizedType = (ParameterizedType) type;
-                    
+
                     // Add the raw type first (e.g., JpaRepository)
                     addTypeFromAST(parameterizedType.getType());
 
@@ -2146,7 +2152,7 @@ public class JDTParserService {
                     for (Object o : parameterizedType.typeArguments()) {
                         if (o instanceof Type) {
                             Type argType = (Type) o;
-                            
+
                             // Recursively handle the type argument
                             addTypeFromAST(argType);
                         }
@@ -2167,7 +2173,7 @@ public class JDTParserService {
         }
 
         /**
-         * Helper method to add a dependency from a simple name
+         * Helper method to add a dependency from a simple fullyQualifiedName
          */
         public void addDependencyFromName(String name) {
             if (name == null || name.isEmpty()) return;
@@ -2177,17 +2183,17 @@ public class JDTParserService {
                 return;
             }
 
-            // First check if it's already a qualified name
+            // First check if it's already a qualified fullyQualifiedName
             if (name.contains(".")) {
                 // If it appears to be a suspicious resolution, try to validate it
                 if (isPotentiallyIncorrectPackageResolution(name, name.substring(name.lastIndexOf('.') + 1))) {
-                    // Extract the simple name
+                    // Extract the simple fullyQualifiedName
                     String simpleName = name.substring(name.lastIndexOf('.') + 1);
 
                     // Try to resolve with other methods
                     // First check imports
                     if (importMap.containsKey(simpleName)) {
-                        addDependencyIfNotExists(new Dependency(importMap.get(simpleName)));
+                        addDependencyIfNotExists(new Dependency(importMap.get(simpleName), packagePathConverter.extractPackageName(importMap.get(simpleName))));
                         return;
                     }
 
@@ -2198,39 +2204,39 @@ public class JDTParserService {
                     }
 
                     if (isTypeInPackage("java.time", simpleName)) {
-                        addDependencyIfNotExists(new Dependency("java.time." + simpleName));
+                        addDependencyIfNotExists(new Dependency("java.time." + simpleName, "java.time"));
                         return;
                     }
-                    
+
                     if (isTypeInPackage("java.text", simpleName)) {
-                        addDependencyIfNotExists(new Dependency("java.text." + simpleName));
+                        addDependencyIfNotExists(new Dependency("java.text." + simpleName, "java.text"));
                         return;
                     }
 
                     if (isTypeInPackage("java.util", simpleName)) {
-                        addDependencyIfNotExists(new Dependency("java.util." + simpleName));
+                        addDependencyIfNotExists(new Dependency("java.util." + simpleName, "java.util"));
                         return;
                     }
 
-                    // Fall back to simple name
-                    addDependencyIfNotExists(new Dependency(simpleName));
+                    // Fall back to simple fullyQualifiedName
+                    addDependencyIfNotExists(new Dependency(simpleName, packagePathConverter.extractPackageName(simpleName)));
                 } else {
-                    // Normal qualified name that looks valid
-                    addDependencyIfNotExists(new Dependency(name));
+                    // Normal qualified fullyQualifiedName that looks valid
+                    addDependencyIfNotExists(new Dependency(name, packagePathConverter.extractPackageName(name)));
                 }
                 return;
             }
 
             // PRIORITY 1: Check explicit imports - most reliable method
             if (importMap.containsKey(name)) {
-                addDependencyIfNotExists(new Dependency(importMap.get(name)));
+                addDependencyIfNotExists(new Dependency(importMap.get(name), packagePathConverter.extractPackageName(importMap.get(name))));
                 return;
             }
 
             // PRIORITY 2: Check wildcard imports - try to resolve against each one
             String resolvedType = resolveTypeFromWildcardImports(name);
             if (resolvedType != null) {
-                addDependencyIfNotExists(new Dependency(resolvedType));
+                addDependencyIfNotExists(new Dependency(resolvedType, packagePathConverter.extractPackageName(resolvedType)));
                 return;
             }
 
@@ -2242,35 +2248,35 @@ public class JDTParserService {
 
             // Check for java.time.* types using Class.forName
             if (isTypeInPackage("java.time", name)) {
-                addDependencyIfNotExists(new Dependency("java.time." + name));
+                addDependencyIfNotExists(new Dependency("java.time." + name, "java.time"));
                 return;
             }
-            
+
             // Check for java.text.* types using Class.forName
             if (isTypeInPackage("java.text", name)) {
-                addDependencyIfNotExists(new Dependency("java.text." + name));
+                addDependencyIfNotExists(new Dependency("java.text." + name, "java.text"));
                 return;
             }
 
             // Check for java.util.* types using Class.forName
             if (isTypeInPackage("java.util", name)) {
-                addDependencyIfNotExists(new Dependency("java.util." + name));
+                addDependencyIfNotExists(new Dependency("java.util." + name, "java.util"));
                 return;
             }
 
             // Try same-package resolution for types that look like classes
             if (currentPackageName != null && !currentPackageName.isEmpty() &&
-                name.length() > 0 && Character.isUpperCase(name.charAt(0)) &&
-                !shouldSkipType(name)) {
-                
+                    name.length() > 0 && Character.isUpperCase(name.charAt(0)) &&
+                    !shouldSkipType(name)) {
+
                 String samePackageType = currentPackageName + "." + name;
-                addDependencyIfNotExists(new Dependency(samePackageType));
+                addDependencyIfNotExists(new Dependency(samePackageType, packagePathConverter.extractPackageName(samePackageType)));
                 return;
             }
-            
-            // Last resort - use the name as is if it's not a type to skip
+
+            // Last resort - use the fullyQualifiedName as is if it's not a type to skip
             if (!shouldSkipType(name)) {
-                addDependencyIfNotExists(new Dependency(name));
+                addDependencyIfNotExists(new Dependency(name, packagePathConverter.extractPackageName(name)));
             }
         }
 
@@ -2291,7 +2297,7 @@ public class JDTParserService {
                     if (rawType != null) {
                         addDependencyWithImportResolution(rawType);
                     }
-                    
+
                     // Then add each type argument as a separate dependency
                     for (ITypeBinding typeArg : binding.getTypeArguments()) {
                         if (typeArg != null && !typeArg.isPrimitive()) {
@@ -2316,7 +2322,7 @@ public class JDTParserService {
                 if (importMap.containsKey(simpleName)) {
                     String explicitImport = importMap.get(simpleName);
                     log.debug("Found explicit import for {}: {}", simpleName, explicitImport);
-                    addDependencyIfNotExists(new Dependency(explicitImport));
+                    addDependencyIfNotExists(new Dependency(explicitImport, packagePathConverter.extractPackageName(explicitImport)));
                     return;
                 }
 
@@ -2324,7 +2330,7 @@ public class JDTParserService {
                 String externalLibraryType = null;
                 if (externalLibraryType != null) {
                     log.debug("Resolved {} to external library: {}", simpleName, externalLibraryType);
-                    addDependencyIfNotExists(new Dependency(externalLibraryType));
+                    addDependencyIfNotExists(new Dependency(externalLibraryType, packagePathConverter.extractPackageName(externalLibraryType)));
                     return;
                 }
 
@@ -2333,14 +2339,14 @@ public class JDTParserService {
                     // Accept if it's clearly an external library (not project package)
                     if (isExternalLibraryType(qualifiedName)) {
                         log.debug("Accepted external library binding for {}: {}", simpleName, qualifiedName);
-                        addDependencyIfNotExists(new Dependency(qualifiedName));
+                        addDependencyIfNotExists(new Dependency(qualifiedName, packagePathConverter.extractPackageName(qualifiedName)));
                         return;
                     } else if (isPotentiallyIncorrectPackageResolution(qualifiedName, simpleName)) {
                         log.debug("Rejected suspicious project binding for {}: {}", simpleName, qualifiedName);
                         // Continue to other resolution methods
                     } else {
                         // Accept other qualified names that don't look suspicious
-                        addDependencyIfNotExists(new Dependency(qualifiedName));
+                        addDependencyIfNotExists(new Dependency(qualifiedName, packagePathConverter.extractPackageName(qualifiedName)));
                         return;
                     }
                 }
@@ -2349,14 +2355,14 @@ public class JDTParserService {
                 String wildcardResolved = resolveTypeFromWildcardImports(simpleName);
                 if (wildcardResolved != null && isExternalLibraryType(wildcardResolved)) {
                     log.debug("Resolved {} via wildcard to external library: {}", simpleName, wildcardResolved);
-                    addDependencyIfNotExists(new Dependency(wildcardResolved));
+                    addDependencyIfNotExists(new Dependency(wildcardResolved, packagePathConverter.extractPackageName(wildcardResolved)));
                     return;
                 }
 
-                // PRIORITY 5: Last resort - use simple name for project types only
-                log.debug("Using simple name as last resort for: {}", simpleName);
+                // PRIORITY 5: Last resort - use simple fullyQualifiedName for project types only
+                log.debug("Using simple fullyQualifiedName as last resort for: {}", simpleName);
                 if (!shouldSkipType(simpleName)) {
-                    addDependencyIfNotExists(new Dependency(simpleName));
+                    addDependencyIfNotExists(new Dependency(simpleName, packagePathConverter.extractPackageName(simpleName)));
                 }
             } catch (Exception e) {
                 log.error("Error resolving dependency for {}: {}", binding.getName(), e.getMessage());
@@ -2370,16 +2376,16 @@ public class JDTParserService {
             if (typeName == null || typeName.isEmpty()) {
                 return true;
             }
-            
-            // Extract simple name from fully qualified name for comparison
-            String simpleName = typeName.contains(".") ? 
-                typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
-            
+
+            // Extract simple fullyQualifiedName from fully qualified fullyQualifiedName for comparison
+            String simpleName = typeName.contains(".") ?
+                    typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
+
             // Skip 'var' keyword (not a real type)
             if ("var".equals(simpleName) || "var".equals(typeName)) {
                 return true;
             }
-            
+
             // Skip primitive types (simple names)
             if (simpleName.equals("boolean") || simpleName.equals("byte") ||
                     simpleName.equals("char") || simpleName.equals("double") ||
@@ -2397,21 +2403,21 @@ public class JDTParserService {
                     simpleName.equals("Void") || simpleName.equals("String")) {
                 return true;
             }
-            
+
             // Skip fully qualified java.lang.* types
             if (typeName.startsWith("java.lang.")) {
                 return true;
             }
-            
+
             // Skip java.util.* collection types that we don't want as dependencies
-            if (typeName.startsWith("java.util.") || 
-                (simpleName.equals("List") || simpleName.equals("Set") ||
-                 simpleName.equals("Map") || simpleName.equals("Collection") ||
-                 simpleName.equals("ArrayList") || simpleName.equals("LinkedList") ||
-                 simpleName.equals("HashSet") || simpleName.equals("TreeSet") ||
-                 simpleName.equals("HashMap") || simpleName.equals("TreeMap") ||
-                 simpleName.equals("Optional") || simpleName.equals("Stream") ||
-                 simpleName.equals("Iterator") || simpleName.equals("Comparator"))) {
+            if (typeName.startsWith("java.util.") ||
+                    (simpleName.equals("List") || simpleName.equals("Set") ||
+                            simpleName.equals("Map") || simpleName.equals("Collection") ||
+                            simpleName.equals("ArrayList") || simpleName.equals("LinkedList") ||
+                            simpleName.equals("HashSet") || simpleName.equals("TreeSet") ||
+                            simpleName.equals("HashMap") || simpleName.equals("TreeMap") ||
+                            simpleName.equals("Optional") || simpleName.equals("Stream") ||
+                            simpleName.equals("Iterator") || simpleName.equals("Comparator"))) {
                 return true;
             }
 
@@ -2422,15 +2428,15 @@ public class JDTParserService {
                     simpleName.equals("FunctionalInterface") || simpleName.equals("Serializable")) {
                 return true;
             }
-            
+
             // Skip array type indicators
             if (typeName.endsWith("[]") || typeName.contains("[]")) {
                 return true;
             }
-            
+
             // Skip if this is the current class being analyzed (self-reference)
-            if (currentClassName != null && 
-                (typeName.equals(currentClassName) || simpleName.equals(currentClassName))) {
+            if (currentClassName != null &&
+                    (typeName.equals(currentClassName) || simpleName.equals(currentClassName))) {
                 return true;
             }
 
@@ -2459,7 +2465,7 @@ public class JDTParserService {
         }
 
         /**
-         * Resolves a type name against wildcard imports, returning the fully qualified name if found
+         * Resolves a type fullyQualifiedName against wildcard imports, returning the fully qualified fullyQualifiedName if found
          */
         private String resolveTypeFromWildcardImports(String typeName) {
             // PRIORITY 1: Check standard library packages first (highest priority)
@@ -2467,12 +2473,12 @@ public class JDTParserService {
                 if ("java.lang".equals(packageName)) {
                     continue; // Skip java.lang as it's implicit
                 }
-                
+
                 // Prioritize standard library packages
                 if (packageName.startsWith("jakarta.") || packageName.startsWith("javax.") ||
-                    packageName.startsWith("org.springframework.") || packageName.startsWith("lombok.") ||
-                    packageName.startsWith("java.")) {
-                    
+                        packageName.startsWith("org.springframework.") || packageName.startsWith("lombok.") ||
+                        packageName.startsWith("java.")) {
+
                     try {
                         String fullyQualifiedName = packageName + "." + typeName;
                         if (isTypeInPackage(packageName, typeName)) {
@@ -2484,7 +2490,7 @@ public class JDTParserService {
                     }
                 }
             }
-            
+
             // PRIORITY 2: Check project-specific packages (lower priority)
             for (String packageName : onDemandImports) {
                 if (packageName.contains(".domain.") || packageName.contains(".dto.") ||
@@ -2509,12 +2515,12 @@ public class JDTParserService {
                     }
                 }
             }
-            
+
             return null; // Type not found in any wildcard import
         }
 
         /**
-         * Checks if a qualified name represents an external library type
+         * Checks if a qualified fullyQualifiedName represents an external library type
          */
         private boolean isExternalLibraryType(String qualifiedName) {
             if (qualifiedName == null) return false;
@@ -2542,7 +2548,7 @@ public class JDTParserService {
         }
 
         /**
-         * Checks if a type name is likely to be a project-specific type
+         * Checks if a type fullyQualifiedName is likely to be a project-specific type
          */
         private boolean isLikelyProjectType(String typeName) {
             // Project types typically start with capital letter and are not primitives/wrappers
@@ -2571,7 +2577,7 @@ public class JDTParserService {
          */
         public void addDependencyIfNotExists(Dependency dependency) {
             try {
-                if (dependency.getName() != null && !dependency.getName().isEmpty() &&
+                if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty() &&
                         dependency.dependencyDoesNotExist(dependencies)) {
                     dependencies.add(dependency);
                 }
@@ -2591,7 +2597,7 @@ public class JDTParserService {
                     if (rawType != null) {
                         addDependencyWithImportResolution(rawType);
                     }
-                    
+
                     // Then add each type argument as a separate dependency
                     for (ITypeBinding typeArg : binding.getTypeArguments()) {
                         if (typeArg != null && !typeArg.isPrimitive()) {
@@ -2624,7 +2630,7 @@ public class JDTParserService {
             // Extract the base type (before the <)
             int angleStart = parameterizedType.indexOf('<');
             String baseType = parameterizedType.substring(0, angleStart).trim();
-            
+
             // Add the base type as a dependency
             visitor.addDependencyFromName(baseType);
 
@@ -2632,10 +2638,10 @@ public class JDTParserService {
             int angleEnd = parameterizedType.lastIndexOf('>');
             if (angleEnd > angleStart) {
                 String typeParameters = parameterizedType.substring(angleStart + 1, angleEnd);
-                
+
                 // Split type parameters by comma, handling nested generics
                 List<String> parameters = splitTypeParameters(typeParameters);
-                
+
                 for (String parameter : parameters) {
                     parameter = parameter.trim();
                     if (!parameter.isEmpty() && !visitor.shouldSkipType(parameter)) {
@@ -2650,7 +2656,7 @@ public class JDTParserService {
             }
         } catch (Exception e) {
             System.err.println("Error parsing parameterized type '" + parameterizedType + "': " + e.getMessage());
-            // Fallback: add the original type name
+            // Fallback: add the original type fullyQualifiedName
             visitor.addDependencyFromName(parameterizedType);
         }
     }
@@ -2664,7 +2670,7 @@ public class JDTParserService {
         List<String> parameters = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         int depth = 0;
-        
+
         for (char c : typeParameters.toCharArray()) {
             if (c == '<') {
                 depth++;
@@ -2682,12 +2688,12 @@ public class JDTParserService {
                 current.append(c);
             }
         }
-        
+
         // Add the last parameter
         if (current.length() > 0) {
             parameters.add(current.toString().trim());
         }
-        
+
         return parameters;
     }
 }
