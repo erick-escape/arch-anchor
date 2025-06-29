@@ -1,5 +1,6 @@
 package tcc.com.viewer.controllers;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import tcc.com.viewer.dto.module.ModuleDTO;
@@ -15,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api")
 public class ProjectController {
@@ -73,7 +75,7 @@ public class ProjectController {
                 file.transferTo(Paths.get(filePath.toUri()));
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("ProjectController -> postProject: ", e);
         }
     }
 
@@ -106,7 +108,7 @@ public class ProjectController {
 
             return moduleService.analyze(projectPath.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("ProjectController -> analyzeProject: ", e);
             throw new RuntimeException("Project analysis failed!");
         }
     }
