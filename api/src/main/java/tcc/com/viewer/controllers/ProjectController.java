@@ -6,7 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import tcc.com.viewer.dto.module.ModuleDTO;
 import tcc.com.viewer.dto.projects.ProjectDetailDTO;
 import tcc.com.viewer.dto.projects.ProjectsListResponseDTO;
-import tcc.com.viewer.services.ModuleService;
+import tcc.com.viewer.services.ProjectService;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,10 +22,10 @@ import java.util.stream.Collectors;
 public class ProjectController {
     private static final String UPLOAD_DIR = "uploads";
 
-    private final ModuleService moduleService;
+    private final ProjectService projectService;
 
-    public ProjectController(ModuleService moduleService) {
-        this.moduleService = moduleService;
+    public ProjectController(ProjectService projectService) {
+        this.projectService = projectService;
     }
 
     @GetMapping("/projects")
@@ -106,7 +106,7 @@ public class ProjectController {
                 throw new RuntimeException("Project not found!");
             }
 
-            return moduleService.analyze(projectPath.toString());
+            return projectService.analyzeProject(projectPath.toString());
         } catch (Exception e) {
             log.error("ProjectController -> analyzeProject: ", e);
             throw new RuntimeException("Project analysis failed!");

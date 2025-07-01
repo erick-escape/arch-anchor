@@ -13,6 +13,7 @@ import tcc.com.viewer.mapstruct.*;
 import tcc.com.viewer.services.parsers.ParserFactory;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -81,7 +82,7 @@ public class ModuleService {
         try {
             // Use a hash of the input string to generate a consistent UUID
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
-            byte[] hash = md.digest(input.getBytes("UTF-8"));
+            byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
 
             // Convert the hash bytes to a UUID format
             StringBuilder sb = new StringBuilder();
@@ -274,11 +275,10 @@ public class ModuleService {
     private boolean isLeafDirectoryWithJavaFiles(Path directory) {
         try {
             // Check if this directory directly contains Java files
-            boolean hasJavaFiles = Files.list(directory)
+
+            return Files.list(directory)
                     .filter(Files::isRegularFile)
                     .anyMatch(path -> path.toString().toLowerCase().endsWith(".java"));
-
-            return hasJavaFiles;
         } catch (IOException e) {
             return false;
         }
@@ -327,32 +327,11 @@ public class ModuleService {
                             }
                         }
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        log.error("ModuleService -> getModules: ", e);
                     }
                 });
 
         return this.modules;
-    }
-
-    public List<ModuleDTO> analyze(String directoryPath) throws IOException {
-        // Clear parser cache for fresh analysis to prevent duplicate processing
-        parserFactory.clearProcessingCache();
-
-        List<Module> modules = this.getModules(directoryPath);
-
-        for (Module module : modules) {
-            this.calculateClassSimilarities(module);
-            this.calculateModuleSimilarity(module);
-            this.populateAllowedRules(module);
-        }
-
-        // Convert modules to ModuleDTO
-        List<ModuleDTO> modulesList = modules.stream()
-                .map(moduleMapper::toDto)
-                .collect(Collectors.toList());
-        this.saveModules(modulesList);
-
-        return modulesList;
     }
 
     public ModuleDTO setRefClazzes(String moduleId, List<String> refClazzIds) {
