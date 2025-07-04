@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.module.Module;
-import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.services.ModuleService;
 
 import java.util.ArrayList;
@@ -37,11 +36,11 @@ public class SplitModule extends Heuristic {
         double totalImprovement;
 
         public SplitModuleResult(String originalModuleId, String originalModuleName,
-                               String remainingModuleId, String remainingModuleName,
-                               String newModuleId, String newModuleName,
-                               List<String> splitClassNames,
-                               double originalSimilarity, double remainingSimilarity,
-                               double newModuleSimilarity, double totalImprovement) {
+                                 String remainingModuleId, String remainingModuleName,
+                                 String newModuleId, String newModuleName,
+                                 List<String> splitClassNames,
+                                 double originalSimilarity, double remainingSimilarity,
+                                 double newModuleSimilarity, double totalImprovement) {
             this.originalModuleId = originalModuleId;
             this.originalModuleName = originalModuleName;
             this.remainingModuleId = remainingModuleId;
@@ -90,7 +89,7 @@ public class SplitModule extends Heuristic {
     }
 
     private void generateClassCombinations(List<Clazz> classes, int combinationSize, int start,
-                                         List<Clazz> currentCombination, List<List<Clazz>> allCombinations) {
+                                           List<Clazz> currentCombination, List<List<Clazz>> allCombinations) {
         if (currentCombination.size() == combinationSize) {
             allCombinations.add(new ArrayList<>(currentCombination));
             return;
@@ -140,7 +139,7 @@ public class SplitModule extends Heuristic {
 
         for (Module module : modules) {
             List<Clazz> classes = module.getClazzes();
-            
+
             if (classes.size() < 2) {
                 log.debug("Skipping module '{}' - insufficient classes for splitting ({})", module.getName(), classes.size());
                 continue;
@@ -151,7 +150,7 @@ public class SplitModule extends Heuristic {
             // Try all possible combinations from size 1 to (total classes - 1)
             for (int splitSize = 1; splitSize < classes.size(); splitSize++) {
                 List<List<Clazz>> combinations = getAllClassCombinations(classes, splitSize);
-                
+
                 for (List<Clazz> classesToSplit : combinations) {
                     Module remainingModule = createModuleWithoutClasses(module, classesToSplit);
                     Module newModule = createModuleWithClasses(module, classesToSplit, "split");
@@ -186,10 +185,16 @@ public class SplitModule extends Heuristic {
         log.info("Found {} potential beneficial splits", potentialSplits.size());
         for (int i = 0; i < Math.min(10, potentialSplits.size()); i++) {
             SplitModuleResult split = potentialSplits.get(i);
-            log.info("Split suggestion: Module '{}' (sim: {:.3f}) -> Remaining (sim: {:.3f}) + New '{}' (sim: {:.3f}) - Classes: {} - Total Improvement: {:.3f}",
-                    split.originalModuleName, split.originalSimilarity,
-                    split.remainingSimilarity, split.newModuleName, split.newModuleSimilarity,
-                    String.join(", ", split.splitClassNames), split.totalImprovement);
+            log.info("Split suggestion: Module '{}' (sim: '{}') -> Remaining (sim: '{}') + New '{}' (sim: '{}') - Classes: {} -" +
+                            "Total Improvement: '{}'",
+                    split.originalModuleName,
+                    String.format("%.3f", split.originalSimilarity),
+                    String.format("%.3f", split.remainingSimilarity),
+                    split.newModuleName,
+                    String.format("%.3f", split.newModuleSimilarity),
+                    String.join(", ", split.splitClassNames),
+                    String.format("%.3f", split.totalImprovement)
+            );
         }
     }
 }
