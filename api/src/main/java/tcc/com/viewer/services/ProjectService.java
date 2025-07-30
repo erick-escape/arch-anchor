@@ -6,8 +6,8 @@ import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.module.ModuleDTO;
 import tcc.com.viewer.mapstruct.ModuleMapper;
 import tcc.com.viewer.mapstruct.ModuleMapperImpl;
+import tcc.com.viewer.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
 import tcc.com.viewer.services.parsers.ParserFactory;
-import tcc.com.viewer.services.heuristics.HeuristicRunner;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,13 +18,13 @@ import java.util.stream.Collectors;
 public class ProjectService {
     private final ModuleService moduleService;
     private final ParserFactory parserFactory;
-    private final HeuristicRunner heuristicRunner;
+    private final ArchitecturalAnalysesRunner analysesRunner;
     private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
-    public ProjectService(ModuleService moduleService, ParserFactory parserFactory, HeuristicRunner heuristicRunner) {
+    public ProjectService(ModuleService moduleService, ParserFactory parserFactory, ArchitecturalAnalysesRunner analysesRunner) {
         this.moduleService = moduleService;
         this.parserFactory = parserFactory;
-        this.heuristicRunner = heuristicRunner;
+        this.analysesRunner = analysesRunner;
     }
 
     public List<ModuleDTO> analyzeProject(String directoryPath) throws IOException {
@@ -39,7 +39,7 @@ public class ProjectService {
             moduleService.populateAllowedRules(module);
         }
 
-        heuristicRunner.executeAll(modules);
+        analysesRunner.executeAll(modules);
 
         // Convert modules to ModuleDTO
         List<ModuleDTO> modulesList = modules.stream()

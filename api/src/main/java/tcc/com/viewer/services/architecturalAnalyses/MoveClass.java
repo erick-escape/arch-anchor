@@ -1,4 +1,4 @@
-package tcc.com.viewer.services.heuristics;
+package tcc.com.viewer.services.architecturalAnalyses;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -12,14 +12,14 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-public class MoveClass extends Heuristic {
+public class MoveClass extends ArchitecturalAnalysis {
     public MoveClass(ModuleService moduleService) {
         super(moduleService);
     }
 
     @Override
     public void execute(List<Module> modules) {
-        moveClassHeuristic(modules);
+        moveClassAnalysis(modules);
     }
 
     private static class MoveClassResult {
@@ -86,8 +86,8 @@ public class MoveClass extends Heuristic {
         return sourceImprovement + targetImprovement;
     }
 
-    public void moveClassHeuristic(List<Module> modules) {
-        log.info("Starting move class heuristic analysis...");
+    public void moveClassAnalysis(List<Module> modules) {
+        log.info("Starting move class analysis...");
 
         List<MoveClassResult> potentialMoves = new ArrayList<>();
 

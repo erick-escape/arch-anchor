@@ -1,4 +1,4 @@
-package tcc.com.viewer.services.heuristics;
+package tcc.com.viewer.services.architecturalAnalyses;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -12,14 +12,14 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-public class SplitModule extends Heuristic {
+public class SplitModule extends ArchitecturalAnalysis {
     public SplitModule(ModuleService moduleService) {
         super(moduleService);
     }
 
     @Override
     public void execute(List<Module> modules) {
-        splitModuleHeuristic(modules);
+        splitModuleAnalysis(modules);
     }
 
     private static class SplitModuleResult {
@@ -132,8 +132,8 @@ public class SplitModule extends Heuristic {
         return remainingImprovement + newModuleImprovement;
     }
 
-    public void splitModuleHeuristic(List<Module> modules) {
-        log.info("Starting split module heuristic analysis for {} modules...", modules.size());
+    public void splitModuleAnalysis(List<Module> modules) {
+        log.info("Starting split module analysis for {} modules...", modules.size());
 
         List<SplitModuleResult> potentialSplits = new ArrayList<>();
 

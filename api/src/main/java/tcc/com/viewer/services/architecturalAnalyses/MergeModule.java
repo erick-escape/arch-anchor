@@ -1,4 +1,4 @@
-package tcc.com.viewer.services.heuristics;
+package tcc.com.viewer.services.architecturalAnalyses;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -12,14 +12,14 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class MergeModule extends Heuristic {
+public class MergeModule extends ArchitecturalAnalysis {
     public MergeModule(ModuleService moduleService) {
         super(moduleService);
     }
 
     @Override
     public void execute(List<Module> modules) {
-        mergeModuleHeuristic(modules);
+        mergeModuleAnalysis(modules);
     }
 
     private static class MergeModuleResult {
@@ -29,8 +29,8 @@ public class MergeModule extends Heuristic {
         String module2Name;
         double improvement;
 
-        public MergeModuleResult(String module1Id, String module1Name, String module2Id, 
-                               String module2Name, double improvement) {
+        public MergeModuleResult(String module1Id, String module1Name, String module2Id,
+                                 String module2Name, double improvement) {
             this.module1Id = module1Id;
             this.module1Name = module1Name;
             this.module2Id = module2Id;
@@ -75,14 +75,14 @@ public class MergeModule extends Heuristic {
         return mergedSimilarity - originalCombinedSimilarity;
     }
 
-    public void mergeModuleHeuristic(List<Module> modules) {
-        log.info("Starting merge module heuristic analysis...");
+    public void mergeModuleAnalysis(List<Module> modules) {
+        log.info("Starting merge module analysis...");
 
         List<MergeModuleResult> potentialMerges = new ArrayList<>();
 
         for (int i = 0; i < modules.size(); i++) {
             Module module1 = modules.get(i);
-            
+
             for (int j = i + 1; j < modules.size(); j++) {
                 Module module2 = modules.get(j);
 
