@@ -3,6 +3,7 @@ package tcc.com.viewer.services.parsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tcc.com.viewer.services.JDTParserService;
+import tcc.com.viewer.services.JavaParserService;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -17,10 +18,14 @@ public class ParserFactory {
 
     private final Map<String, LanguageParser> parsers = new ConcurrentHashMap<>();
     private final JDTParserService jdtParserService;
+    private final JavaParserService javaParserService;
 
     // Constructor for Spring dependency injection
-    public ParserFactory(JDTParserService jdtParserService) {
+    public ParserFactory(
+            JDTParserService jdtParserService,
+            @Autowired(required = false) JavaParserService javaParserService) {
         this.jdtParserService = jdtParserService;
+        this.javaParserService = javaParserService;
     }
 
     @Autowired(required = false)  // Make it optional in case no parsers are available
@@ -56,9 +61,17 @@ public class ParserFactory {
         }
         
         if (filePathStr.endsWith(".java")) {
-            JavaParser javaParser = new JavaParser(jdtParserService);
-            registerParser(javaParser);
-            return javaParser;
+            // Try to create a JavaParser with dependency injection
+            // This should use the JavaParser @Component that we just updated
+            for (LanguageParser parser : parsers.values()) {
+                if (parser instanceof JavaParser) {
+                    return parser;
+                }
+            }
+            
+            // If no JavaParser bean is found, create one manually (should not happen with Spring)
+            // This is kept for backward compatibility but shouldn't be needed
+            throw new UnsupportedOperationException("No JavaParser found - check Spring configuration");
         }
 
         throw new UnsupportedOperationException("No parser available for file: " + filePath);
@@ -68,6 +81,10 @@ public class ParserFactory {
      * Clears the processing cache for fresh analysis
      */
     public void clearProcessingCache() {
+        // Clear both JDT and JavaParser caches
         jdtParserService.clearProcessedFilesCache();
+        if (javaParserService != null) {
+            javaParserService.clearCache();
+        }
     }
 }

@@ -21,18 +21,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * JUnit test suite that verifies full, correct resolution of imports for representative classes
  * in uploads/pass-in. This suite should immediately fail if dependency binding breaks after any change.
+ * Updated to test the new JavaParserService implementation.
  */
 @SpringBootTest
-@DisplayName("JDT Type Resolution Tests")
+@DisplayName("JavaParser Type Resolution Tests")
 class JDTTypeResolutionTest {
 
     @Autowired
-    private JDTParserService jdtParserService;
+    private JavaParserService javaParserService;
 
     @BeforeEach
     void setUp() {
         // Clear the processed files cache before each test to ensure consistent results
-        jdtParserService.clearProcessedFilesCache();
+        javaParserService.clearCache();
     }
 
     /**
@@ -157,7 +158,7 @@ class JDTTypeResolutionTest {
         Path absolutePath = Paths.get(System.getProperty("user.dir")).resolve(classPath);
 
         // Act
-        List<Dependency> dependencies = jdtParserService.getDependencies(absolutePath);
+        List<Dependency> dependencies = javaParserService.getDependencies(absolutePath);
 
         // Extract fully qualified type names from dependencies
         Set<String> actualTypes = dependencies.stream()
@@ -222,25 +223,29 @@ class JDTTypeResolutionTest {
         Path absolutePath = Paths.get(System.getProperty("user.dir")).resolve(classPath);
 
         // Clear cache to ensure first call processes the file
-        jdtParserService.clearProcessedFilesCache();
+        javaParserService.clearCache();
 
         // Act - First call
-        List<Dependency> firstCall = jdtParserService.getDependencies(absolutePath);
+        List<Dependency> firstCall = javaParserService.getDependencies(absolutePath);
         Set<String> firstCallTypes = firstCall.stream()
                 .map(Dependency::getFullyQualifiedName)
                 .collect(Collectors.toSet());
 
-        // Act - Second call (should return empty list due to caching)
-        List<Dependency> secondCall = jdtParserService.getDependencies(absolutePath);
+        // Act - Second call (should return same results, not empty since JavaParser doesn't use file-level caching like JDT)
+        List<Dependency> secondCall = javaParserService.getDependencies(absolutePath);
 
         // Assert
         assertThat(firstCallTypes)
                 .as("First call should return expected types for class: %s", testName)
                 .containsExactlyInAnyOrderElementsOf(expectedTypes);
 
-        assertThat(secondCall)
-                .as("Second call should return empty list due to processed files cache for class: %s", testName)
-                .isEmpty();
+        Set<String> secondCallTypes = secondCall.stream()
+                .map(Dependency::getFullyQualifiedName)
+                .collect(Collectors.toSet());
+
+        assertThat(secondCallTypes)
+                .as("Second call should return consistent results for class: %s", testName)
+                .isEqualTo(firstCallTypes);
     }
 
     @ParameterizedTest(name = "{0} - File Exists Test")
