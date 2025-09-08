@@ -285,6 +285,8 @@ public class JavaParserService {
         Path pomFile = projectRoot.resolve("pom.xml");
         if (Files.exists(pomFile)) {
             jarPaths.addAll(resolveMavenDependencies(pomFile));
+            // Add common Spring Boot transitive dependencies that our simple resolver misses
+            jarPaths.addAll(resolveSpringBootTransitiveDependencies(pomFile));
         }
 
         // Try Gradle
@@ -298,6 +300,44 @@ public class JavaParserService {
 
         // Cache the results
         jarCache.put(cacheKey, jarPaths);
+
+        return jarPaths;
+    }
+
+    /**
+     * Resolves common Spring Boot transitive dependencies that our simple resolver misses
+     */
+    private List<String> resolveSpringBootTransitiveDependencies(Path pomFile) {
+        List<String> jarPaths = new ArrayList<>();
+
+        try {
+            String pomContent = Files.readString(pomFile);
+
+            // Check if this is a Spring Boot project with data-jpa
+            if (pomContent.contains("spring-boot-starter-data-jpa")) {
+                // Add Jakarta persistence API
+                String jakartaPersistenceJar = downloadMavenArtifact("jakarta.persistence", "jakarta.persistence-api", "3.1.0");
+                if (jakartaPersistenceJar != null) {
+                    jarPaths.add(jakartaPersistenceJar);
+                    log.debug("Added Jakarta Persistence API JAR: {}", jakartaPersistenceJar);
+                }
+            }
+
+            // Check if this is a Spring Boot web project 
+            if (pomContent.contains("spring-boot-starter-web")) {
+                // Add Spring Web annotations
+                String springWebJar = downloadMavenArtifact("org.springframework", "spring-web", "6.1.13");
+                if (springWebJar != null) {
+                    jarPaths.add(springWebJar);
+                    log.debug("Added Spring Web JAR: {}", springWebJar);
+                }
+            }
+
+            log.info("Added {} Spring Boot transitive dependencies", jarPaths.size());
+
+        } catch (Exception e) {
+            log.error("Error resolving Spring Boot transitive dependencies: {}", e.getMessage());
+        }
 
         return jarPaths;
     }
@@ -679,6 +719,11 @@ public class JavaParserService {
             // Track current class name to avoid self-references
             currentClassName = n.getNameAsString();
 
+            // Process class annotations - this was missing and causing test failures!
+            for (AnnotationExpr annotation : n.getAnnotations()) {
+                processAnnotation(annotation);
+            }
+
             // Handle extended types (superclass)
             for (ClassOrInterfaceType extendedType : n.getExtendedTypes()) {
                 processType(extendedType);
@@ -703,6 +748,11 @@ public class JavaParserService {
         public void visit(EnumDeclaration n, Void arg) {
             currentClassName = n.getNameAsString();
 
+            // Process enum annotations
+            for (AnnotationExpr annotation : n.getAnnotations()) {
+                processAnnotation(annotation);
+            }
+
             // Handle implemented interfaces
             for (ClassOrInterfaceType implementedType : n.getImplementedTypes()) {
                 processType(implementedType);
@@ -714,6 +764,11 @@ public class JavaParserService {
         @Override
         public void visit(RecordDeclaration n, Void arg) {
             currentClassName = n.getNameAsString();
+
+            // Process record annotations
+            for (AnnotationExpr annotation : n.getAnnotations()) {
+                processAnnotation(annotation);
+            }
 
             // Handle implemented interfaces
             for (ClassOrInterfaceType implementedType : n.getImplementedTypes()) {
@@ -736,6 +791,12 @@ public class JavaParserService {
         @Override
         public void visit(AnnotationDeclaration n, Void arg) {
             currentClassName = n.getNameAsString();
+
+            // Process annotation declaration annotations (meta-annotations)
+            for (AnnotationExpr annotation : n.getAnnotations()) {
+                processAnnotation(annotation);
+            }
+
             super.visit(n, arg);
         }
 
@@ -890,16 +951,38 @@ public class JavaParserService {
 
         /**
          * Processes any Type node to extract dependencies
+         * Fixed to handle wildcard import failures with direct TypeSolver resolution
          */
         private void processType(Type type) {
             if (type == null) return;
 
             try {
-                // Try to resolve the type first
+                // Try JavaParser resolution first (works for explicit imports)
                 ResolvedType resolvedType = type.resolve();
                 processResolvedType(resolvedType);
             } catch (Exception e) {
-                // Fallback to AST-based processing
+                log.debug("JavaParser resolution failed for type, trying direct TypeSolver: {}", e.getMessage());
+
+                // JavaParser resolution failed - use direct TypeSolver lookup for ClassOrInterfaceType
+                if (type instanceof ClassOrInterfaceType) {
+                    String typeName = ((ClassOrInterfaceType) type).getNameAsString();
+                    String fullyQualifiedName = resolveTypeWithTypeSolver(typeName);
+                    if (fullyQualifiedName != null) {
+                        log.debug("Resolved type {} to {} via direct TypeSolver", typeName, fullyQualifiedName);
+                        addDependencyIfNotExists(fullyQualifiedName);
+
+                        // Process type arguments even when main type resolution succeeded via TypeSolver
+                        ClassOrInterfaceType classType = (ClassOrInterfaceType) type;
+                        if (classType.getTypeArguments().isPresent()) {
+                            for (Type typeArg : classType.getTypeArguments().get()) {
+                                processType(typeArg);
+                            }
+                        }
+                        return;
+                    }
+                }
+
+                // Continue with existing AST fallback for other cases
                 processTypeFromAST(type);
             }
         }
@@ -953,8 +1036,8 @@ public class JavaParserService {
                 ClassOrInterfaceType classType = (ClassOrInterfaceType) type;
                 String typeName = classType.getNameAsString();
 
-                // Try to resolve from imports
-                String fullyQualifiedName = resolveTypeFromImports(typeName);
+                // Try to resolve using direct TypeSolver
+                String fullyQualifiedName = resolveTypeWithTypeSolver(typeName);
 
                 // Check if this is a generic container that should be skipped
                 if (fullyQualifiedName != null) {
@@ -1018,20 +1101,21 @@ public class JavaParserService {
 
         /**
          * Processes annotations to extract their types
+         * Fixed to use direct TypeSolver resolution instead of broken JavaParser resolution
          */
         private void processAnnotation(AnnotationExpr annotation) {
             if (annotation == null) return;
 
-            try {
-                ResolvedType resolvedType = annotation.calculateResolvedType();
-                processResolvedType(resolvedType);
-            } catch (Exception e) {
-                // Fallback to name resolution
-                String annotationName = annotation.getNameAsString();
-                String fullyQualifiedName = resolveTypeFromImports(annotationName);
-                if (fullyQualifiedName != null) {
-                    addDependencyIfNotExists(fullyQualifiedName);
-                }
+            String annotationName = annotation.getNameAsString();
+
+            // Don't try JavaParser resolution - it's broken for marker annotations
+            // Go directly to our resolution logic
+            String fullyQualifiedName = resolveTypeWithTypeSolver(annotationName);
+            if (fullyQualifiedName != null) {
+                log.debug("Resolved annotation {} to {}", annotationName, fullyQualifiedName);
+                addDependencyIfNotExists(fullyQualifiedName);
+            } else {
+                log.debug("Could not resolve annotation: {}", annotationName);
             }
 
             // Process annotation member values
@@ -1058,58 +1142,99 @@ public class JavaParserService {
                 for (Expression element : arrayInit.getValues()) {
                     processAnnotationValue(element);
                 }
+            } else if (value instanceof FieldAccessExpr) {
+                // Handle static enum references like GenerationType.UUID
+                FieldAccessExpr fieldAccess = (FieldAccessExpr) value;
+                try {
+                    // Try to resolve the scope (the enum class)
+                    ResolvedType resolvedType = fieldAccess.getScope().calculateResolvedType();
+                    processResolvedType(resolvedType);
+                } catch (Exception e) {
+                    // Fallback: extract the type name from the scope
+                    if (fieldAccess.getScope() instanceof NameExpr) {
+                        String scopeName = ((NameExpr) fieldAccess.getScope()).getNameAsString();
+                        String fullyQualifiedName = resolveTypeWithTypeSolver(scopeName);
+                        if (fullyQualifiedName != null) {
+                            log.debug("Resolved enum type {} to {} via field access", scopeName, fullyQualifiedName);
+                            addDependencyIfNotExists(fullyQualifiedName);
+                        }
+                    }
+                }
+            } else if (value instanceof NameExpr) {
+                // Handle simple enum references
+                NameExpr nameExpr = (NameExpr) value;
+                String name = nameExpr.getNameAsString();
+                String fullyQualifiedName = resolveTypeWithTypeSolver(name);
+                if (fullyQualifiedName != null) {
+                    addDependencyIfNotExists(fullyQualifiedName);
+                }
             }
         }
 
         /**
-         * Resolves a simple type name to its fully qualified name using imports
+         * Resolves a simple type name to its fully qualified name using direct TypeSolver queries
+         * This bypasses JavaParser's broken resolution for wildcard imports
          */
-        private String resolveTypeFromImports(String simpleName) {
+        private String resolveTypeWithTypeSolver(String simpleName) {
             if (simpleName == null || simpleName.isEmpty()) {
                 return null;
             }
 
-            // Check explicit imports first
+            // 1. Check explicit imports first
             if (importMap.containsKey(simpleName)) {
                 return importMap.get(simpleName);
             }
 
-            // Check wildcard imports - prioritize external libraries  
-            for (String packageName : onDemandImports) {
-                String candidate = packageName + "." + simpleName;
-                // For external libraries, always use the wildcard resolution
-                if (packageName.startsWith("java.") || packageName.startsWith("javax.") ||
-                        packageName.startsWith("jakarta.") || packageName.startsWith("org.springframework.") ||
-                        packageName.startsWith("org.") || packageName.startsWith("com.") ||
-                        packageName.startsWith("lombok.")) {
-                    log.debug("Resolved {} from wildcard import {} to {}", simpleName, packageName, candidate);
-                    return candidate;
+            // 2. Check wildcard imports using direct TypeSolver queries
+            for (String wildcardImport : onDemandImports) {
+                String candidateFQN = wildcardImport + "." + simpleName;
+                try {
+                    var resolved = typeSolver.tryToSolveType(candidateFQN);
+                    if (resolved.isSolved()) {
+                        log.debug("Resolved {} to {} via wildcard import {}", simpleName, candidateFQN, wildcardImport);
+                        return candidateFQN;
+                    }
+                } catch (Exception e) {
+                    // Continue to next wildcard import
                 }
             }
 
-            // For project-specific wildcard imports, also resolve them
-            for (String packageName : onDemandImports) {
-                if (packageName.startsWith("tcc.com.")) {
-                    String candidate = packageName + "." + simpleName;
-                    log.debug("Resolved {} from project wildcard import {} to {}", simpleName, packageName, candidate);
-                    return candidate;
-                }
-            }
-
-            // Check same package
+            // 3. Check same package
             if (!currentPackage.isEmpty()) {
-                String candidate = currentPackage + "." + simpleName;
-                log.debug("Resolved {} to same package: {}", simpleName, candidate);
-                return candidate;
+                String candidateFQN = currentPackage + "." + simpleName;
+                try {
+                    var resolved = typeSolver.tryToSolveType(candidateFQN);
+                    if (resolved.isSolved()) {
+                        log.debug("Resolved {} to {} via same package", simpleName, candidateFQN);
+                        return candidateFQN;
+                    }
+                } catch (Exception e) {
+                    // Continue
+                }
             }
 
-            // Check java.lang (implicit import)
-            if (isJavaLangClass(simpleName)) {
-                return "java.lang." + simpleName;
+            // 4. Check java.lang
+            String javaLangCandidate = "java.lang." + simpleName;
+            try {
+                var resolved = typeSolver.tryToSolveType(javaLangCandidate);
+                if (resolved.isSolved()) {
+                    log.debug("Resolved {} to {} via java.lang", simpleName, javaLangCandidate);
+                    return javaLangCandidate;
+                }
+            } catch (Exception e) {
+                // Continue
             }
 
             log.debug("Could not resolve type: {}", simpleName);
-            return simpleName; // Return as-is if can't resolve
+            return null; // Could not resolve
+        }
+
+        /**
+         * Legacy method - now delegates to resolveTypeWithTypeSolver
+         */
+        private String resolveTypeFromImports(String simpleName) {
+            String resolved = resolveTypeWithTypeSolver(simpleName);
+            return resolved != null ? resolved : simpleName;
         }
 
         private boolean isJavaLangClass(String className) {

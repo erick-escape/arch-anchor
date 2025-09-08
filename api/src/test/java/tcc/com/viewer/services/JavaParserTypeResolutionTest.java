@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @DisplayName("JavaParser Type Resolution Tests")
-class JDTTypeResolutionTest {
+class JavaParserTypeResolutionTest {
 
     @Autowired
     private JavaParserService javaParserService;
@@ -92,7 +92,8 @@ class JDTTypeResolutionTest {
                                 "org.springframework.web.method.support.CompositeUriComponentsContributor",
                                 "org.springframework.web.util.UriComponentsBuilder",
                                 "tcc.com.pass_in.dto.attendee.AttendeeBadgeResponseDTO",
-                                "tcc.com.pass_in.services.AttendeeService"
+                                "tcc.com.pass_in.services.AttendeeService",
+                                "java.net.URI"
                         )
                 ),
                 Arguments.of(
