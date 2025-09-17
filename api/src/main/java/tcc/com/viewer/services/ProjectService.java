@@ -37,6 +37,8 @@ public class ProjectService {
             moduleService.calculateClassSimilarities(module);
             moduleService.calculateModuleSimilarity(module);
             moduleService.populateAllowedRules(module);
+            moduleService.populateRefClazzesDependencies(module);
+            moduleService.populateAllDependencies(module);
         }
 
         analysesRunner.executeAll(modules);

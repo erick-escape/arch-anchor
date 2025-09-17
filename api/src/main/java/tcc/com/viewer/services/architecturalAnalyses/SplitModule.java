@@ -64,6 +64,8 @@ public class SplitModule extends ArchitecturalAnalysis {
                 newName,
                 originalModule.getRefClazzes(),
                 originalModule.getAllowedRules(),
+                originalModule.getRefClazzesDependencies(),
+                originalModule.getAllDependencies(),
                 new ArrayList<>(classes),
                 0.0
         );
@@ -83,6 +85,8 @@ public class SplitModule extends ArchitecturalAnalysis {
                 newName,
                 originalModule.getRefClazzes(),
                 originalModule.getAllowedRules(),
+                originalModule.getRefClazzesDependencies(),
+                originalModule.getAllDependencies(),
                 remainingClasses,
                 0.0
         );

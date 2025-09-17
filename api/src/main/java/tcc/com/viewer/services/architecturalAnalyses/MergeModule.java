@@ -57,6 +57,8 @@ public class MergeModule extends ArchitecturalAnalysis {
                 mergedName,
                 mergedRefClazzes,
                 mergedAllowedRules,
+                null, // refClazzesDependencies will be calculated later
+                null, // allDependencies will be calculated later
                 mergedClazzes,
                 0.0
         );

@@ -7,6 +7,7 @@ import tcc.com.viewer.domains.dependency.Dependency;
 import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
+import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
 import tcc.com.viewer.dto.rules.AllowedRuleDTO;
 import tcc.com.viewer.mapstruct.*;
@@ -28,6 +29,7 @@ public class ModuleService {
     private final ModuleMapper moduleMapper = new ModuleMapperImpl();
     private final ClazzMapper clazzMapper = new ClazzMapperImpl();
     private final AllowedRuleMapper allowedRuleMapper = new AllowedRuleMapperImpl();
+    private final DependencyMapper dependencyMapper = new DependencyMapperImpl();
 
     public ModuleService(ParserFactory parserFactory) {
         this.parserFactory = parserFactory;
@@ -182,6 +184,50 @@ public class ModuleService {
         module.setAllowedRules(allowedRules);
     }
 
+    public void populateAllDependencies(Module module) {
+        if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
+            module.setAllDependencies(new ArrayList<>());
+            return;
+        }
+
+        Map<String, Dependency> uniqueDependencies = new HashMap<>();
+
+        for (Clazz clazz : module.getClazzes()) {
+            if (clazz.getDependencies() != null) {
+                for (Dependency dependency : clazz.getDependencies()) {
+                    if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty()) {
+                        uniqueDependencies.put(dependency.getFullyQualifiedName(), dependency);
+                    }
+                }
+            }
+        }
+
+        List<Dependency> allDependencies = new ArrayList<>(uniqueDependencies.values());
+        module.setAllDependencies(allDependencies);
+    }
+
+    public void populateRefClazzesDependencies(Module module) {
+        if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty()) {
+            module.setRefClazzesDependencies(new ArrayList<>());
+            return;
+        }
+
+        Map<String, Dependency> uniqueDependencies = new HashMap<>();
+
+        for (Clazz clazz : module.getRefClazzes()) {
+            if (clazz.getDependencies() != null) {
+                for (Dependency dependency : clazz.getDependencies()) {
+                    if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty()) {
+                        uniqueDependencies.put(dependency.getFullyQualifiedName(), dependency);
+                    }
+                }
+            }
+        }
+
+        List<Dependency> refClazzesDependencies = new ArrayList<>(uniqueDependencies.values());
+        module.setRefClazzesDependencies(refClazzesDependencies);
+    }
+
     public List<ModuleDTO> splitModule(ModuleDTO originalModule, List<String> classIds) {
         // Convert to entity for easier manipulation
         Module originalModuleEntity = moduleMapper.toEntity(originalModule);
@@ -203,6 +249,9 @@ public class ModuleService {
 
         this.calculateClassSimilarities(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
+        this.populateAllowedRules(retainedModuleEntity);
+        this.populateRefClazzesDependencies(retainedModuleEntity);
+        this.populateAllDependencies(retainedModuleEntity);
 
         // Create the new module (with extracted classes)
         Module newModuleEntity = new Module();
@@ -214,6 +263,9 @@ public class ModuleService {
 
         this.calculateClassSimilarities(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
+        this.populateAllowedRules(newModuleEntity);
+        this.populateRefClazzesDependencies(newModuleEntity);
+        this.populateAllDependencies(newModuleEntity);
 
         // Convert back to DTOs
         ModuleDTO retainedDto = moduleMapper.toDto(retainedModuleEntity);
@@ -317,6 +369,8 @@ public class ModuleService {
                                         moduleName,
                                         null, // refClazzes will be calculated later
                                         null, // allowedRules will be calculated later
+                                        null, // refClazzesDependencies will be calculated later
+                                        null, // allDependencies will be calculated later
                                         clazzes,
                                         0.0 // Similarity will be calculated later
                                 );
@@ -367,6 +421,8 @@ public class ModuleService {
                 .toList();
         moduleEntity.setRefClazzes(modulesList);
         this.populateAllowedRules(moduleEntity);
+        this.populateRefClazzesDependencies(moduleEntity);
+        this.populateAllDependencies(moduleEntity);
 
         // Create updated module with new reference classes
         ModuleDTO updatedModule = new ModuleDTO(
@@ -376,6 +432,12 @@ public class ModuleService {
                 (AllowedRuleDTO[]) moduleEntity.getAllowedRules().stream()
                         .map(allowedRuleMapper::toDto)
                         .toArray(),
+                (DependencyDTO[]) moduleEntity.getRefClazzesDependencies().stream()
+                        .map(dependencyMapper::toDto)
+                        .toArray(DependencyDTO[]::new),
+                (DependencyDTO[]) moduleEntity.getAllDependencies().stream()
+                        .map(dependencyMapper::toDto)
+                        .toArray(DependencyDTO[]::new),
                 targetModule.clazzes(),
                 targetModule.similarity()
         );

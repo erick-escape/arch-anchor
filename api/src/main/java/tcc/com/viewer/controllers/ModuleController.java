@@ -88,6 +88,8 @@ public class ModuleController {
                 newName,
                 null, // refClass will be calculated later
                 null, // allowedRules will be calculated later
+                null, // refClazzesDependencies will be calculated later
+                null, // allDependencies will be calculated later
                 mergedClasses,
                 0.0 // Similarity will be calculated later
         );
@@ -95,6 +97,8 @@ public class ModuleController {
         moduleService.calculateClassSimilarities(newModule);
         moduleService.calculateModuleSimilarity(newModule);
         moduleService.populateAllowedRules(newModule);
+        moduleService.populateRefClazzesDependencies(newModule);
+        moduleService.populateAllDependencies(newModule);
 
         return moduleMapper.toDto(newModule);
     }
