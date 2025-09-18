@@ -4,10 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
+import tcc.com.viewer.domains.dependency.DependencyOrigin;
 import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.dependencies.DependencyDTO;
+import tcc.com.viewer.dto.dependencies.DependencyOriginDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
 import tcc.com.viewer.dto.rules.AllowedRuleDTO;
 import tcc.com.viewer.mapstruct.*;
@@ -30,6 +32,7 @@ public class ModuleService {
     private final ClazzMapper clazzMapper = new ClazzMapperImpl();
     private final AllowedRuleMapper allowedRuleMapper = new AllowedRuleMapperImpl();
     private final DependencyMapper dependencyMapper = new DependencyMapperImpl();
+    private final DependencyOriginMapper dependencyOriginMapper = new DependencyOriginMapperImpl();
 
     public ModuleService(ParserFactory parserFactory) {
         this.parserFactory = parserFactory;
@@ -184,6 +187,31 @@ public class ModuleService {
         module.setAllowedRules(allowedRules);
     }
 
+    public void populateAllDependenciesOrigin(Module module) {
+        if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
+            module.setAllDependenciesOrigin(new ArrayList<>());
+            return;
+        }
+
+        Set<String> uniqueOriginNames = new HashSet<>();
+
+        for (Clazz clazz : module.getClazzes()) {
+            if (clazz.getDependencies() != null) {
+                for (Dependency dependency : clazz.getDependencies()) {
+                    if (dependency.getOriginName() != null && !dependency.getOriginName().isEmpty()) {
+                        uniqueOriginNames.add(dependency.getOriginName());
+                    }
+                }
+            }
+        }
+
+        List<DependencyOrigin> allDependenciesOrigin = uniqueOriginNames.stream()
+                .map(DependencyOrigin::new)
+                .collect(Collectors.toList());
+
+        module.setAllDependenciesOrigin(allDependenciesOrigin);
+    }
+
     public void populateAllDependencies(Module module) {
         if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
             module.setAllDependencies(new ArrayList<>());
@@ -250,6 +278,7 @@ public class ModuleService {
         this.calculateClassSimilarities(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
         this.populateAllowedRules(retainedModuleEntity);
+        this.populateAllDependenciesOrigin(retainedModuleEntity);
         this.populateRefClazzesDependencies(retainedModuleEntity);
         this.populateAllDependencies(retainedModuleEntity);
 
@@ -264,6 +293,7 @@ public class ModuleService {
         this.calculateClassSimilarities(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
         this.populateAllowedRules(newModuleEntity);
+        this.populateAllDependenciesOrigin(newModuleEntity);
         this.populateRefClazzesDependencies(newModuleEntity);
         this.populateAllDependencies(newModuleEntity);
 
@@ -369,6 +399,7 @@ public class ModuleService {
                                         moduleName,
                                         null, // refClazzes will be calculated later
                                         null, // allowedRules will be calculated later
+                                        null, // allDependenciesOrigin will be calculated later
                                         null, // refClazzesDependencies will be calculated later
                                         null, // allDependencies will be calculated later
                                         clazzes,
@@ -421,6 +452,7 @@ public class ModuleService {
                 .toList();
         moduleEntity.setRefClazzes(modulesList);
         this.populateAllowedRules(moduleEntity);
+        this.populateAllDependenciesOrigin(moduleEntity);
         this.populateRefClazzesDependencies(moduleEntity);
         this.populateAllDependencies(moduleEntity);
 
@@ -432,6 +464,9 @@ public class ModuleService {
                 (AllowedRuleDTO[]) moduleEntity.getAllowedRules().stream()
                         .map(allowedRuleMapper::toDto)
                         .toArray(),
+                moduleEntity.getAllDependenciesOrigin().stream()
+                        .map(dependencyOriginMapper::toDto)
+                        .toArray(DependencyOriginDTO[]::new),
                 moduleEntity.getRefClazzesDependencies().stream()
                         .map(dependencyMapper::toDto)
                         .toArray(DependencyDTO[]::new),

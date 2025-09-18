@@ -51,10 +51,11 @@ public class MergeModule extends ArchitecturalAnalysis {
         String mergedId = module1.getId() + "_" + module2.getId();
         String mergedName = module1.getName() + " + " + module2.getName();
 
-        // we don't need refClazzes, allowedRules, refClazzesDependencies or allDependencies to calculate the improvement of the merge
+        // we don't need refClazzes, allowedRules, allDependenciesOrigin, refClazzesDependencies or allDependencies to calculate the improvement of the merge
         return new Module(
                 mergedId,
                 mergedName,
+                null,
                 null,
                 null,
                 null,

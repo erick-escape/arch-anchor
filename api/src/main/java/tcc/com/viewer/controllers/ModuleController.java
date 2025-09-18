@@ -88,6 +88,7 @@ public class ModuleController {
                 newName,
                 null, // refClass will be calculated later
                 null, // allowedRules will be calculated later
+                null, // allDependenciesOrigin will be calculated later
                 null, // refClazzesDependencies will be calculated later
                 null, // allDependencies will be calculated later
                 mergedClasses,
@@ -97,6 +98,7 @@ public class ModuleController {
         moduleService.calculateClassSimilarities(newModule);
         moduleService.calculateModuleSimilarity(newModule);
         moduleService.populateAllowedRules(newModule);
+        moduleService.populateAllDependenciesOrigin(newModule);
         moduleService.populateRefClazzesDependencies(newModule);
         moduleService.populateAllDependencies(newModule);
 
