@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.module.Module;
-import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.services.ModuleService;
 
 import java.util.ArrayList;
@@ -43,22 +42,23 @@ public class MergeModule extends ArchitecturalAnalysis {
         List<Clazz> mergedClazzes = new ArrayList<>(module1.getClazzes());
         mergedClazzes.addAll(module2.getClazzes());
 
-        List<Clazz> mergedRefClazzes = new ArrayList<>(module1.getRefClazzes());
-        mergedRefClazzes.addAll(module2.getRefClazzes());
-
-        List<AllowedRule> mergedAllowedRules = new ArrayList<>(module1.getAllowedRules());
-        mergedAllowedRules.addAll(module2.getAllowedRules());
+//        List<Clazz> mergedRefClazzes = new ArrayList<>(module1.getRefClazzes());
+//        mergedRefClazzes.addAll(module2.getRefClazzes());
+//
+//        List<AllowedRule> mergedAllowedRules = new ArrayList<>(module1.getAllowedRules());
+//        mergedAllowedRules.addAll(module2.getAllowedRules());
 
         String mergedId = module1.getId() + "_" + module2.getId();
         String mergedName = module1.getName() + " + " + module2.getName();
 
+        // we don't need refClazzes, allowedRules, refClazzesDependencies or allDependencies to calculate the improvement of the merge
         return new Module(
                 mergedId,
                 mergedName,
-                mergedRefClazzes,
-                mergedAllowedRules,
-                null, // refClazzesDependencies will be calculated later
-                null, // allDependencies will be calculated later
+                null,
+                null,
+                null,
+                null,
                 mergedClazzes,
                 0.0
         );
