@@ -432,10 +432,10 @@ public class ModuleService {
                 (AllowedRuleDTO[]) moduleEntity.getAllowedRules().stream()
                         .map(allowedRuleMapper::toDto)
                         .toArray(),
-                (DependencyDTO[]) moduleEntity.getRefClazzesDependencies().stream()
+                moduleEntity.getRefClazzesDependencies().stream()
                         .map(dependencyMapper::toDto)
                         .toArray(DependencyDTO[]::new),
-                (DependencyDTO[]) moduleEntity.getAllDependencies().stream()
+                moduleEntity.getAllDependencies().stream()
                         .map(dependencyMapper::toDto)
                         .toArray(DependencyDTO[]::new),
                 targetModule.clazzes(),
