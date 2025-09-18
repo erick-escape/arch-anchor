@@ -66,7 +66,100 @@ JavaParser library and provides architectural analysis capabilities through REST
 - `Module` - Represents a logical module in the analyzed project
 - `Clazz` - Represents a class with its methods, attributes, and relationships
 - `Dependency` - Models dependencies between classes/modules
+- `DependencyOrigin` - Represents the origin module of dependencies
 - `AllowedRule` - Defines architectural constraints and rules
+
+### Architectural Analysis Framework
+
+The system includes a sophisticated architectural analysis framework located in `src/main/java/tcc/com/viewer/services/architecturalAnalyses/` that processes the parsed modules to provide architectural insights and recommendations.
+
+#### Framework Components
+
+**ArchitecturalAnalysis** (Abstract Base Class)
+- Abstract base class that all analyses must extend
+- Provides access to `ModuleService` for module manipulation operations
+- Defines the `execute(List<Module> modules)` contract that all analyses implement
+
+**ArchitecturalAnalysesRunner** (Service)
+- Spring service that orchestrates the execution of all registered analyses
+- Automatically discovers and injects all `ArchitecturalAnalysis` implementations via dependency injection
+- Executes analyses sequentially after project parsing is complete
+- Provides logging for analysis execution tracking
+
+#### Analysis Execution Flow
+
+1. **Post-Parsing**: After `ProjectService.analyzeProject()` completes module creation and dependency resolution
+2. **Analysis Trigger**: `ArchitecturalAnalysesRunner.executeAll(modules)` is called with the complete modules list
+3. **Sequential Execution**: Each analysis processes the modules list independently
+4. **Result Generation**: Analyses generate internal result objects with recommendations
+5. **Logging Output**: Results are logged in user-friendly format for review
+
+#### Current Analysis Implementations
+
+**SplitModule Analysis**
+- Identifies modules that could benefit from being split into smaller, more cohesive modules
+- Analyzes class similarity patterns within modules to find natural split points
+- Generates combinations of classes that would improve overall module cohesion
+- Calculates potential similarity improvements for each split recommendation
+
+**MergeModule Analysis**
+- Identifies pairs of modules that could be merged to improve overall architecture
+- Analyzes cross-module dependencies and class relationships
+- Calculates similarity improvements that would result from module merging
+- Considers module size and cohesion factors in recommendations
+
+**MoveClass Analysis**
+- Identifies individual classes that could be moved to different modules
+- Analyzes dependency patterns to find classes better suited to other modules
+- Calculates potential similarity improvements for class relocations
+- Considers both source and target module impacts
+
+#### Creating New Analyses
+
+To create a new architectural analysis:
+
+1. **Extend ArchitecturalAnalysis**: Create a new class extending the abstract base class
+2. **Add @Component**: Annotate with `@Component` for Spring auto-discovery
+3. **Implement execute()**: Process the modules list and generate analysis results
+4. **Create Result Class**: Define private inner class to hold analysis results
+5. **Generate Logging**: Use slf4j to log user-friendly results and recommendations
+
+**Example Structure:**
+```java
+@Slf4j
+@Component
+public class YourAnalysis extends ArchitecturalAnalysis {
+    public YourAnalysis(ModuleService moduleService) {
+        super(moduleService);
+    }
+
+    @Override
+    public void execute(List<Module> modules) {
+        // Process modules and generate recommendations
+        YourAnalysisResult result = analyzeModules(modules);
+        log.info("Your analysis results: {}", result.getSummary());
+    }
+
+    private static class YourAnalysisResult {
+        // Result data and summary methods
+    }
+}
+```
+
+#### Analysis Data Access
+
+Analyses have access to complete `Module` objects containing:
+- Class definitions and metadata (`module.getClazzes()`)
+- Dependency relationships (`module.getAllDependencies()`)
+- Reference classes (`module.getRefClazzes()`)
+- Architectural rules (`module.getAllowedRules()`)
+- Dependency origins (`module.getAllDependenciesOrigin()`)
+- Module similarity metrics (`module.getSimilarity()`)
+
+The analyses can utilize `ModuleService` methods for:
+- Similarity calculations
+- Module manipulation operations
+- Dependency population and updates
 
 ### Data Flow
 
@@ -89,7 +182,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 - Uses Spring Boot Test framework
 - Test files in `src/test/java/tcc/com/viewer/`
 - Key test classes:
-    - `JavaParserTypeResolutionTest` - Tests JDT parsing functionality
+    - `JavaParserTypeResolutionTest` - Tests JavaParser parsing functionality
     - `PackagePathConverterTest` - Tests package name extraction utilities
 
 ### Important Implementation Details
