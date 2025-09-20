@@ -89,7 +89,11 @@ public class MoveClass extends ArchitecturalAnalysis {
         double sourceImprovement = newSourceSimilarity - originalSourceSimilarity;
         double targetImprovement = newTargetSimilarity - originalTargetSimilarity;
 
-        return sourceImprovement + targetImprovement;
+        if (sourceImprovement > 0 && targetImprovement > 0) {
+            return sourceImprovement + targetImprovement;
+        } else {
+            return 0;
+        }
     }
 
     public void moveClassAnalysis(List<Module> modules) {
