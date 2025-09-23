@@ -2577,10 +2577,10 @@ public class JDTParserService {
          */
         public void addDependencyIfNotExists(Dependency dependency) {
             try {
-                if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty() &&
-                        dependency.dependencyDoesNotExist(dependencies)) {
-                    dependencies.add(dependency);
-                }
+//                if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty() &&
+//                        dependency.dependencyDoesNotExist(dependencies)) {
+//                    dependencies.add(dependency);
+//                }
             } catch (Exception e) {
                 System.err.println("Error adding dependency: " + e.getMessage());
             }
