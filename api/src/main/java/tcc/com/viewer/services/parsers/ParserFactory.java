@@ -2,7 +2,6 @@ package tcc.com.viewer.services.parsers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import tcc.com.viewer.services.JDTParserService;
 import tcc.com.viewer.services.JavaParserService;
 
 import java.nio.file.Path;
@@ -15,16 +14,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 public class ParserFactory {
-
     private final Map<String, LanguageParser> parsers = new ConcurrentHashMap<>();
-    private final JDTParserService jdtParserService;
     private final JavaParserService javaParserService;
 
     // Constructor for Spring dependency injection
-    public ParserFactory(
-            JDTParserService jdtParserService,
-            @Autowired(required = false) JavaParserService javaParserService) {
-        this.jdtParserService = jdtParserService;
+    public ParserFactory(@Autowired(required = false) JavaParserService javaParserService) {
         this.javaParserService = javaParserService;
     }
 
@@ -59,7 +53,7 @@ public class ParserFactory {
                 return parser;
             }
         }
-        
+
         if (filePathStr.endsWith(".java")) {
             // Try to create a JavaParser with dependency injection
             // This should use the JavaParser @Component that we just updated
@@ -68,7 +62,7 @@ public class ParserFactory {
                     return parser;
                 }
             }
-            
+
             // If no JavaParser bean is found, create one manually (should not happen with Spring)
             // This is kept for backward compatibility but shouldn't be needed
             throw new UnsupportedOperationException("No JavaParser found - check Spring configuration");
@@ -76,13 +70,11 @@ public class ParserFactory {
 
         throw new UnsupportedOperationException("No parser available for file: " + filePath);
     }
-    
+
     /**
      * Clears the processing cache for fresh analysis
      */
     public void clearProcessingCache() {
-        // Clear both JDT and JavaParser caches
-        jdtParserService.clearProcessedFilesCache();
         if (javaParserService != null) {
             javaParserService.clearCache();
         }
