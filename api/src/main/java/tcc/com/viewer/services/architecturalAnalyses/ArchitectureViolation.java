@@ -338,10 +338,12 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
         for (Dependency dependency : clazz.getDependencies()) {
             if (dependency != null &&
-                dependency.getOriginName() != null &&
-                dependency.getFullyQualifiedName() != null &&
-                dependency.getOriginName().equals(forbiddenOrigin)) {
-                violatingFQNs.add(dependency.getFullyQualifiedName());
+                dependency.getPackageName() != null &&
+                dependency.getPackageName().equals(forbiddenOrigin)) {
+                // Collect all types from this forbidden package
+                if (dependency.getTypes() != null) {
+                    dependency.getTypes().forEach(type -> violatingFQNs.add(type.getFullyQualifiedName()));
+                }
             }
         }
 
@@ -520,8 +522,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
         int newViolations = 0;
         for (Dependency dependency : clazz.getDependencies()) {
-            if (dependency.getOriginName() != null &&
-                !targetAllowedOrigins.contains(dependency.getOriginName())) {
+            if (dependency.getPackageName() != null &&
+                !targetAllowedOrigins.contains(dependency.getPackageName())) {
                 newViolations++;
             }
         }

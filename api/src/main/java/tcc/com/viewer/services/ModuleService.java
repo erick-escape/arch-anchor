@@ -150,8 +150,8 @@ public class ModuleService {
     }
 
     private double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
-        Set<String> deps1 = Arrays.stream(clazz1.getDependencies()).map(Dependency::getFullyQualifiedName).collect(Collectors.toSet());
-        Set<String> deps2 = Arrays.stream(clazz2.getDependencies()).map(Dependency::getFullyQualifiedName).collect(Collectors.toSet());
+        Set<String> deps1 = Arrays.stream(clazz1.getDependencies()).map(Dependency::getPackageName).collect(Collectors.toSet());
+        Set<String> deps2 = Arrays.stream(clazz2.getDependencies()).map(Dependency::getPackageName).collect(Collectors.toSet());
 
         int a = (int) deps1.stream().filter(deps2::contains).count();
         int b = deps1.size() - a;
@@ -173,8 +173,8 @@ public class ModuleService {
         for (Clazz refClazz : module.getRefClazzes()) {
             if (refClazz.getDependencies() != null) {
                 for (Dependency dependency : refClazz.getDependencies()) {
-                    if (dependency.getOriginName() != null && !dependency.getOriginName().isEmpty()) {
-                        uniqueOriginNames.add(dependency.getOriginName());
+                    if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
+                        uniqueOriginNames.add(dependency.getPackageName());
                     }
                 }
             }
@@ -198,8 +198,8 @@ public class ModuleService {
         for (Clazz clazz : module.getClazzes()) {
             if (clazz.getDependencies() != null) {
                 for (Dependency dependency : clazz.getDependencies()) {
-                    if (dependency.getOriginName() != null && !dependency.getOriginName().isEmpty()) {
-                        uniqueOriginNames.add(dependency.getOriginName());
+                    if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
+                        uniqueOriginNames.add(dependency.getPackageName());
                     }
                 }
             }
@@ -223,8 +223,8 @@ public class ModuleService {
         for (Clazz clazz : module.getClazzes()) {
             if (clazz.getDependencies() != null) {
                 for (Dependency dependency : clazz.getDependencies()) {
-                    if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty()) {
-                        uniqueDependencies.put(dependency.getFullyQualifiedName(), dependency);
+                    if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
+                        uniqueDependencies.put(dependency.getPackageName(), dependency);
                     }
                 }
             }
@@ -245,8 +245,8 @@ public class ModuleService {
         for (Clazz clazz : module.getRefClazzes()) {
             if (clazz.getDependencies() != null) {
                 for (Dependency dependency : clazz.getDependencies()) {
-                    if (dependency.getFullyQualifiedName() != null && !dependency.getFullyQualifiedName().isEmpty()) {
-                        uniqueDependencies.put(dependency.getFullyQualifiedName(), dependency);
+                    if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
+                        uniqueDependencies.put(dependency.getPackageName(), dependency);
                     }
                 }
             }

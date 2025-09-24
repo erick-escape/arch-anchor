@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * JUnit test suite that verifies full, correct resolution of imports for representative classes
  * in uploads/pass-in. This suite should immediately fail if dependency binding breaks after any change.
- * Updated to test the new JavaParserService implementation.
+ * Tests the new Dependency structure with package-level dependencies containing type collections.
+ * Verifies both package names and fully qualified type names are correctly extracted.
  */
 @SpringBootTest
 @DisplayName("JavaParser Type Resolution Tests")
@@ -37,8 +38,23 @@ class JavaParserTypeResolutionTest {
     }
 
     /**
+     * Helper method to extract expected package names from fully qualified type names.
+     * For example: "org.springframework.boot.SpringApplication" -> "org.springframework.boot"
+     */
+    private static Set<String> extractExpectedPackages(Set<String> fullyQualifiedTypes) {
+        return fullyQualifiedTypes.stream()
+                .map(fqn -> {
+                    int lastDotIndex = fqn.lastIndexOf('.');
+                    return lastDotIndex != -1 ? fqn.substring(0, lastDotIndex) : fqn;
+                })
+                .collect(Collectors.toSet());
+    }
+
+    /**
      * Provides test cases for parameterized tests.
-     * Each argument contains: [test fullyQualifiedName, file path, expected fully qualified type names]
+     * Each argument contains: [test name, file path, expected fully qualified type names]
+     * Expected package names are derived from the fully qualified type names.
+     * Both package names and type names are verified in the tests.
      */
     static Stream<Arguments> provideTestCases() {
         return Stream.of(
@@ -161,12 +177,21 @@ class JavaParserTypeResolutionTest {
         // Act
         List<Dependency> dependencies = javaParserService.getDependencies(absolutePath);
 
-        // Extract fully qualified type names from dependencies
-        Set<String> actualTypes = dependencies.stream()
-                .map(Dependency::getFullyQualifiedName)
+        // Extract expected package names from expected types
+        Set<String> expectedPackages = extractExpectedPackages(expectedTypes);
+
+        // Extract actual package names from dependencies
+        Set<String> actualPackages = dependencies.stream()
+                .map(Dependency::getPackageName)
                 .collect(Collectors.toSet());
 
-        // Assert
+        // Extract actual type names from dependencies
+        Set<String> actualTypes = dependencies.stream()
+                .flatMap(dependency -> dependency.getTypes().stream())
+                .map(type -> type.getFullyQualifiedName())
+                .collect(Collectors.toSet());
+
+        // Assert basic structure
         assertThat(dependencies)
                 .as("Dependencies list should not be null")
                 .isNotNull();
@@ -175,25 +200,46 @@ class JavaParserTypeResolutionTest {
                 .as("Should have dependencies for class: %s", testName)
                 .isNotEmpty();
 
-        // Verify each dependency has a non-null fullyQualifiedName
+        // Verify each dependency has a non-null packageName
         assertThat(dependencies)
-                .as("All dependencies should have non-null names")
-                .allSatisfy(dependency -> assertThat(dependency.getFullyQualifiedName()).isNotNull());
+                .as("All dependencies should have non-null package names")
+                .allSatisfy(dependency -> assertThat(dependency.getPackageName()).isNotNull());
 
-        // Check for missing expected types
+        // Verify each dependency has non-null types list
+        assertThat(dependencies)
+                .as("All dependencies should have non-null types list")
+                .allSatisfy(dependency -> assertThat(dependency.getTypes()).isNotNull());
+
+        // Check package names match
+        Set<String> missingPackages = expectedPackages.stream()
+                .filter(expectedPackage -> !actualPackages.contains(expectedPackage))
+                .collect(Collectors.toSet());
+
+        Set<String> unexpectedPackages = actualPackages.stream()
+                .filter(actualPackage -> !expectedPackages.contains(actualPackage))
+                .collect(Collectors.toSet());
+
+        // Check type names match
         Set<String> missingTypes = expectedTypes.stream()
                 .filter(expectedType -> !actualTypes.contains(expectedType))
                 .collect(Collectors.toSet());
 
-        // Check for unexpected types (dependencies found but not expected)
         Set<String> unexpectedTypes = actualTypes.stream()
                 .filter(actualType -> !expectedTypes.contains(actualType))
                 .collect(Collectors.toSet());
 
         // Provide detailed assertion messages
-        if (!missingTypes.isEmpty() || !unexpectedTypes.isEmpty()) {
+        if (!missingPackages.isEmpty() || !unexpectedPackages.isEmpty() || !missingTypes.isEmpty() || !unexpectedTypes.isEmpty()) {
             StringBuilder message = new StringBuilder()
-                    .append("Type resolution mismatch for class: ").append(testName).append("\n");
+                    .append("Dependency resolution mismatch for class: ").append(testName).append("\n");
+
+            if (!missingPackages.isEmpty()) {
+                message.append("Missing expected packages: ").append(missingPackages).append("\n");
+            }
+
+            if (!unexpectedPackages.isEmpty()) {
+                message.append("Unexpected packages found: ").append(unexpectedPackages).append("\n");
+            }
 
             if (!missingTypes.isEmpty()) {
                 message.append("Missing expected types: ").append(missingTypes).append("\n");
@@ -203,15 +249,21 @@ class JavaParserTypeResolutionTest {
                 message.append("Unexpected types found: ").append(unexpectedTypes).append("\n");
             }
 
-            message.append("Expected types: ").append(expectedTypes).append("\n")
+            message.append("Expected packages: ").append(expectedPackages).append("\n")
+                    .append("Actual packages: ").append(actualPackages).append("\n")
+                    .append("Expected types: ").append(expectedTypes).append("\n")
                     .append("Actual types: ").append(actualTypes);
 
             throw new AssertionError(message.toString());
         }
 
-        // Final assertion - exact match
+        // Final assertions - exact matches
+        assertThat(actualPackages)
+                .as("Extracted package names should exactly match expected packages for class: %s", testName)
+                .containsExactlyInAnyOrderElementsOf(expectedPackages);
+
         assertThat(actualTypes)
-                .as("Extracted types should exactly match expected types for class: %s", testName)
+                .as("Extracted type names should exactly match expected types for class: %s", testName)
                 .containsExactlyInAnyOrderElementsOf(expectedTypes);
     }
 
@@ -223,29 +275,52 @@ class JavaParserTypeResolutionTest {
         Path classPath = Paths.get(relativePath);
         Path absolutePath = Paths.get(System.getProperty("user.dir")).resolve(classPath);
 
+        // Extract expected package names from expected types
+        Set<String> expectedPackages = extractExpectedPackages(expectedTypes);
+
         // Clear cache to ensure first call processes the file
         javaParserService.clearCache();
 
         // Act - First call
         List<Dependency> firstCall = javaParserService.getDependencies(absolutePath);
+
+        Set<String> firstCallPackages = firstCall.stream()
+                .map(Dependency::getPackageName)
+                .collect(Collectors.toSet());
+
         Set<String> firstCallTypes = firstCall.stream()
-                .map(Dependency::getFullyQualifiedName)
+                .flatMap(dependency -> dependency.getTypes().stream())
+                .map(type -> type.getFullyQualifiedName())
                 .collect(Collectors.toSet());
 
         // Act - Second call (should return same results, not empty since JavaParser doesn't use file-level caching like JDT)
         List<Dependency> secondCall = javaParserService.getDependencies(absolutePath);
 
-        // Assert
+        Set<String> secondCallPackages = secondCall.stream()
+                .map(Dependency::getPackageName)
+                .collect(Collectors.toSet());
+
+        Set<String> secondCallTypes = secondCall.stream()
+                .flatMap(dependency -> dependency.getTypes().stream())
+                .map(type -> type.getFullyQualifiedName())
+                .collect(Collectors.toSet());
+
+        // Assert first call returns expected results
+        assertThat(firstCallPackages)
+                .as("First call should return expected packages for class: %s", testName)
+                .containsExactlyInAnyOrderElementsOf(expectedPackages);
+
         assertThat(firstCallTypes)
                 .as("First call should return expected types for class: %s", testName)
                 .containsExactlyInAnyOrderElementsOf(expectedTypes);
 
-        Set<String> secondCallTypes = secondCall.stream()
-                .map(Dependency::getFullyQualifiedName)
-                .collect(Collectors.toSet());
+        // Assert second call returns consistent results
+        assertThat(secondCallPackages)
+                .as("Second call should return consistent package results for class: %s", testName)
+                .isEqualTo(firstCallPackages);
 
         assertThat(secondCallTypes)
-                .as("Second call should return consistent results for class: %s", testName)
+                .as("Second call should return consistent type results for class: %s", testName)
                 .isEqualTo(firstCallTypes);
     }
 

@@ -659,12 +659,25 @@ public class JavaParserService {
     }
 
     /**
-     * Removes duplicate dependencies
+     * Removes duplicate dependencies and merges types within same package
      */
     private List<Dependency> deduplicateDependencies(List<Dependency> dependencies) {
         Map<String, Dependency> uniqueDeps = new LinkedHashMap<>();
         for (Dependency dep : dependencies) {
-            uniqueDeps.put(dep.getFullyQualifiedName(), dep);
+            String packageName = dep.getPackageName();
+            Dependency existing = uniqueDeps.get(packageName);
+            if (existing == null) {
+                uniqueDeps.put(packageName, dep);
+            } else {
+                // Merge types from duplicate packages
+                for (tcc.com.viewer.domains.dependency.Type type : dep.getTypes()) {
+                    boolean typeExists = existing.getTypes().stream()
+                            .anyMatch(t -> t.getFullyQualifiedName().equals(type.getFullyQualifiedName()));
+                    if (!typeExists) {
+                        existing.addType(type);
+                    }
+                }
+            }
         }
         return new ArrayList<>(uniqueDeps.values());
     }
@@ -674,6 +687,7 @@ public class JavaParserService {
      */
     private class JavaParserDependencyVisitor extends VoidVisitorAdapter<Void> {
         private final List<Dependency> dependencies = new ArrayList<>();
+        private final Map<String, Dependency> packageToDependencyMap = new HashMap<>();
         private final Map<String, String> importMap = new HashMap<>();
         private final Set<String> onDemandImports = new HashSet<>();
         private final CombinedTypeSolver typeSolver;
@@ -1249,16 +1263,25 @@ public class JavaParserService {
 
         private void addDependencyIfNotExists(String fullyQualifiedName) {
             if (isSignificantDependency(fullyQualifiedName)) {
-                String originName = packageNameExtractor.extractPackageName(fullyQualifiedName);
-                Dependency dependency = new Dependency(fullyQualifiedName, originName);
+                String packageName = packageNameExtractor.extractPackageName(fullyQualifiedName);
+                tcc.com.viewer.domains.dependency.Type type = new tcc.com.viewer.domains.dependency.Type(fullyQualifiedName);
 
-                // Avoid duplicates
-                boolean exists = dependencies.stream()
-                        .anyMatch(dep -> dep.getFullyQualifiedName().equals(fullyQualifiedName));
-
-                if (!exists) {
+                // Get or create dependency for this package
+                Dependency dependency = packageToDependencyMap.get(packageName);
+                if (dependency == null) {
+                    dependency = new Dependency(packageName);
+                    packageToDependencyMap.put(packageName, dependency);
                     dependencies.add(dependency);
-                    log.debug("Added dependency: {}", fullyQualifiedName);
+                    log.debug("Added package dependency: {}", packageName);
+                }
+
+                // Add type to the dependency if not already present
+                boolean typeExists = dependency.getTypes().stream()
+                        .anyMatch(t -> t.getFullyQualifiedName().equals(fullyQualifiedName));
+
+                if (!typeExists) {
+                    dependency.addType(type);
+                    log.debug("Added type {} to package {}", fullyQualifiedName, packageName);
                 }
             }
         }
