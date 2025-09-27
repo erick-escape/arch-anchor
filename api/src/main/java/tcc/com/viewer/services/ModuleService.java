@@ -150,8 +150,8 @@ public class ModuleService {
     }
 
     private double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
-        Set<String> deps1 = Arrays.stream(clazz1.getDependencies()).map(Dependency::getPackageName).collect(Collectors.toSet());
-        Set<String> deps2 = Arrays.stream(clazz2.getDependencies()).map(Dependency::getPackageName).collect(Collectors.toSet());
+        Set<String> deps1 = clazz1.getDependencies().stream().map(Dependency::getPackageName).collect(Collectors.toSet());
+        Set<String> deps2 = clazz2.getDependencies().stream().map(Dependency::getPackageName).collect(Collectors.toSet());
 
         int a = (int) deps1.stream().filter(deps2::contains).count();
         int b = deps1.size() - a;
@@ -323,7 +323,7 @@ public class ModuleService {
                         Clazz clazz = new Clazz(
                                 generateNewUUID(),
                                 className,
-                                dependencies.toArray(new Dependency[0]),
+                                dependencies,
                                 0.0, // Similarity will be calculated later
                                 modulePath.getFileName().toString(), // firstModule
                                 modulePath.getFileName().toString() // currentModule

@@ -5,13 +5,15 @@ import lombok.Getter;
 import lombok.Setter;
 import tcc.com.viewer.domains.dependency.Dependency;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
 public class Clazz {
     private String id;
     private String name;
-    private Dependency[] dependencies;
+    private List<Dependency> dependencies;
     private Double similarity;
     private final String firstModule;
     private String currentModule;
