@@ -18,6 +18,7 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSol
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
@@ -686,6 +687,7 @@ public class JavaParserService {
      * Custom visitor for extracting dependencies using JavaParser
      */
     private class JavaParserDependencyVisitor extends VoidVisitorAdapter<Void> {
+        @Getter
         private final List<Dependency> dependencies = new ArrayList<>();
         private final Map<String, Dependency> packageToDependencyMap = new HashMap<>();
         private final Map<String, String> importMap = new HashMap<>();
@@ -696,10 +698,6 @@ public class JavaParserService {
 
         public JavaParserDependencyVisitor(CombinedTypeSolver typeSolver) {
             this.typeSolver = typeSolver;
-        }
-
-        public List<Dependency> getDependencies() {
-            return dependencies;
         }
 
         @Override
@@ -1320,6 +1318,14 @@ public class JavaParserService {
             if (fullyQualifiedName.equals(currentClassName) ||
                     fullyQualifiedName.endsWith("." + currentClassName)) {
                 return false;
+            }
+
+            // Skip types from the same package
+            if (!currentPackage.isEmpty()) {
+                String typePackage = fullyQualifiedName.contains(".") ?
+                        fullyQualifiedName.substring(0, fullyQualifiedName.lastIndexOf('.')) :
+                        "";
+                return !currentPackage.equals(typePackage);
             }
 
             return true;
