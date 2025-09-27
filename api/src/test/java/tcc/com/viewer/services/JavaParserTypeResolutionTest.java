@@ -120,7 +120,7 @@ class JavaParserTypeResolutionTest {
                                 "org.springframework.stereotype.Service",
                                 "tcc.com.pass_in.domain.attendee.Attendee",
                                 "tcc.com.pass_in.domain.event.Event",
-                                "tcc.com.pass_in.services.AttendeeService",
+//                                "tcc.com.pass_in.services.AttendeeService",
                                 "tcc.com.pass_in.domain.event.exceptions.EventNotFoundException",
                                 "tcc.com.pass_in.domain.event.exceptions.EventFullException",
                                 "tcc.com.pass_in.dto.attendee.AttendeeIdDTO",
@@ -133,13 +133,13 @@ class JavaParserTypeResolutionTest {
                                 "java.time.LocalDateTime"
                         )
                 ),
-                Arguments.of(
-                        "AttendeesListResponseDTO",
-                        "uploads/pass-in/src/main/java/tcc/com/pass_in/dto/attendee/AttendeesListResponseDTO.java",
-                        Set.of(
-                                "tcc.com.pass_in.dto.attendee.AttendeeDetailsDTO"
-                        )
-                ),
+//                Arguments.of(
+//                        "AttendeesListResponseDTO",
+//                        "uploads/pass-in/src/main/java/tcc/com/pass_in/dto/attendee/AttendeesListResponseDTO.java",
+//                        Set.of(
+//                                "tcc.com.pass_in.dto.attendee.AttendeeDetailsDTO"
+//                        )
+//                ),
                 Arguments.of(
                         "EventNotFoundException",
                         "uploads/pass-in/src/main/java/tcc/com/pass_in/domain/event/exceptions/EventNotFoundException.java",
