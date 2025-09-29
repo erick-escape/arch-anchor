@@ -169,7 +169,20 @@ public class ModuleService {
             if (clazz.getDependencies() != null) {
                 for (Dependency dependency : clazz.getDependencies()) {
                     if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
-                        uniqueDependencies.put(dependency.getPackageName(), dependency);
+                        String packageName = dependency.getPackageName();
+
+                        if (uniqueDependencies.containsKey(packageName)) {
+                            // Merge types from this dependency into the existing one
+                            Dependency existingDependency = uniqueDependencies.get(packageName);
+                            if (dependency.getTypes() != null) {
+                                for (var type : dependency.getTypes()) {
+                                    existingDependency.addType(type);
+                                }
+                            }
+                        } else {
+                            // Add new dependency
+                            uniqueDependencies.put(packageName, dependency);
+                        }
                     }
                 }
             }
@@ -191,7 +204,20 @@ public class ModuleService {
             if (clazz.getDependencies() != null) {
                 for (Dependency dependency : clazz.getDependencies()) {
                     if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
-                        uniqueDependencies.put(dependency.getPackageName(), dependency);
+                        String packageName = dependency.getPackageName();
+
+                        if (uniqueDependencies.containsKey(packageName)) {
+                            // Merge types from this dependency into the existing one
+                            Dependency existingDependency = uniqueDependencies.get(packageName);
+                            if (dependency.getTypes() != null) {
+                                for (var type : dependency.getTypes()) {
+                                    existingDependency.addType(type);
+                                }
+                            }
+                        } else {
+                            // Add new dependency
+                            uniqueDependencies.put(packageName, dependency);
+                        }
                     }
                 }
             }
