@@ -87,18 +87,14 @@ public class ModuleController {
                 moduleService.generateNewUUID(),
                 newName,
                 null, // refClass will be calculated later
-                null, // allowedRules will be calculated later
-                null, // allDependenciesOrigin will be calculated later
                 null, // refClazzesDependencies will be calculated later
-                null, // allDependencies will be calculated later
+                null, // moduleDependencies will be calculated later
                 mergedClasses,
                 0.0 // Similarity will be calculated later
         );
         // Recalculate similarities using ModuleService
         moduleService.calculateClassSimilarities(newModule);
         moduleService.calculateModuleSimilarity(newModule);
-        moduleService.populateAllowedRules(newModule);
-        moduleService.populateAllDependenciesOrigin(newModule);
         moduleService.populateRefClazzesDependencies(newModule);
         moduleService.populateAllDependencies(newModule);
 

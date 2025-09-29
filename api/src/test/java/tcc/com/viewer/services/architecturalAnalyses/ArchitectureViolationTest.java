@@ -7,10 +7,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
-import tcc.com.viewer.domains.dependency.DependencyOrigin;
 import tcc.com.viewer.domains.dependency.Type;
 import tcc.com.viewer.domains.module.Module;
-import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.services.ModuleService;
 
 import java.util.ArrayList;
@@ -230,11 +228,11 @@ class ArchitectureViolationTest {
     }
 
     private Module createCleanModule() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.allowed")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
         List<Clazz> classes = List.of(
                 new Clazz("class1", "CleanClass",
@@ -243,15 +241,15 @@ class ArchitectureViolationTest {
         );
 
         return new Module("clean-module", "Clean Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.8);
+                refClazzesDependencies, moduleDependencies, classes, 0.8);
     }
 
     private Module createModuleWithSingleViolation() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.forbidden")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.forbidden.BadClass", "com.example.forbidden")
         );
         List<Clazz> classes = List.of(
                 new Clazz("violating-class", "ViolatingClass",
@@ -260,16 +258,16 @@ class ArchitectureViolationTest {
         );
 
         return new Module("source-module", "Source Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.5);
+                refClazzesDependencies, moduleDependencies, classes, 0.5);
     }
 
     private Module createTargetModuleForViolation() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.forbidden"), // Allows the forbidden origin
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.forbidden.SomeClass", "com.example.forbidden"), // Allows the forbidden origin
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.allowed")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.allowed.GoodClass", "com.example.allowed")
         );
         List<Clazz> classes = List.of(
                 new Clazz("target-class", "TargetClass",
@@ -278,16 +276,16 @@ class ArchitectureViolationTest {
         );
 
         return new Module("target-module", "Target Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.9);
+                refClazzesDependencies, moduleDependencies, classes, 0.9);
     }
 
     private Module createModuleWithMultipleViolations() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.forbidden1"),
-                new DependencyOrigin("com.example.forbidden2")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.forbidden1.BadClass1", "com.example.forbidden1"),
+                createDependency("com.example.forbidden2.BadClass2", "com.example.forbidden2")
         );
         List<Clazz> classes = List.of(
                 new Clazz("multi-violating-class", "MultiViolatingClass",
@@ -299,15 +297,15 @@ class ArchitectureViolationTest {
         );
 
         return new Module("multi-module", "Multi Violation Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.3);
+                refClazzesDependencies, moduleDependencies, classes, 0.3);
     }
 
     private Module createModuleWithViolationCluster() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.forbidden")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.forbidden.BadClass", "com.example.forbidden")
         );
         List<Clazz> classes = List.of(
                 new Clazz("violating-class1", "ViolatingClass1",
@@ -322,15 +320,15 @@ class ArchitectureViolationTest {
         );
 
         return new Module("cluster-module", "Cluster Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.4);
+                refClazzesDependencies, moduleDependencies, classes, 0.4);
     }
 
     private Module createModuleWithOrphanedClass() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.unique")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.unique.UniqueClass", "com.example.unique")
         );
         List<Clazz> classes = List.of(
                 new Clazz("orphaned-class", "OrphanedClass",
@@ -339,32 +337,32 @@ class ArchitectureViolationTest {
         );
 
         return new Module("orphan-module", "Orphan Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.6);
+                refClazzesDependencies, moduleDependencies, classes, 0.6);
     }
 
     private Module createBetterTargetModule() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.forbidden") // Allows the violation
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.forbidden.SomeClass", "com.example.forbidden") // Allows the violation
         );
         return new Module("better-target", "Better Target", new ArrayList<>(),
-                allowedRules, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0.5);
+                refClazzesDependencies, new ArrayList<>(), new ArrayList<>(), 0.5);
     }
 
     private Module createWorseTargetModule() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.forbidden") // Allows the violation
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.forbidden.SomeClass", "com.example.forbidden") // Allows the violation
         );
         return new Module("worse-target", "Worse Target", new ArrayList<>(),
-                allowedRules, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0.5);
+                refClazzesDependencies, new ArrayList<>(), new ArrayList<>(), 0.5);
     }
 
     private Module createModuleWithMixedDependencies() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.allowed"),
-                new DependencyOrigin("com.example.forbidden")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.allowed.GoodClass", "com.example.allowed"),
+                createDependency("com.example.forbidden.BadClass", "com.example.forbidden")
         );
         List<Clazz> classes = List.of(
                 new Clazz("mixed-class", "MixedClass",
@@ -376,20 +374,20 @@ class ArchitectureViolationTest {
         );
 
         return new Module("mixed-module", "Mixed Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.6);
+                refClazzesDependencies, moduleDependencies, classes, 0.6);
     }
 
     private Module createEmptyModule() {
         return new Module("empty-module", "Empty Module", new ArrayList<>(),
-                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0.0);
+                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0.0);
     }
 
     private Module createModuleWithSelfDependencies() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("Self Module") // Self-dependency
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("Self Module.InternalClass", "Self Module") // Self-dependency
         );
         List<Clazz> classes = List.of(
                 new Clazz("self-class", "SelfClass",
@@ -398,15 +396,15 @@ class ArchitectureViolationTest {
         );
 
         return new Module("self-module", "Self Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.7);
+                refClazzesDependencies, moduleDependencies, classes, 0.7);
     }
 
     private Module createModuleWithAllViolatingClasses() {
-        List<AllowedRule> allowedRules = List.of(
-                new AllowedRule("com.example.allowed")
+        List<Dependency> refClazzesDependencies = List.of(
+                createDependency("com.example.allowed.SomeClass", "com.example.allowed")
         );
-        List<DependencyOrigin> dependencyOrigins = List.of(
-                new DependencyOrigin("com.example.forbidden")
+        List<Dependency> moduleDependencies = List.of(
+                createDependency("com.example.forbidden.Bad1", "com.example.forbidden")
         );
         List<Clazz> classes = List.of(
                 new Clazz("violating1", "ViolatingClass1",
@@ -421,24 +419,22 @@ class ArchitectureViolationTest {
         );
 
         return new Module("all-violating", "All Violating Module", new ArrayList<>(),
-                allowedRules, dependencyOrigins, new ArrayList<>(), new ArrayList<>(), classes, 0.3);
+                refClazzesDependencies, moduleDependencies, classes, 0.3);
     }
 
     private List<Module> createModulesWithCircularDependencies() {
         // Module A depends on Module B
         Module moduleA = new Module("module-a", "Module A", new ArrayList<>(),
-                List.of(new AllowedRule("com.example.allowed")),
-                List.of(new DependencyOrigin("Module B")),
-                new ArrayList<>(), new ArrayList<>(),
+                List.of(createDependency("com.example.allowed.SomeClass", "com.example.allowed")),
+                List.of(createDependency("Module B.ClassB", "Module B")),
                 List.of(new Clazz("class-a", "ClassA",
                         List.of(createDependency("Module B.ClassB", "Module B")),
                         0.5, "module-a", "module-a")), 0.5);
 
         // Module B depends on Module A (circular)
         Module moduleB = new Module("module-b", "Module B", new ArrayList<>(),
-                List.of(new AllowedRule("com.example.allowed")),
-                List.of(new DependencyOrigin("Module A")),
-                new ArrayList<>(), new ArrayList<>(),
+                List.of(createDependency("com.example.allowed.SomeClass", "com.example.allowed")),
+                List.of(createDependency("Module A.ClassA", "Module A")),
                 List.of(new Clazz("class-b", "ClassB",
                         List.of(createDependency("Module A.ClassA", "Module A")),
                         0.5, "module-b", "module-b")), 0.5);

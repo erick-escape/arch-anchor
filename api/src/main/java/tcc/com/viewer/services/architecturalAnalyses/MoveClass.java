@@ -47,10 +47,8 @@ public class MoveClass extends ArchitecturalAnalysis {
                 targetModule.getId(),
                 targetModule.getName(),
                 targetModule.getRefClazzes(),
-                targetModule.getAllowedRules(),
-                targetModule.getAllDependenciesOrigin(),
                 targetModule.getRefClazzesDependencies(),
-                targetModule.getAllDependencies(),
+                targetModule.getModuleDependencies(),
                 newClazzes,
                 0.0
         );
@@ -65,10 +63,8 @@ public class MoveClass extends ArchitecturalAnalysis {
                 sourceModule.getId(),
                 sourceModule.getName(),
                 sourceModule.getRefClazzes(),
-                sourceModule.getAllowedRules(),
-                sourceModule.getAllDependenciesOrigin(),
                 sourceModule.getRefClazzesDependencies(),
-                sourceModule.getAllDependencies(),
+                sourceModule.getModuleDependencies(),
                 newClazzes,
                 0.0
         );

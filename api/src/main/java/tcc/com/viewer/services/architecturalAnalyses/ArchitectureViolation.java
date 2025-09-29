@@ -4,13 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
-import tcc.com.viewer.domains.dependency.DependencyOrigin;
 import tcc.com.viewer.domains.module.Module;
-import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.services.ModuleService;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,10 +34,10 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         private final int newModulesRequired;
 
         public ArchitectureViolationResult(List<ModuleViolation> moduleViolations,
-                                         List<ViolationCluster> clusters,
-                                         int totalViolations,
-                                         int moveableClasses,
-                                         int newModulesRequired) {
+                                           List<ViolationCluster> clusters,
+                                           int totalViolations,
+                                           int moveableClasses,
+                                           int newModulesRequired) {
             this.moduleViolations = new ArrayList<>(moduleViolations);
             this.clusters = new ArrayList<>(clusters);
             this.totalViolations = totalViolations;
@@ -85,9 +82,9 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         private final List<MoveSuggestion> alternativeSuggestions;
 
         public ViolatingClass(String classId, String className,
-                            List<String> violatingDependencyFQNs,
-                            MoveSuggestion bestSuggestion,
-                            List<MoveSuggestion> alternativeSuggestions) {
+                              List<String> violatingDependencyFQNs,
+                              MoveSuggestion bestSuggestion,
+                              List<MoveSuggestion> alternativeSuggestions) {
             this.classId = classId;
             this.className = className;
             this.violatingDependencyFQNs = new ArrayList<>(violatingDependencyFQNs);
@@ -105,8 +102,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         private final String suggestionReason;
 
         public MoveSuggestion(String targetModuleId, String targetModuleName,
-                            double similarityImprovement, int newViolationsCreated,
-                            boolean requiresNewModule, String suggestionReason) {
+                              double similarityImprovement, int newViolationsCreated,
+                              boolean requiresNewModule, String suggestionReason) {
             this.targetModuleId = targetModuleId;
             this.targetModuleName = targetModuleName;
             this.similarityImprovement = similarityImprovement;
@@ -123,7 +120,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         private final String recommendation;
 
         public ViolationCluster(String forbiddenOrigin, String affectedModuleId,
-                              int classCount, String recommendation) {
+                                int classCount, String recommendation) {
             this.forbiddenOrigin = forbiddenOrigin;
             this.affectedModuleId = affectedModuleId;
             this.classCount = classCount;
@@ -175,7 +172,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         final int newModulesRequiredCount;
 
         public ModuleViolationAnalysis(ModuleViolation moduleViolation, List<ViolationCluster> clusters,
-                                     int violationCount, int moveableClassCount, int newModulesRequiredCount) {
+                                       int violationCount, int moveableClassCount, int newModulesRequiredCount) {
             this.moduleViolation = moduleViolation;
             this.clusters = clusters;
             this.violationCount = violationCount;
@@ -194,19 +191,19 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
             return new ModuleViolationAnalysis(null, new ArrayList<>(), 0, 0, 0);
         }
 
-        // Step 1: Extract allowed origins from allowed rules
-        Set<String> allowedOrigins = (module.getAllowedRules() != null) ?
-                module.getAllowedRules().stream()
-                        .filter(rule -> rule != null && rule.getFullyQualifiedName() != null)
-                        .map(AllowedRule::getFullyQualifiedName)
+        // Step 1: Extract allowed origins from refClazzesDependencies
+        Set<String> allowedOrigins = (module.getRefClazzesDependencies() != null) ?
+                module.getRefClazzesDependencies().stream()
+                        .filter(dep -> dep != null && dep.getPackageName() != null)
+                        .map(Dependency::getPackageName)
                         .collect(Collectors.toSet()) :
                 new HashSet<>();
 
-        // Step 2: Extract actual origins from dependencies
-        Set<String> actualOrigins = (module.getAllDependenciesOrigin() != null) ?
-                module.getAllDependenciesOrigin().stream()
-                        .filter(origin -> origin != null && origin.getOriginName() != null)
-                        .map(DependencyOrigin::getOriginName)
+        // Step 2: Extract actual origins from moduleDependencies
+        Set<String> actualOrigins = (module.getModuleDependencies() != null) ?
+                module.getModuleDependencies().stream()
+                        .filter(dep -> dep != null && dep.getPackageName() != null)
+                        .map(Dependency::getPackageName)
                         .collect(Collectors.toSet()) :
                 new HashSet<>();
 
@@ -243,10 +240,10 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
             if (originAnalysis.isCluster) {
                 clusters.add(new ViolationCluster(
-                    forbiddenOrigin,
-                    module.getId(),
-                    originAnalysis.classCount,
-                    "Consider changing module reference class"
+                        forbiddenOrigin,
+                        module.getId(),
+                        originAnalysis.classCount,
+                        "Consider changing module reference class"
                 ));
             }
 
@@ -268,7 +265,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         final int newModulesRequiredCount;
 
         public OriginViolationAnalysis(OriginViolation originViolation, boolean isCluster, int classCount,
-                                     int moveableClassCount, int newModulesRequiredCount) {
+                                       int moveableClassCount, int newModulesRequiredCount) {
             this.originViolation = originViolation;
             this.isCluster = isCluster;
             this.classCount = classCount;
@@ -289,11 +286,11 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 MoveSuggestionAnalysis suggestionAnalysis = generateMoveSuggestions(clazz, module, forbiddenOrigin, allModules);
 
                 ViolatingClass violatingClass = new ViolatingClass(
-                    clazz.getId(),
-                    clazz.getName(),
-                    violatingDependencyFQNs,
-                    suggestionAnalysis.bestSuggestion,
-                    suggestionAnalysis.alternativeSuggestions
+                        clazz.getId(),
+                        clazz.getName(),
+                        violatingDependencyFQNs,
+                        suggestionAnalysis.bestSuggestion,
+                        suggestionAnalysis.alternativeSuggestions
                 );
 
                 violatingClasses.add(violatingClass);
@@ -320,11 +317,11 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         OriginViolation originViolation = new OriginViolation(forbiddenOrigin, violatingClasses, isCluster);
 
         return new OriginViolationAnalysis(
-            originViolation,
-            isCluster,
-            violatingClasses.size(),
-            moveableClasses,
-            newModulesRequired
+                originViolation,
+                isCluster,
+                violatingClasses.size(),
+                moveableClasses,
+                newModulesRequired
         );
     }
 
@@ -338,8 +335,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
         for (Dependency dependency : clazz.getDependencies()) {
             if (dependency != null &&
-                dependency.getPackageName() != null &&
-                dependency.getPackageName().equals(forbiddenOrigin)) {
+                    dependency.getPackageName() != null &&
+                    dependency.getPackageName().equals(forbiddenOrigin)) {
                 // Collect all types from this forbidden package
                 if (dependency.getTypes() != null) {
                     dependency.getTypes().forEach(type -> violatingFQNs.add(type.getFullyQualifiedName()));
@@ -361,13 +358,13 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
     }
 
     private MoveSuggestionAnalysis generateMoveSuggestions(Clazz clazz, Module sourceModule,
-                                                          String forbiddenOrigin, List<Module> allModules) {
+                                                           String forbiddenOrigin, List<Module> allModules) {
         List<MoveSuggestion> suggestions = new ArrayList<>();
 
         // Handle null inputs gracefully
         if (clazz == null || sourceModule == null || forbiddenOrigin == null || allModules == null) {
             MoveSuggestion noTargetSuggestion = new MoveSuggestion(
-                null, "New Module", 0.0, 0, true, "No existing module accepts this dependency"
+                    null, "New Module", 0.0, 0, true, "No existing module accepts this dependency"
             );
             return new MoveSuggestionAnalysis(noTargetSuggestion, new ArrayList<>());
         }
@@ -375,15 +372,15 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         // Search all modules where forbidden origins are in allowedRules
         for (Module targetModule : allModules) {
             if (targetModule == null || targetModule.getId() == null ||
-                targetModule.getId().equals(sourceModule.getId())) {
+                    targetModule.getId().equals(sourceModule.getId())) {
                 continue; // Skip null or same module
             }
 
             // Check if this target module allows the forbidden origin
-            boolean allowsForbiddenOrigin = (targetModule.getAllowedRules() != null) &&
-                targetModule.getAllowedRules().stream()
-                    .filter(rule -> rule != null && rule.getFullyQualifiedName() != null)
-                    .anyMatch(rule -> rule.getFullyQualifiedName().equals(forbiddenOrigin));
+            boolean allowsForbiddenOrigin = (targetModule.getRefClazzesDependencies() != null) &&
+                    targetModule.getRefClazzesDependencies().stream()
+                            .filter(dep -> dep != null && dep.getPackageName() != null)
+                            .anyMatch(dep -> dep.getPackageName().equals(forbiddenOrigin));
 
             if (allowsForbiddenOrigin) {
                 // Calculate similarity improvement and new violations
@@ -392,12 +389,12 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 String reason = determineMoveSuggestionReason(calculation);
 
                 MoveSuggestion suggestion = new MoveSuggestion(
-                    targetModule.getId(),
-                    targetModule.getName(),
-                    calculation.similarityImprovement,
-                    calculation.newViolationsCreated,
-                    false, // Not requiring new module
-                    reason
+                        targetModule.getId(),
+                        targetModule.getName(),
+                        calculation.similarityImprovement,
+                        calculation.newViolationsCreated,
+                        false, // Not requiring new module
+                        reason
                 );
 
                 suggestions.add(suggestion);
@@ -427,12 +424,12 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         } else {
             // No valid targets found, suggest creating new module
             bestSuggestion = new MoveSuggestion(
-                null,
-                "New Module",
-                0.0,
-                0,
-                true,
-                "No existing module accepts this dependency"
+                    null,
+                    "New Module",
+                    0.0,
+                    0,
+                    true,
+                    "No existing module accepts this dependency"
             );
         }
 
@@ -485,10 +482,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 module.getId() + "_temp_without_" + classToRemove.getId(),
                 module.getName(),
                 module.getRefClazzes(),
-                module.getAllowedRules(),
-                module.getAllDependenciesOrigin(),
                 module.getRefClazzesDependencies(),
-                module.getAllDependencies(),
+                module.getModuleDependencies(),
                 newClazzes,
                 0.0
         );
@@ -502,10 +497,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 module.getId() + "_temp_with_" + classToAdd.getId(),
                 module.getName(),
                 module.getRefClazzes(),
-                module.getAllowedRules(),
-                module.getAllDependenciesOrigin(),
                 module.getRefClazzesDependencies(),
-                module.getAllDependencies(),
+                module.getModuleDependencies(),
                 newClazzes,
                 0.0
         );
@@ -516,14 +509,14 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         // a complete violation analysis on the hypothetical target module
         if (clazz.getDependencies() == null) return 0;
 
-        Set<String> targetAllowedOrigins = targetModule.getAllowedRules().stream()
-                .map(AllowedRule::getFullyQualifiedName)
+        Set<String> targetAllowedOrigins = targetModule.getRefClazzesDependencies().stream()
+                .map(Dependency::getPackageName)
                 .collect(Collectors.toSet());
 
         int newViolations = 0;
         for (Dependency dependency : clazz.getDependencies()) {
             if (dependency.getPackageName() != null &&
-                !targetAllowedOrigins.contains(dependency.getPackageName())) {
+                    !targetAllowedOrigins.contains(dependency.getPackageName())) {
                 newViolations++;
             }
         }
@@ -553,7 +546,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
         // Summary section
         output.append("📊 Summary: ").append(result.totalViolations).append(" violations found affecting ")
-               .append(result.moduleViolations.size()).append(" modules\n");
+                .append(result.moduleViolations.size()).append(" modules\n");
         output.append("├── ").append(result.moveableClasses).append(" classes require relocation\n");
         output.append("├── ").append(result.newModulesRequired).append(" new modules suggested\n");
         output.append("└── ").append(result.clusters.size()).append(" violation clusters detected\n\n");
@@ -567,7 +560,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 boolean isLastModule = (i == result.moduleViolations.size() - 1);
 
                 output.append("Module: ").append(moduleViolation.moduleName)
-                       .append(" (ID: ").append(moduleViolation.moduleId).append(")\n");
+                        .append(" (ID: ").append(moduleViolation.moduleId).append(")\n");
 
                 for (int j = 0; j < moduleViolation.originViolations.size(); j++) {
                     OriginViolation originViolation = moduleViolation.originViolations.get(j);
@@ -607,8 +600,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                                 output.append(suggPrefix).append("🎯 Best Move: ").append(violatingClass.bestSuggestion.targetModuleName).append("\n");
                                 String reasonPrefix = isLastModule && isLastOrigin && isLastClass ? "│   │       ├── " : "│   │       ├── ";
                                 output.append(reasonPrefix).append("Similarity improvement: ")
-                                       .append(String.format("%+.2f", violatingClass.bestSuggestion.similarityImprovement))
-                                       .append("\n");
+                                        .append(String.format("%+.2f", violatingClass.bestSuggestion.similarityImprovement))
+                                        .append("\n");
                                 output.append(reasonPrefix).append("New violations: ").append(violatingClass.bestSuggestion.newViolationsCreated).append("\n");
                                 String finalPrefix = isLastModule && isLastOrigin && isLastClass ? "│   │       └── " : "│   │       └── ";
                                 output.append(finalPrefix).append("Reason: ").append(violatingClass.bestSuggestion.suggestionReason).append("\n");
@@ -640,7 +633,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 .orElse(0.0);
 
         output.append("├── ").append(result.moveableClasses).append(" classes can move to existing modules")
-               .append(" (avg similarity improvement: ").append(String.format("%+.2f", avgImprovement)).append(")\n");
+                .append(" (avg similarity improvement: ").append(String.format("%+.2f", avgImprovement)).append(")\n");
         output.append("├── ").append(result.newModulesRequired).append(" classes require new module creation\n");
         output.append("└── ").append(result.clusters.size()).append(" violation clusters need reference class review\n\n");
 

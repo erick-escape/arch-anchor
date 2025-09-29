@@ -36,8 +36,6 @@ public class ProjectService {
         for (Module module : modules) {
             moduleService.calculateClassSimilarities(module);
             moduleService.calculateModuleSimilarity(module);
-            moduleService.populateAllowedRules(module);
-            moduleService.populateAllDependenciesOrigin(module);
             moduleService.populateRefClazzesDependencies(module);
             moduleService.populateAllDependencies(module);
         }

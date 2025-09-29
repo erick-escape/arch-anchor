@@ -4,14 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.clazz.Clazz;
 import tcc.com.viewer.domains.dependency.Dependency;
-import tcc.com.viewer.domains.dependency.DependencyOrigin;
 import tcc.com.viewer.domains.module.Module;
-import tcc.com.viewer.domains.rules.AllowedRule;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.dependencies.DependencyDTO;
-import tcc.com.viewer.dto.dependencies.DependencyOriginDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
-import tcc.com.viewer.dto.rules.AllowedRuleDTO;
 import tcc.com.viewer.mapstruct.*;
 import tcc.com.viewer.services.parsers.ParserFactory;
 
@@ -30,9 +26,7 @@ public class ModuleService {
     private final ParserFactory parserFactory;
     private final ModuleMapper moduleMapper = new ModuleMapperImpl();
     private final ClazzMapper clazzMapper = new ClazzMapperImpl();
-    private final AllowedRuleMapper allowedRuleMapper = new AllowedRuleMapperImpl();
     private final DependencyMapper dependencyMapper = new DependencyMapperImpl();
-    private final DependencyOriginMapper dependencyOriginMapper = new DependencyOriginMapperImpl();
 
     public ModuleService(ParserFactory parserFactory) {
         this.parserFactory = parserFactory;
@@ -162,59 +156,10 @@ public class ModuleService {
         return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
     }
 
-    public void populateAllowedRules(Module module) {
-        if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty()) {
-            module.setAllowedRules(new ArrayList<>());
-            return;
-        }
-
-        Set<String> uniqueOriginNames = new HashSet<>();
-
-        for (Clazz refClazz : module.getRefClazzes()) {
-            if (refClazz.getDependencies() != null) {
-                for (Dependency dependency : refClazz.getDependencies()) {
-                    if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
-                        uniqueOriginNames.add(dependency.getPackageName());
-                    }
-                }
-            }
-        }
-
-        List<AllowedRule> allowedRules = uniqueOriginNames.stream()
-                .map(AllowedRule::new)
-                .collect(Collectors.toList());
-
-        module.setAllowedRules(allowedRules);
-    }
-
-    public void populateAllDependenciesOrigin(Module module) {
-        if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
-            module.setAllDependenciesOrigin(new ArrayList<>());
-            return;
-        }
-
-        Set<String> uniqueOriginNames = new HashSet<>();
-
-        for (Clazz clazz : module.getClazzes()) {
-            if (clazz.getDependencies() != null) {
-                for (Dependency dependency : clazz.getDependencies()) {
-                    if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
-                        uniqueOriginNames.add(dependency.getPackageName());
-                    }
-                }
-            }
-        }
-
-        List<DependencyOrigin> allDependenciesOrigin = uniqueOriginNames.stream()
-                .map(DependencyOrigin::new)
-                .collect(Collectors.toList());
-
-        module.setAllDependenciesOrigin(allDependenciesOrigin);
-    }
 
     public void populateAllDependencies(Module module) {
         if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
-            module.setAllDependencies(new ArrayList<>());
+            module.setModuleDependencies(new ArrayList<>());
             return;
         }
 
@@ -231,7 +176,7 @@ public class ModuleService {
         }
 
         List<Dependency> allDependencies = new ArrayList<>(uniqueDependencies.values());
-        module.setAllDependencies(allDependencies);
+        module.setModuleDependencies(allDependencies);
     }
 
     public void populateRefClazzesDependencies(Module module) {
@@ -277,8 +222,6 @@ public class ModuleService {
 
         this.calculateClassSimilarities(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
-        this.populateAllowedRules(retainedModuleEntity);
-        this.populateAllDependenciesOrigin(retainedModuleEntity);
         this.populateRefClazzesDependencies(retainedModuleEntity);
         this.populateAllDependencies(retainedModuleEntity);
 
@@ -292,8 +235,6 @@ public class ModuleService {
 
         this.calculateClassSimilarities(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
-        this.populateAllowedRules(newModuleEntity);
-        this.populateAllDependenciesOrigin(newModuleEntity);
         this.populateRefClazzesDependencies(newModuleEntity);
         this.populateAllDependencies(newModuleEntity);
 
@@ -398,10 +339,8 @@ public class ModuleService {
                                         moduleId,
                                         moduleName,
                                         null, // refClazzes will be calculated later
-                                        null, // allowedRules will be calculated later
-                                        null, // allDependenciesOrigin will be calculated later
                                         null, // refClazzesDependencies will be calculated later
-                                        null, // allDependencies will be calculated later
+                                        null, // moduleDependencies will be calculated later
                                         clazzes,
                                         0.0 // Similarity will be calculated later
                                 );
@@ -445,14 +384,12 @@ public class ModuleService {
             throw new IllegalArgumentException("Some requested class IDs were not found in the module");
         }
 
-        // Calculate allowed rules
+        // Calculate dependencies
         Module moduleEntity = moduleMapper.toEntity(targetModule);
         List<Clazz> modulesList = refClazzes.stream()
                 .map(clazzMapper::toEntity)
                 .toList();
         moduleEntity.setRefClazzes(modulesList);
-        this.populateAllowedRules(moduleEntity);
-        this.populateAllDependenciesOrigin(moduleEntity);
         this.populateRefClazzesDependencies(moduleEntity);
         this.populateAllDependencies(moduleEntity);
 
@@ -461,16 +398,10 @@ public class ModuleService {
                 targetModule.id(),
                 targetModule.name(),
                 refClazzes.toArray(new ClazzResponseDTO[0]),
-                (AllowedRuleDTO[]) moduleEntity.getAllowedRules().stream()
-                        .map(allowedRuleMapper::toDto)
-                        .toArray(),
-                moduleEntity.getAllDependenciesOrigin().stream()
-                        .map(dependencyOriginMapper::toDto)
-                        .toArray(DependencyOriginDTO[]::new),
                 moduleEntity.getRefClazzesDependencies().stream()
                         .map(dependencyMapper::toDto)
                         .toArray(DependencyDTO[]::new),
-                moduleEntity.getAllDependencies().stream()
+                moduleEntity.getModuleDependencies().stream()
                         .map(dependencyMapper::toDto)
                         .toArray(DependencyDTO[]::new),
                 targetModule.clazzes(),
