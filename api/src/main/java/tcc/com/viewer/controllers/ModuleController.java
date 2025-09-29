@@ -96,7 +96,7 @@ public class ModuleController {
         moduleService.calculateClassSimilarities(newModule);
         moduleService.calculateModuleSimilarity(newModule);
         moduleService.populateRefClazzesDependencies(newModule);
-        moduleService.populateAllDependencies(newModule);
+        moduleService.populateModuleDependencies(newModule);
 
         return moduleMapper.toDto(newModule);
     }

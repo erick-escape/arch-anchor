@@ -157,7 +157,7 @@ public class ModuleService {
     }
 
 
-    public void populateAllDependencies(Module module) {
+    public void populateModuleDependencies(Module module) {
         if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
             module.setModuleDependencies(new ArrayList<>());
             return;
@@ -223,7 +223,7 @@ public class ModuleService {
         this.calculateClassSimilarities(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
         this.populateRefClazzesDependencies(retainedModuleEntity);
-        this.populateAllDependencies(retainedModuleEntity);
+        this.populateModuleDependencies(retainedModuleEntity);
 
         // Create the new module (with extracted classes)
         Module newModuleEntity = new Module();
@@ -236,7 +236,7 @@ public class ModuleService {
         this.calculateClassSimilarities(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
         this.populateRefClazzesDependencies(newModuleEntity);
-        this.populateAllDependencies(newModuleEntity);
+        this.populateModuleDependencies(newModuleEntity);
 
         // Convert back to DTOs
         ModuleDTO retainedDto = moduleMapper.toDto(retainedModuleEntity);
@@ -391,7 +391,7 @@ public class ModuleService {
                 .toList();
         moduleEntity.setRefClazzes(modulesList);
         this.populateRefClazzesDependencies(moduleEntity);
-        this.populateAllDependencies(moduleEntity);
+        this.populateModuleDependencies(moduleEntity);
 
         // Create updated module with new reference classes
         ModuleDTO updatedModule = new ModuleDTO(

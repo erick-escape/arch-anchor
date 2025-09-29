@@ -37,7 +37,7 @@ public class ProjectService {
             moduleService.calculateClassSimilarities(module);
             moduleService.calculateModuleSimilarity(module);
             moduleService.populateRefClazzesDependencies(module);
-            moduleService.populateAllDependencies(module);
+            moduleService.populateModuleDependencies(module);
         }
 
         analysesRunner.executeAll(modules);
