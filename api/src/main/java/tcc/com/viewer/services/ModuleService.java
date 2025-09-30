@@ -121,11 +121,11 @@ public class ModuleService {
             clazz.setSimilarity(1.0);
         }
 
-        // Set refClass as the class with the highest similarity
+        // Set refClazz as the class with the highest similarity
         if (!clazzes.isEmpty()) {
-            Clazz refClass = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
-            List<Clazz> refClasses = List.of(refClass);
-            module.setRefClazzes(refClasses);
+            Clazz refClazz = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
+            List<Clazz> refClazzes = List.of(refClazz);
+            module.setRefClazzes(refClazzes);
         }
     }
 
