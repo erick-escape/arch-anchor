@@ -50,6 +50,7 @@ public class MoveClass extends ArchitecturalAnalysis {
                 targetModule.getRefClazzesDependencies(),
                 targetModule.getModuleDependencies(),
                 newClazzes,
+                0.0,
                 0.0
         );
     }
@@ -66,6 +67,7 @@ public class MoveClass extends ArchitecturalAnalysis {
                 sourceModule.getRefClazzesDependencies(),
                 sourceModule.getModuleDependencies(),
                 newClazzes,
+                0.0,
                 0.0
         );
     }

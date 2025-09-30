@@ -15,6 +15,7 @@ public class Clazz {
     private String name;
     private List<Dependency> dependencies;
     private Double similarity;
+    private Double avgSimilarityWithRefClazzes;
     private final String firstModule;
     private String currentModule;
 }

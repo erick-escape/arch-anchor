@@ -237,11 +237,11 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("class1", "CleanClass",
                         List.of(createDependency("com.example.allowed.SomeClass", "com.example.allowed")),
-                        0.8, "test-module", "test-module")
+                        0.8, 0.0, "test-module", "test-module")
         );
 
         return new Module("clean-module", "Clean Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.8);
+                refClazzesDependencies, moduleDependencies, classes, 0.8, 0.0);
     }
 
     private Module createModuleWithSingleViolation() {
@@ -254,11 +254,11 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("violating-class", "ViolatingClass",
                         List.of(createDependency("com.example.forbidden.BadClass", "com.example.forbidden")),
-                        0.5, "source-module", "source-module")
+                        0.5, 0.0, "source-module", "source-module")
         );
 
         return new Module("source-module", "Source Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.5);
+                refClazzesDependencies, moduleDependencies, classes, 0.5, 0.0);
     }
 
     private Module createTargetModuleForViolation() {
@@ -272,11 +272,11 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("target-class", "TargetClass",
                         List.of(createDependency("com.example.allowed.GoodClass", "com.example.allowed")),
-                        0.9, "target-module", "target-module")
+                        0.9, 0.0, "target-module", "target-module")
         );
 
         return new Module("target-module", "Target Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.9);
+                refClazzesDependencies, moduleDependencies, classes, 0.9, 0.0);
     }
 
     private Module createModuleWithMultipleViolations() {
@@ -293,11 +293,11 @@ class ArchitectureViolationTest {
                                 createDependency("com.example.forbidden1.BadClass1", "com.example.forbidden1"),
                                 createDependency("com.example.forbidden2.BadClass2", "com.example.forbidden2")
                         ),
-                        0.3, "multi-module", "multi-module")
+                        0.3, 0.0, "multi-module", "multi-module")
         );
 
         return new Module("multi-module", "Multi Violation Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.3);
+                refClazzesDependencies, moduleDependencies, classes, 0.3, 0.0);
     }
 
     private Module createModuleWithViolationCluster() {
@@ -310,17 +310,17 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("violating-class1", "ViolatingClass1",
                         List.of(createDependency("com.example.forbidden.BadClass", "com.example.forbidden")),
-                        0.4, "cluster-module", "cluster-module"),
+                        0.4, 0.0, "cluster-module", "cluster-module"),
                 new Clazz("violating-class2", "ViolatingClass2",
                         List.of(createDependency("com.example.forbidden.AnotherBadClass", "com.example.forbidden")),
-                        0.4, "cluster-module", "cluster-module"),
+                        0.4, 0.0, "cluster-module", "cluster-module"),
                 new Clazz("violating-class3", "ViolatingClass3",
                         List.of(createDependency("com.example.forbidden.ThirdBadClass", "com.example.forbidden")),
-                        0.4, "cluster-module", "cluster-module")
+                        0.4, 0.0, "cluster-module", "cluster-module")
         );
 
         return new Module("cluster-module", "Cluster Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.4);
+                refClazzesDependencies, moduleDependencies, classes, 0.4, 0.0);
     }
 
     private Module createModuleWithOrphanedClass() {
@@ -333,11 +333,11 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("orphaned-class", "OrphanedClass",
                         List.of(createDependency("com.example.unique.UniqueClass", "com.example.unique")),
-                        0.6, "orphan-module", "orphan-module")
+                        0.6, 0.0, "orphan-module", "orphan-module")
         );
 
         return new Module("orphan-module", "Orphan Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.6);
+                refClazzesDependencies, moduleDependencies, classes, 0.6, 0.0);
     }
 
     private Module createBetterTargetModule() {
@@ -345,7 +345,7 @@ class ArchitectureViolationTest {
                 createDependency("com.example.forbidden.SomeClass", "com.example.forbidden") // Allows the violation
         );
         return new Module("better-target", "Better Target", new ArrayList<>(),
-                refClazzesDependencies, new ArrayList<>(), new ArrayList<>(), 0.5);
+                refClazzesDependencies, new ArrayList<>(), new ArrayList<>(), 0.5, 0.0);
     }
 
     private Module createWorseTargetModule() {
@@ -353,7 +353,7 @@ class ArchitectureViolationTest {
                 createDependency("com.example.forbidden.SomeClass", "com.example.forbidden") // Allows the violation
         );
         return new Module("worse-target", "Worse Target", new ArrayList<>(),
-                refClazzesDependencies, new ArrayList<>(), new ArrayList<>(), 0.5);
+                refClazzesDependencies, new ArrayList<>(), new ArrayList<>(), 0.5, 0.0);
     }
 
     private Module createModuleWithMixedDependencies() {
@@ -370,16 +370,16 @@ class ArchitectureViolationTest {
                                 createDependency("com.example.allowed.GoodClass", "com.example.allowed"),
                                 createDependency("com.example.forbidden.BadClass", "com.example.forbidden")
                         ),
-                        0.6, "mixed-module", "mixed-module")
+                        0.6, 0.0, "mixed-module", "mixed-module")
         );
 
         return new Module("mixed-module", "Mixed Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.6);
+                refClazzesDependencies, moduleDependencies, classes, 0.6, 0.0);
     }
 
     private Module createEmptyModule() {
         return new Module("empty-module", "Empty Module", new ArrayList<>(),
-                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0.0);
+                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), 0.0, 0.0);
     }
 
     private Module createModuleWithSelfDependencies() {
@@ -392,11 +392,11 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("self-class", "SelfClass",
                         List.of(createDependency("Self Module.InternalClass", "Self Module")),
-                        0.7, "self-module", "self-module")
+                        0.7, 0.0, "self-module", "self-module")
         );
 
         return new Module("self-module", "Self Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.7);
+                refClazzesDependencies, moduleDependencies, classes, 0.7, 0.0);
     }
 
     private Module createModuleWithAllViolatingClasses() {
@@ -409,17 +409,17 @@ class ArchitectureViolationTest {
         List<Clazz> classes = List.of(
                 new Clazz("violating1", "ViolatingClass1",
                         List.of(createDependency("com.example.forbidden.Bad1", "com.example.forbidden")),
-                        0.3, "all-violating", "all-violating"),
+                        0.3, 0.0, "all-violating", "all-violating"),
                 new Clazz("violating2", "ViolatingClass2",
                         List.of(createDependency("com.example.forbidden.Bad2", "com.example.forbidden")),
-                        0.3, "all-violating", "all-violating"),
+                        0.3, 0.0, "all-violating", "all-violating"),
                 new Clazz("violating3", "ViolatingClass3",
                         List.of(createDependency("com.example.forbidden.Bad3", "com.example.forbidden")),
-                        0.3, "all-violating", "all-violating")
+                        0.3, 0.0, "all-violating", "all-violating")
         );
 
         return new Module("all-violating", "All Violating Module", new ArrayList<>(),
-                refClazzesDependencies, moduleDependencies, classes, 0.3);
+                refClazzesDependencies, moduleDependencies, classes, 0.3, 0.0);
     }
 
     private List<Module> createModulesWithCircularDependencies() {
@@ -429,7 +429,7 @@ class ArchitectureViolationTest {
                 List.of(createDependency("Module B.ClassB", "Module B")),
                 List.of(new Clazz("class-a", "ClassA",
                         List.of(createDependency("Module B.ClassB", "Module B")),
-                        0.5, "module-a", "module-a")), 0.5);
+                        0.5, 0.0, "module-a", "module-a")), 0.5, 0.0);
 
         // Module B depends on Module A (circular)
         Module moduleB = new Module("module-b", "Module B", new ArrayList<>(),
@@ -437,7 +437,7 @@ class ArchitectureViolationTest {
                 List.of(createDependency("Module A.ClassA", "Module A")),
                 List.of(new Clazz("class-b", "ClassB",
                         List.of(createDependency("Module A.ClassA", "Module A")),
-                        0.5, "module-b", "module-b")), 0.5);
+                        0.5, 0.0, "module-b", "module-b")), 0.5, 0.0);
 
         return List.of(moduleA, moduleB);
     }

@@ -59,6 +59,7 @@ public class MergeModule extends ArchitecturalAnalysis {
                 null,
                 null,
                 mergedClazzes,
+                0.0,
                 0.0
         );
     }

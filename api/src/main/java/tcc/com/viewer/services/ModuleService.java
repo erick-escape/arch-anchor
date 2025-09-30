@@ -129,6 +129,57 @@ public class ModuleService {
         }
     }
 
+    public void calculateAvgSimilarityWithRefClazzes(Module module) {
+        List<Clazz> clazzes = module.getClazzes();
+        List<Clazz> refClazzes = module.getRefClazzes();
+
+        if (refClazzes == null || refClazzes.isEmpty()) {
+            // If no reference classes, set all avgSimilarityWithRefClazzes to 0.0
+            for (Clazz clazz : clazzes) {
+                clazz.setAvgSimilarityWithRefClazzes(0.0);
+            }
+            return;
+        }
+
+        if (refClazzes.size() == 1) {
+            // If only one reference class, set its avgSimilarityWithRefClazzes to 1.0
+            Clazz refClazz = refClazzes.get(0);
+            refClazz.setAvgSimilarityWithRefClazzes(1.0);
+
+            // Calculate avgSimilarityWithRefClazzes for other classes with this unique reference class
+            for (Clazz clazz : clazzes) {
+                if (!clazz.equals(refClazz)) {
+                    double similarity = calculateSimilarity(clazz, refClazz);
+                    clazz.setAvgSimilarityWithRefClazzes(similarity);
+                }
+            }
+        } else {
+            // Multiple reference classes
+            for (Clazz clazz : clazzes) {
+                double totalSimilarity = 0.0;
+                int count = 0;
+
+                if (refClazzes.contains(clazz)) {
+                    // If this class is a reference class, calculate with other reference classes
+                    for (Clazz refClazz : refClazzes) {
+                        if (!clazz.equals(refClazz)) {
+                            totalSimilarity += calculateSimilarity(clazz, refClazz);
+                            count++;
+                        }
+                    }
+                } else {
+                    // If not a reference class, calculate with all reference classes
+                    for (Clazz refClazz : refClazzes) {
+                        totalSimilarity += calculateSimilarity(clazz, refClazz);
+                        count++;
+                    }
+                }
+
+                clazz.setAvgSimilarityWithRefClazzes(count > 0 ? totalSimilarity / count : 0.0);
+            }
+        }
+    }
+
     public void calculateModuleSimilarity(Module module) {
         List<Clazz> clazzes = module.getClazzes();
 
@@ -140,6 +191,20 @@ public class ModuleService {
             module.setSimilarity(totalSimilarity / clazzes.size());
         } else {
             module.setSimilarity(0.0);
+        }
+
+        // Calculate avgRefClazzesSimilarity
+        List<Clazz> refClazzes = module.getRefClazzes();
+        if (refClazzes != null && !refClazzes.isEmpty()) {
+            double totalRefSimilarity = 0.0;
+            for (Clazz refClazz : refClazzes) {
+                if (refClazz.getAvgSimilarityWithRefClazzes() != null) {
+                    totalRefSimilarity += refClazz.getAvgSimilarityWithRefClazzes();
+                }
+            }
+            module.setAvgRefClazzesSimilarity(totalRefSimilarity / refClazzes.size());
+        } else {
+            module.setAvgRefClazzesSimilarity(0.0);
         }
     }
 
@@ -247,6 +312,7 @@ public class ModuleService {
                 .toList());
 
         this.calculateClassSimilarities(retainedModuleEntity);
+        this.calculateAvgSimilarityWithRefClazzes(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
         this.populateRefClazzesDependencies(retainedModuleEntity);
         this.populateModuleDependencies(retainedModuleEntity);
@@ -260,6 +326,7 @@ public class ModuleService {
                 .toList());
 
         this.calculateClassSimilarities(newModuleEntity);
+        this.calculateAvgSimilarityWithRefClazzes(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
         this.populateRefClazzesDependencies(newModuleEntity);
         this.populateModuleDependencies(newModuleEntity);
@@ -292,6 +359,7 @@ public class ModuleService {
                                 className,
                                 dependencies,
                                 0.0, // Similarity will be calculated later
+                                0.0, // avgSimilarityWithRefClazzes will be calculated later
                                 modulePath.getFileName().toString(), // firstModule
                                 modulePath.getFileName().toString() // currentModule
                         );
@@ -368,7 +436,8 @@ public class ModuleService {
                                         null, // refClazzesDependencies will be calculated later
                                         null, // moduleDependencies will be calculated later
                                         clazzes,
-                                        0.0 // Similarity will be calculated later
+                                        0.0, // Similarity will be calculated later
+                                        0.0 // avgRefClazzesSimilarity will be calculated later
                                 );
                                 this.modules.add(module);
                                 log.info("Added new module: {} with ID: {}", moduleName, moduleId);
@@ -410,12 +479,14 @@ public class ModuleService {
             throw new IllegalArgumentException("Some requested class IDs were not found in the module");
         }
 
-        // Calculate dependencies
+        // Calculate dependencies and similarities
         Module moduleEntity = moduleMapper.toEntity(targetModule);
         List<Clazz> modulesList = refClazzes.stream()
                 .map(clazzMapper::toEntity)
                 .toList();
         moduleEntity.setRefClazzes(modulesList);
+        this.calculateAvgSimilarityWithRefClazzes(moduleEntity);
+        this.calculateModuleSimilarity(moduleEntity);
         this.populateRefClazzesDependencies(moduleEntity);
         this.populateModuleDependencies(moduleEntity);
 
@@ -430,8 +501,11 @@ public class ModuleService {
                 moduleEntity.getModuleDependencies().stream()
                         .map(dependencyMapper::toDto)
                         .toArray(DependencyDTO[]::new),
-                targetModule.clazzes(),
-                targetModule.similarity()
+                moduleEntity.getClazzes().stream()
+                        .map(clazzMapper::toDto)
+                        .toArray(ClazzResponseDTO[]::new),
+                moduleEntity.getSimilarity(),
+                moduleEntity.getAvgRefClazzesSimilarity()
         );
 
         // Replace the module in the list

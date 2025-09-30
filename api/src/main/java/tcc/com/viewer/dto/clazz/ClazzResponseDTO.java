@@ -10,6 +10,7 @@ public record ClazzResponseDTO(
         String name,
         List<DependencyDTO> dependencies,
         Double similarity,
+        Double avgSimilarityWithRefClazzes,
         String firstModule,
         String currentModule) implements Serializable {
 }

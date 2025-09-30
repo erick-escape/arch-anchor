@@ -90,10 +90,12 @@ public class ModuleController {
                 null, // refClazzesDependencies will be calculated later
                 null, // moduleDependencies will be calculated later
                 mergedClasses,
-                0.0 // Similarity will be calculated later
+                0.0, // Similarity will be calculated later
+                0.0 // avgRefClazzesSimilarity will be calculated later
         );
         // Recalculate similarities using ModuleService
         moduleService.calculateClassSimilarities(newModule);
+        moduleService.calculateAvgSimilarityWithRefClazzes(newModule);
         moduleService.calculateModuleSimilarity(newModule);
         moduleService.populateRefClazzesDependencies(newModule);
         moduleService.populateModuleDependencies(newModule);

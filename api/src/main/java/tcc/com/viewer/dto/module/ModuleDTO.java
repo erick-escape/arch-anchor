@@ -12,5 +12,6 @@ public record ModuleDTO(
         DependencyDTO[] refClazzesDependencies,
         DependencyDTO[] allDependencies,
         ClazzResponseDTO[] clazzes,
-        Double similarity) implements Serializable {
+        Double similarity,
+        Double avgRefClazzesSimilarity) implements Serializable {
 }

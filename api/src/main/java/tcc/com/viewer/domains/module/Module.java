@@ -21,4 +21,5 @@ public class Module {
     private List<Dependency> moduleDependencies;
     private List<Clazz> clazzes;
     private Double similarity;
+    private Double avgRefClazzesSimilarity;
 }

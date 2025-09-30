@@ -485,6 +485,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 module.getRefClazzesDependencies(),
                 module.getModuleDependencies(),
                 newClazzes,
+                0.0,
                 0.0
         );
     }
@@ -500,6 +501,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 module.getRefClazzesDependencies(),
                 module.getModuleDependencies(),
                 newClazzes,
+                0.0,
                 0.0
         );
     }
