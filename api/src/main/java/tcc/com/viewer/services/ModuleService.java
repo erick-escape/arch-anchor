@@ -208,6 +208,51 @@ public class ModuleService {
         }
     }
 
+    /**
+     * Calculates the average similarity of a single class with a list of reference classes.
+     * This method is useful for evaluating how well a class would fit in a module
+     * based on its similarity with the module's reference classes.
+     *
+     * @param clazz The class to calculate similarity for
+     * @param refClazzes The reference classes to compare against
+     * @return The average similarity with reference classes, or 0.0 if no reference classes
+     */
+    public double calculateAvgSimilarityWithRefClazzes(Clazz clazz, List<Clazz> refClazzes) {
+        if (refClazzes == null || refClazzes.isEmpty()) {
+            return 0.0;
+        }
+
+        if (refClazzes.size() == 1) {
+            Clazz refClazz = refClazzes.get(0);
+            if (clazz.equals(refClazz)) {
+                return 1.0;
+            }
+            return calculateSimilarity(clazz, refClazz);
+        }
+
+        // Multiple reference classes
+        double totalSimilarity = 0.0;
+        int count = 0;
+
+        if (refClazzes.contains(clazz)) {
+            // If this class is a reference class, calculate with other reference classes
+            for (Clazz refClazz : refClazzes) {
+                if (!clazz.equals(refClazz)) {
+                    totalSimilarity += calculateSimilarity(clazz, refClazz);
+                    count++;
+                }
+            }
+        } else {
+            // If not a reference class, calculate with all reference classes
+            for (Clazz refClazz : refClazzes) {
+                totalSimilarity += calculateSimilarity(clazz, refClazz);
+                count++;
+            }
+        }
+
+        return count > 0 ? totalSimilarity / count : 0.0;
+    }
+
     private double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
         Set<String> deps1 = clazz1.getDependencies().stream().map(Dependency::getPackageName).collect(Collectors.toSet());
         Set<String> deps2 = clazz2.getDependencies().stream().map(Dependency::getPackageName).collect(Collectors.toSet());

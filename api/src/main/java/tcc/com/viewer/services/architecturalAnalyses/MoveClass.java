@@ -27,105 +27,103 @@ public class MoveClass extends ArchitecturalAnalysis {
         String targetModuleId;
         String classId;
         String className;
+        double currentAvgSimilarity;
+        double targetAvgSimilarity;
         double improvement;
 
         public MoveClassResult(String sourceModuleId, String targetModuleId, String classId,
-                               String className, double improvement) {
+                               String className, double currentAvgSimilarity,
+                               double targetAvgSimilarity, double improvement) {
             this.sourceModuleId = sourceModuleId;
             this.targetModuleId = targetModuleId;
             this.classId = classId;
             this.className = className;
+            this.currentAvgSimilarity = currentAvgSimilarity;
+            this.targetAvgSimilarity = targetAvgSimilarity;
             this.improvement = improvement;
         }
     }
 
-    private Module createModuleWithMovedClass(Module sourceModule, Module targetModule, Clazz classToMove) {
-        List<Clazz> newClazzes = new ArrayList<>(targetModule.getClazzes());
-        newClazzes.add(classToMove);
+    /**
+     * Calculates the improvement in avgSimilarityWithRefClazzes for a class when moved
+     * from source module to target module. A positive improvement indicates that the class
+     * would have better cohesion with the target module's reference classes.
+     *
+     * @param classToMove The class being evaluated for relocation
+     * @param sourceModule The module currently containing the class
+     * @param targetModule The module to potentially receive the class
+     * @return The improvement value (target similarity - current similarity), or 0 if no improvement
+     */
+    private double calculateAvgSimilarityImprovement(Clazz classToMove, Module sourceModule, Module targetModule) {
+        // Get current avgSimilarityWithRefClazzes in the source module
+        double currentAvgSimilarity = classToMove.getAvgSimilarityWithRefClazzes() != null
+                ? classToMove.getAvgSimilarityWithRefClazzes()
+                : 0.0;
 
-        return new Module(
-                targetModule.getId(),
-                targetModule.getName(),
-                targetModule.getRefClazzes(),
-                targetModule.getRefClazzesDependencies(),
-                targetModule.getModuleDependencies(),
-                newClazzes,
-                0.0,
-                0.0
-        );
-    }
-
-    private Module createModuleWithRemovedClass(Module sourceModule, Clazz classToRemove) {
-        List<Clazz> newClazzes = sourceModule.getClazzes().stream()
-                .filter(clazz -> !clazz.getId().equals(classToRemove.getId()))
-                .collect(Collectors.toList());
-
-        return new Module(
-                sourceModule.getId(),
-                sourceModule.getName(),
-                sourceModule.getRefClazzes(),
-                sourceModule.getRefClazzesDependencies(),
-                sourceModule.getModuleDependencies(),
-                newClazzes,
-                0.0,
-                0.0
-        );
-    }
-
-    private double calculateSimilarityImprovement(Module originalSourceModule, Module originalTargetModule,
-                                                  Module newSourceModule, Module newTargetModule) {
-        this.moduleService.calculateClassSimilarities(newSourceModule);
-        this.moduleService.calculateModuleSimilarity(newSourceModule);
-        this.moduleService.calculateClassSimilarities(newTargetModule);
-        this.moduleService.calculateModuleSimilarity(newTargetModule);
-
-        double originalSourceSimilarity = originalSourceModule.getSimilarity();
-        double originalTargetSimilarity = originalTargetModule.getSimilarity();
-        double newSourceSimilarity = newSourceModule.getSimilarity();
-        double newTargetSimilarity = newTargetModule.getSimilarity();
-
-        double sourceImprovement = newSourceSimilarity - originalSourceSimilarity;
-        double targetImprovement = newTargetSimilarity - originalTargetSimilarity;
-
-        if (sourceImprovement > 0 && targetImprovement > 0) {
-            return sourceImprovement + targetImprovement;
-        } else {
-            return 0;
+        // Calculate what the avgSimilarityWithRefClazzes would be in the target module
+        double targetAvgSimilarity = 0.0;
+        if (targetModule.getRefClazzes() != null && !targetModule.getRefClazzes().isEmpty()) {
+            targetAvgSimilarity = this.moduleService.calculateAvgSimilarityWithRefClazzes(
+                    classToMove,
+                    targetModule.getRefClazzes()
+            );
         }
+
+        // Calculate improvement
+        double improvement = targetAvgSimilarity - currentAvgSimilarity;
+
+        return improvement;
     }
 
     public void moveClassAnalysis(List<Module> modules) {
-        log.info("Starting move class analysis...");
+        log.info("Starting move class analysis based on avgSimilarityWithRefClazzes...");
 
         List<MoveClassResult> potentialMoves = new ArrayList<>();
 
         for (int i = 0; i < modules.size(); i++) {
             Module sourceModule = modules.get(i);
 
+            // Skip modules without reference classes
+            if (sourceModule.getRefClazzes() == null || sourceModule.getRefClazzes().isEmpty()) {
+                log.debug("Skipping source module '{}' - no reference classes defined", sourceModule.getName());
+                continue;
+            }
+
             for (Clazz classToMove : sourceModule.getClazzes()) {
+                double currentAvgSimilarity = classToMove.getAvgSimilarityWithRefClazzes() != null
+                        ? classToMove.getAvgSimilarityWithRefClazzes()
+                        : 0.0;
+
                 for (int j = 0; j < modules.size(); j++) {
                     if (i == j) continue;
 
                     Module targetModule = modules.get(j);
 
-                    Module newSourceModule = createModuleWithRemovedClass(sourceModule, classToMove);
-                    Module newTargetModule = createModuleWithMovedClass(sourceModule, targetModule, classToMove);
-
-                    if (newSourceModule.getClazzes().isEmpty()) {
+                    // Skip target modules without reference classes
+                    if (targetModule.getRefClazzes() == null || targetModule.getRefClazzes().isEmpty()) {
                         continue;
                     }
 
-                    double improvement = calculateSimilarityImprovement(sourceModule, targetModule,
-                            newSourceModule, newTargetModule);
+                    // Calculate improvement based on avgSimilarityWithRefClazzes
+                    double improvement = calculateAvgSimilarityImprovement(classToMove, sourceModule, targetModule);
 
+                    // Only consider moves that improve the class's similarity with reference classes
                     if (improvement > 0) {
+                        double targetAvgSimilarity = currentAvgSimilarity + improvement;
+
                         potentialMoves.add(new MoveClassResult(
                                 sourceModule.getId(),
                                 targetModule.getId(),
                                 classToMove.getId(),
                                 classToMove.getName(),
+                                currentAvgSimilarity,
+                                targetAvgSimilarity,
                                 improvement
                         ));
+
+                        log.debug("Potential move: '{}' from '{}' to '{}' - Current: {}, Target: {}, Improvement: {}",
+                                classToMove.getName(), sourceModule.getName(), targetModule.getName(),
+                                currentAvgSimilarity, targetAvgSimilarity, improvement);
                     }
                 }
             }
@@ -134,10 +132,19 @@ public class MoveClass extends ArchitecturalAnalysis {
         potentialMoves.sort((a, b) -> Double.compare(b.improvement, a.improvement));
 
         log.info("Found {} potential beneficial moves", potentialMoves.size());
-        for (int i = 0; i < Math.min(5, potentialMoves.size()); i++) {
-            MoveClassResult move = potentialMoves.get(i);
-            log.info("Move suggestion: Class '{}' from module '{}' to module '{}' - Improvement: {}",
-                    move.className, move.sourceModuleId, move.targetModuleId, move.improvement);
+        if (potentialMoves.isEmpty()) {
+            log.info("No beneficial move class suggestions found. All classes appear to be optimally placed.");
+        } else {
+            log.info("Top move suggestions (based on avgSimilarityWithRefClazzes improvement):");
+            for (int i = 0; i < Math.min(5, potentialMoves.size()); i++) {
+                MoveClassResult move = potentialMoves.get(i);
+                log.info("  {}. Move '{}' from module '{}' to module '{}'",
+                        (i + 1), move.className, move.sourceModuleId, move.targetModuleId);
+                log.info("     Current avgSimilarity: {}, Target avgSimilarity: {}, Improvement: +{}",
+                        String.format("%.4f", move.currentAvgSimilarity),
+                        String.format("%.4f", move.targetAvgSimilarity),
+                        String.format("%.4f", move.improvement));
+            }
         }
     }
 }
