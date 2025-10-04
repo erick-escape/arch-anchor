@@ -78,41 +78,22 @@ public class MergeModule extends ArchitecturalAnalysis {
     }
 
     /**
-     * Calculates the improvement in avgRefClazzesSimilarity when merging two modules.
-     * The improvement is calculated by comparing the merged module's avgRefClazzesSimilarity
-     * with both original modules' avgRefClazzesSimilarity values.
+     * Calculates the improvement in the modules similarity when merging two modules.
+     * The improvement is calculated by checking if the merged module's similarity
+     * is greater than both original modules' similarity. If so, return the sum of
+     * the improvements and divide it by two. If not, return zero.
      *
      * @return The minimum improvement (positive if merged is better than both originals)
      */
-    private double calculateAvgRefClazzesSimilarityImprovement(Module module1, Module module2, Module mergedModule) {
-        // Calculate avgSimilarityWithRefClazzes for each reference class in the merged module
+    private double calculateModuleSimilarityImprovement(Module module1, Module module2, Module mergedModule) {
         this.moduleService.calculateAvgSimilarityWithRefClazzes(mergedModule);
-
-        // Calculate the merged module's avgRefClazzesSimilarity
-        List<Clazz> mergedRefClazzes = mergedModule.getRefClazzes();
-        double mergedAvgRefClazzesSimilarity = 0.0;
-
-        if (mergedRefClazzes != null && !mergedRefClazzes.isEmpty()) {
-            double totalRefSimilarity = 0.0;
-            for (Clazz refClazz : mergedRefClazzes) {
-                if (refClazz.getAvgSimilarityWithRefClazzes() != null) {
-                    totalRefSimilarity += refClazz.getAvgSimilarityWithRefClazzes();
-                }
-            }
-            mergedAvgRefClazzesSimilarity = totalRefSimilarity / mergedRefClazzes.size();
+        this.moduleService.calculateModuleSimilarity(mergedModule);
+        Double mergedModuleSimilarity = mergedModule.getSimilarity();
+        if (mergedModuleSimilarity > module1.getSimilarity() && mergedModuleSimilarity > module2.getSimilarity()) {
+            return ((mergedModuleSimilarity - module1.getSimilarity()) + (mergedModuleSimilarity - module2.getSimilarity())) / 2;
         }
 
-        mergedModule.setAvgRefClazzesSimilarity(mergedAvgRefClazzesSimilarity);
-
-        double originalAvgRefSim1 = module1.getAvgRefClazzesSimilarity() != null ? module1.getAvgRefClazzesSimilarity() : 0.0;
-        double originalAvgRefSim2 = module2.getAvgRefClazzesSimilarity() != null ? module2.getAvgRefClazzesSimilarity() : 0.0;
-
-        // The improvement must be positive for BOTH modules (merged must be better than both)
-        double improvement1 = mergedAvgRefClazzesSimilarity - originalAvgRefSim1;
-        double improvement2 = mergedAvgRefClazzesSimilarity - originalAvgRefSim2;
-
-        // Return the minimum improvement (both must be positive for a valid merge)
-        return Math.min(improvement1, improvement2);
+        return 0;
     }
 
     public void mergeModuleAnalysis(List<Module> modules) {
@@ -144,7 +125,7 @@ public class MergeModule extends ArchitecturalAnalysis {
                     continue;
                 }
 
-                double improvement = calculateAvgRefClazzesSimilarityImprovement(module1, module2, mergedModule);
+                double improvement = calculateModuleSimilarityImprovement(module1, module2, mergedModule);
 
                 // Only recommend merge if avgRefClazzesSimilarity improves for BOTH modules
                 if (improvement > 0) {
