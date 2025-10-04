@@ -213,7 +213,7 @@ public class ModuleService {
      * This method is useful for evaluating how well a class would fit in a module
      * based on its similarity with the module's reference classes.
      *
-     * @param clazz The class to calculate similarity for
+     * @param clazz      The class to calculate similarity for
      * @param refClazzes The reference classes to compare against
      * @return The average similarity with reference classes, or 0.0 if no reference classes
      */

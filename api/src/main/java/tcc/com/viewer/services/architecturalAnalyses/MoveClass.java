@@ -8,7 +8,6 @@ import tcc.com.viewer.services.ModuleService;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -49,7 +48,7 @@ public class MoveClass extends ArchitecturalAnalysis {
      * from source module to target module. A positive improvement indicates that the class
      * would have better cohesion with the target module's reference classes.
      *
-     * @param classToMove The class being evaluated for relocation
+     * @param classToMove  The class being evaluated for relocation
      * @param sourceModule The module currently containing the class
      * @param targetModule The module to potentially receive the class
      * @return The improvement value (target similarity - current similarity), or 0 if no improvement
@@ -70,9 +69,7 @@ public class MoveClass extends ArchitecturalAnalysis {
         }
 
         // Calculate improvement
-        double improvement = targetAvgSimilarity - currentAvgSimilarity;
-
-        return improvement;
+        return targetAvgSimilarity - currentAvgSimilarity;
     }
 
     public void moveClassAnalysis(List<Module> modules) {
