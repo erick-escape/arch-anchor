@@ -96,14 +96,6 @@ public class SplitModule extends ArchitecturalAnalysis {
     }
 
     /**
-     * Calculates the similarity between two classes based on their dependencies
-     */
-    private double calculateClassSimilarity(Clazz c1, Clazz c2) {
-        // Use the same similarity calculation as in ModuleService
-        return this.moduleService.calculateAvgSimilarityWithRefClazzes(c1, List.of(c2));
-    }
-
-    /**
      * Assigns each class to either module1 (superRefClass side) or module2 (deRefClass side)
      * based on which edge it is closer to
      */
@@ -119,10 +111,10 @@ public class SplitModule extends ArchitecturalAnalysis {
                 continue; // Already assigned
             }
 
-            double similarityToSuper = calculateClassSimilarity(clazz, superRefClass);
-            double similarityToDe = calculateClassSimilarity(clazz, deRefClass);
+            double similarityToSuper = this.moduleService.calculateSimilarity(clazz, superRefClass);
+            double similarityToDeRef = this.moduleService.calculateSimilarity(clazz, deRefClass);
 
-            if (similarityToSuper >= similarityToDe) {
+            if (similarityToSuper >= similarityToDeRef) {
                 module1Classes.add(clazz);
             } else {
                 module2Classes.add(clazz);
@@ -174,7 +166,7 @@ public class SplitModule extends ArchitecturalAnalysis {
     /**
      * Calculates the minimum improvement across both split modules
      */
-    private double calculateMinimumImprovement(Module original, Module module1, Module module2) {
+    private double calculateImprovement(Module original, Module module1, Module module2) {
         double originalSimilarity = original.getSimilarity();
         double module1Similarity = module1.getSimilarity();
         double module2Similarity = module2.getSimilarity();
@@ -182,7 +174,7 @@ public class SplitModule extends ArchitecturalAnalysis {
         double improvement1 = module1Similarity - originalSimilarity;
         double improvement2 = module2Similarity - originalSimilarity;
 
-        return Math.min(improvement1, improvement2);
+        return (improvement1 + improvement2) / 2;
     }
 
     public void splitModuleAnalysis(List<Module> modules) {
@@ -239,7 +231,7 @@ public class SplitModule extends ArchitecturalAnalysis {
 
             // Evaluate if split is beneficial
             if (isSplitBeneficial(module, module1, module2)) {
-                double minImprovement = calculateMinimumImprovement(module, module1, module2);
+                double improvement = calculateImprovement(module, module1, module2);
 
                 List<String> module1ClassNames = module1Classes.stream()
                         .map(Clazz::getName)
@@ -263,11 +255,11 @@ public class SplitModule extends ArchitecturalAnalysis {
                         module.getSimilarity(),
                         module1.getSimilarity(),
                         module2.getSimilarity(),
-                        minImprovement
+                        improvement
                 ));
 
                 log.debug("Beneficial split found for '{}': Module1 similarity: {}, Module2 similarity: {}, Min improvement: {}",
-                        module.getName(), module1.getSimilarity(), module2.getSimilarity(), minImprovement);
+                        module.getName(), module1.getSimilarity(), module2.getSimilarity(), improvement);
             }
         }
 
