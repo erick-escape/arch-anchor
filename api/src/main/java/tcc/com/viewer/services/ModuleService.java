@@ -223,37 +223,18 @@ public class ModuleService {
         }
 
         if (refClazzes.size() == 1) {
-            Clazz refClazz = refClazzes.get(0);
-            if (clazz.equals(refClazz)) {
-                return 1.0;
-            }
-            return calculateSimilarity(clazz, refClazz);
+            return calculateSimilarity(clazz, refClazzes.get(0));
         }
 
-        // Multiple reference classes
         double totalSimilarity = 0.0;
-        int count = 0;
-
-        if (refClazzes.contains(clazz)) {
-            // If this class is a reference class, calculate with other reference classes
-            for (Clazz refClazz : refClazzes) {
-                if (!clazz.equals(refClazz)) {
-                    totalSimilarity += calculateSimilarity(clazz, refClazz);
-                    count++;
-                }
-            }
-        } else {
-            // If not a reference class, calculate with all reference classes
-            for (Clazz refClazz : refClazzes) {
-                totalSimilarity += calculateSimilarity(clazz, refClazz);
-                count++;
-            }
+        for (Clazz refClazz : refClazzes) {
+            totalSimilarity += calculateSimilarity(clazz, refClazz);
         }
 
-        return count > 0 ? totalSimilarity / count : 0.0;
+        return totalSimilarity / refClazzes.size();
     }
 
-    private double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
+    public double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
         Set<String> deps1 = clazz1.getDependencies().stream().map(Dependency::getPackageName).collect(Collectors.toSet());
         Set<String> deps2 = clazz2.getDependencies().stream().map(Dependency::getPackageName).collect(Collectors.toSet());
 
@@ -265,7 +246,6 @@ public class ModuleService {
 
         return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
     }
-
 
     public void populateModuleDependencies(Module module) {
         if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
