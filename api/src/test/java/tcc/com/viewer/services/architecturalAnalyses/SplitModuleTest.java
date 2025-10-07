@@ -40,9 +40,21 @@ class SplitModuleTest {
         lenient().doNothing().when(moduleService).calculateAvgSimilarityWithRefClazzes(any(Module.class));
         lenient().doNothing().when(moduleService).calculateModuleSimilarity(any(Module.class));
 
-        // Mock class similarity calculation
-        lenient().when(moduleService.calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any()))
-                .thenReturn(0.6); // Default moderate similarity
+        // Mock class-to-class similarity calculation (used in assignClassesToModules)
+        // Default: return moderate similarity based on avgSimilarityWithRefClazzes
+        lenient().when(moduleService.calculateSimilarity(any(Clazz.class), any(Clazz.class)))
+                .thenAnswer(invocation -> {
+                    Clazz c1 = invocation.getArgument(0);
+                    Clazz c2 = invocation.getArgument(1);
+
+                    // Use avgSimilarityWithRefClazzes as proxy for similarity
+                    double sim1 = c1.getAvgSimilarityWithRefClazzes() != null ? c1.getAvgSimilarityWithRefClazzes() : 0.5;
+                    double sim2 = c2.getAvgSimilarityWithRefClazzes() != null ? c2.getAvgSimilarityWithRefClazzes() : 0.5;
+
+                    // Return higher similarity if both have similar avgSimilarityWithRefClazzes
+                    double diff = Math.abs(sim1 - sim2);
+                    return 1.0 - diff; // Closer values = higher similarity
+                });
     }
 
     // Test Case 1: No Beneficial Splits - Module already has optimal cohesion
@@ -479,16 +491,34 @@ class SplitModuleTest {
     }
 
     private void mockClassSimilarityForBalancedSplit() {
-        when(moduleService.calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any()))
+        // Mock class-to-class similarity for balanced split test
+        lenient().when(moduleService.calculateSimilarity(any(Clazz.class), any(Clazz.class)))
                 .thenAnswer(invocation -> {
                     Clazz clazz = invocation.getArgument(0);
-                    List<Clazz> refClasses = invocation.getArgument(1);
+                    Clazz targetEdge = invocation.getArgument(1);
 
-                    // Return higher similarity if packages match
-                    if (clazz.getName().startsWith("C") && refClasses.get(0).getName().contains("Super")) {
-                        return clazz.getName().contains("1") || clazz.getName().contains("2") ? 0.85 : 0.3;
+                    // Classes C1, C2 are similar to SuperRef (high similarity)
+                    if ((clazz.getName().equals("C1") || clazz.getName().equals("C2"))
+                            && targetEdge.getName().equals("SuperRef")) {
+                        return 0.85;
                     }
-                    return 0.6;
+                    // Classes C3, C4 are similar to DeRef (high similarity)
+                    if ((clazz.getName().equals("C3") || clazz.getName().equals("C4"))
+                            && targetEdge.getName().equals("DeRef")) {
+                        return 0.80;
+                    }
+                    // Cross-group similarities are low
+                    if ((clazz.getName().equals("C1") || clazz.getName().equals("C2"))
+                            && targetEdge.getName().equals("DeRef")) {
+                        return 0.25;
+                    }
+                    if ((clazz.getName().equals("C3") || clazz.getName().equals("C4"))
+                            && targetEdge.getName().equals("SuperRef")) {
+                        return 0.30;
+                    }
+
+                    // Default moderate similarity
+                    return 0.5;
                 });
     }
 }

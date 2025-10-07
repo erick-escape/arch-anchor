@@ -37,17 +37,28 @@ class MergeModuleTest {
         // Setup default mock behavior for avgSimilarityWithRefClazzes calculation with lenient stubbing
         lenient().doAnswer(invocation -> {
             Module module = invocation.getArgument(0);
-            // Calculate for each ref class in the module
-            if (module.getRefClazzes() != null) {
+            // Calculate avgRefClazzesSimilarity for the module based on its ref classes
+            if (module.getRefClazzes() != null && !module.getRefClazzes().isEmpty()) {
+                double totalSim = 0.0;
                 for (Clazz refClass : module.getRefClazzes()) {
-                    // Set a default value if not already set
-                    if (refClass.getAvgSimilarityWithRefClazzes() == null) {
-                        refClass.setAvgSimilarityWithRefClazzes(0.75);
+                    if (refClass.getAvgSimilarityWithRefClazzes() != null) {
+                        totalSim += refClass.getAvgSimilarityWithRefClazzes();
                     }
                 }
+                module.setAvgRefClazzesSimilarity(totalSim / module.getRefClazzes().size());
             }
             return null;
         }).when(moduleService).calculateAvgSimilarityWithRefClazzes(any(Module.class));
+
+        // Setup default mock behavior for module similarity calculation
+        lenient().doAnswer(invocation -> {
+            Module module = invocation.getArgument(0);
+            // Default: set similarity to avgRefClazzesSimilarity if not already set
+            if (module.getSimilarity() == null && module.getAvgRefClazzesSimilarity() != null) {
+                module.setSimilarity(module.getAvgRefClazzesSimilarity());
+            }
+            return null;
+        }).when(moduleService).calculateModuleSimilarity(any(Module.class));
     }
 
     // Test Case 1: No Beneficial Merges - All modules optimally separated
@@ -454,27 +465,41 @@ class MergeModuleTest {
 
     // Helper methods for mocking
 
-    private void mockMergedModuleHigherCohesion(double mergedCohesion) {
+    private void mockMergedModuleHigherCohesion(double mergedSimilarity) {
+        // Mock both avgSimilarityWithRefClazzes and module similarity calculations
         doAnswer(invocation -> {
             Module module = invocation.getArgument(0);
-            if (module.getRefClazzes() != null) {
-                for (Clazz refClass : module.getRefClazzes()) {
-                    refClass.setAvgSimilarityWithRefClazzes(mergedCohesion);
-                }
+            // Set avgRefClazzesSimilarity for the merged module
+            if (module.getRefClazzes() != null && !module.getRefClazzes().isEmpty()) {
+                module.setAvgRefClazzesSimilarity(mergedSimilarity);
             }
             return null;
         }).when(moduleService).calculateAvgSimilarityWithRefClazzes(any(Module.class));
+
+        doAnswer(invocation -> {
+            Module module = invocation.getArgument(0);
+            // Set module similarity to the specified value
+            module.setSimilarity(mergedSimilarity);
+            return null;
+        }).when(moduleService).calculateModuleSimilarity(any(Module.class));
     }
 
-    private void mockMergedModuleLowerCohesion(double mergedCohesion) {
+    private void mockMergedModuleLowerCohesion(double mergedSimilarity) {
+        // Mock both avgSimilarityWithRefClazzes and module similarity calculations
         doAnswer(invocation -> {
             Module module = invocation.getArgument(0);
-            if (module.getRefClazzes() != null) {
-                for (Clazz refClass : module.getRefClazzes()) {
-                    refClass.setAvgSimilarityWithRefClazzes(mergedCohesion);
-                }
+            // Set avgRefClazzesSimilarity for the merged module
+            if (module.getRefClazzes() != null && !module.getRefClazzes().isEmpty()) {
+                module.setAvgRefClazzesSimilarity(mergedSimilarity);
             }
             return null;
         }).when(moduleService).calculateAvgSimilarityWithRefClazzes(any(Module.class));
+
+        doAnswer(invocation -> {
+            Module module = invocation.getArgument(0);
+            // Set module similarity to the specified value
+            module.setSimilarity(mergedSimilarity);
+            return null;
+        }).when(moduleService).calculateModuleSimilarity(any(Module.class));
     }
 }
