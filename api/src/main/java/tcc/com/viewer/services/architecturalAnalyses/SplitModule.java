@@ -258,7 +258,7 @@ public class SplitModule extends ArchitecturalAnalysis {
                         improvement
                 ));
 
-                log.debug("Beneficial split found for '{}': Module1 similarity: {}, Module2 similarity: {}, Min improvement: {}",
+                log.debug("Beneficial split found for '{}': Module1 similarity: {}, Module2 similarity: {}, Improvement: {}",
                         module.getName(), module1.getSimilarity(), module2.getSimilarity(), improvement);
             }
         }
@@ -269,7 +269,7 @@ public class SplitModule extends ArchitecturalAnalysis {
         if (potentialSplits.isEmpty()) {
             log.info("No beneficial split suggestions found. All modules appear to have optimal cohesion.");
         } else {
-            log.info("Top split suggestions (based on minimum improvement):");
+            log.info("Top split suggestions:");
             for (int i = 0; i < Math.min(5, potentialSplits.size()); i++) {
                 SplitModuleResult split = potentialSplits.get(i);
                 log.info("  {}. Split module '{}'", (i + 1), split.originalModuleName);
@@ -280,7 +280,7 @@ public class SplitModule extends ArchitecturalAnalysis {
                 log.info("     → Module 2 '{}' (ref: '{}'): {} classes, similarity: {}",
                         split.module2Name, split.deRefClassName, split.module2ClassNames.size(),
                         String.format("%.4f", split.module2Similarity));
-                log.info("     Min improvement: +{}", String.format("%.4f", split.improvement));
+                log.info("     Improvement: +{}", String.format("%.4f", split.improvement));
             }
         }
     }

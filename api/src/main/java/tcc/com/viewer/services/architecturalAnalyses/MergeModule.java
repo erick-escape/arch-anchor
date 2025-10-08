@@ -97,7 +97,7 @@ public class MergeModule extends ArchitecturalAnalysis {
     }
 
     public void mergeModuleAnalysis(List<Module> modules) {
-        log.info("Starting merge module analysis based on avgRefClazzesSimilarity...");
+        log.info("Starting merge module analysis...");
 
         List<MergeModuleResult> potentialMerges = new ArrayList<>();
 
@@ -144,8 +144,8 @@ public class MergeModule extends ArchitecturalAnalysis {
                             improvement
                     ));
 
-                    log.debug("Potential merge: '{}' with '{}' - Module1 avgRefSim: {}, Module2 avgRefSim: {}, Merged avgRefSim: {}, Improvement: {}",
-                            module1.getName(), module2.getName(), module1AvgRefSim, module2AvgRefSim, mergedAvgRefSim, improvement);
+                    log.debug("Potential merge: '{}' with '{}' - Improvement: {}",
+                            module1.getName(), module2.getName(), improvement);
                 }
             }
         }
@@ -156,16 +156,12 @@ public class MergeModule extends ArchitecturalAnalysis {
         if (potentialMerges.isEmpty()) {
             log.info("No beneficial merge suggestions found. All modules appear to be optimally separated.");
         } else {
-            log.info("Top merge suggestions (based on avgRefClazzesSimilarity improvement):");
+            log.info("Top merge suggestions:");
             for (int i = 0; i < Math.min(5, potentialMerges.size()); i++) {
                 MergeModuleResult merge = potentialMerges.get(i);
                 log.info("  {}. Merge module '{}' with module '{}'",
                         (i + 1), merge.module1Name, merge.module2Name);
-                log.info("     Module1 avgRefSim: {}, Module2 avgRefSim: {}, Merged avgRefSim: {}, Min Improvement: +{}",
-                        String.format("%.4f", merge.module1AvgRefSim),
-                        String.format("%.4f", merge.module2AvgRefSim),
-                        String.format("%.4f", merge.mergedAvgRefSim),
-                        String.format("%.4f", merge.improvement));
+                log.info("      Improvement: +{}", String.format("%.4f", merge.improvement));
             }
         }
     }
