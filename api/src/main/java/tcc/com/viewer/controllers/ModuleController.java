@@ -91,7 +91,8 @@ public class ModuleController {
                 null, // moduleDependencies will be calculated later
                 mergedClasses,
                 0.0, // Similarity will be calculated later
-                0.0 // avgRefClazzesSimilarity will be calculated later
+                0.0, // avgRefClazzesSimilarity will be calculated later
+                0 // violations will be calculated later
         );
         // Recalculate similarities using ModuleService
         moduleService.calculateClassSimilarities(newModule);
@@ -99,6 +100,7 @@ public class ModuleController {
         moduleService.calculateModuleSimilarity(newModule);
         moduleService.populateRefClazzesDependencies(newModule);
         moduleService.populateModuleDependencies(newModule);
+        moduleService.calculateModuleViolations(newModule);
 
         return moduleMapper.toDto(newModule);
     }

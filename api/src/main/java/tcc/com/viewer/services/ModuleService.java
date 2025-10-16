@@ -40,6 +40,10 @@ public class ModuleService {
             "php", List.of(".php")
     );
 
+    // Weights for refClass selection: higher weight means more importance
+    private static final double SIMILARITY_WEIGHT = 0.7;
+    private static final double VIOLATION_WEIGHT = 0.3;
+
     public void saveModules(List<ModuleDTO> modulesList) {
         if (modulesList == null) {
             throw new IllegalArgumentException("Modules list cannot be null");
@@ -103,6 +107,32 @@ public class ModuleService {
         }
     }
 
+    /**
+     * Calculates the number of violations if the given class were to be selected as refClass.
+     * Violations are dependencies present in module dependencies but not in the candidate class's dependencies.
+     *
+     * @param candidateClass     The class being evaluated as a potential refClass
+     * @param moduleDependencies All dependencies from all classes in the module
+     * @return The number of violations (dependencies that would not be allowed)
+     */
+    private int calculateViolations(Clazz candidateClass, List<Dependency> moduleDependencies) {
+        if (moduleDependencies == null || moduleDependencies.isEmpty()) {
+            return 0;
+        }
+
+        // Get the dependency package names from the candidate class
+        Set<String> candidateDependencies = candidateClass.getDependencies().stream()
+                .map(Dependency::getPackageName)
+                .collect(Collectors.toSet());
+
+        // Count how many module dependencies are NOT in the candidate's dependencies
+        // These would be violations if this class became the refClass
+        return (int) moduleDependencies.stream()
+                .map(Dependency::getPackageName)
+                .filter(packageName -> !candidateDependencies.contains(packageName))
+                .count();
+    }
+
     public void calculateClassSimilarities(Module module) {
         List<Clazz> clazzes = module.getClazzes();
 
@@ -121,9 +151,57 @@ public class ModuleService {
             clazz.setSimilarity(1.0);
         }
 
-        // Set refClazz as the class with the highest similarity
+        // Set refClazz based on weighted score combining similarity and violations
         if (!clazzes.isEmpty()) {
-            Clazz refClazz = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
+            // Ensure module dependencies are populated for violation calculation
+            populateModuleDependencies(module);
+            List<Dependency> moduleDependencies = module.getModuleDependencies();
+
+            // Calculate violations for each class and find max for normalization
+            Map<Clazz, Integer> violationsMap = new HashMap<>();
+            int maxViolations = 0;
+
+            for (Clazz clazz : clazzes) {
+                int violations = calculateViolations(clazz, moduleDependencies);
+                violationsMap.put(clazz, violations);
+                maxViolations = Math.max(maxViolations, violations);
+            }
+
+            // Select refClazz based on weighted score
+            Clazz refClazz;
+            if (maxViolations == 0) {
+                // If no violations exist, select based on similarity only
+                refClazz = clazzes.stream()
+                        .max(Comparator.comparingDouble(Clazz::getSimilarity))
+                        .orElse(null);
+                log.info("Selected refClass based on similarity only (no violations): {}", refClazz != null ? refClazz.getName() : "null");
+            } else {
+                // Calculate weighted score for each class
+                final int finalMaxViolations = maxViolations;
+                refClazz = clazzes.stream()
+                        .max(Comparator.comparingDouble(clazz -> {
+                            double similarity = clazz.getSimilarity();
+                            int violations = violationsMap.get(clazz);
+
+                            // Normalize violations to [0, 1] where 0 is best (no violations)
+                            double normalizedViolations = (double) violations / finalMaxViolations;
+
+                            // Calculate combined score: higher is better
+                            // Subtract normalized violations because fewer violations is better
+                            double score = (SIMILARITY_WEIGHT * similarity) + (VIOLATION_WEIGHT * (1.0 - normalizedViolations));
+
+                            log.debug("Class: {}, Similarity: {}, Violations: {}, Score: {}",
+                                    clazz.getName(), similarity, violations, score);
+                            return score;
+                        }))
+                        .orElse(null);
+
+                if (refClazz != null) {
+                    log.info("Selected refClass: {} with similarity: {} and violations: {}",
+                            refClazz.getName(), refClazz.getSimilarity(), violationsMap.get(refClazz));
+                }
+            }
+
             List<Clazz> refClazzes = List.of(refClazz);
             module.setRefClazzes(refClazzes);
         }
@@ -247,6 +325,47 @@ public class ModuleService {
         return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
     }
 
+    /**
+     * Calculates the number of violations in a module.
+     * Violations are dependencies used by classes in the module that are NOT in the allowedRules
+     * (i.e., dependencies not present in refClazzes).
+     *
+     * @param module The module to calculate violations for
+     */
+    public void calculateModuleViolations(Module module) {
+        if (module == null) {
+            return;
+        }
+
+        // If no refClazzes or no refClazzesDependencies, set violations to 0
+        if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty() ||
+                module.getRefClazzesDependencies() == null || module.getRefClazzesDependencies().isEmpty()) {
+            module.setViolations(0);
+            return;
+        }
+
+        // If no module dependencies, set violations to 0
+        if (module.getModuleDependencies() == null || module.getModuleDependencies().isEmpty()) {
+            module.setViolations(0);
+            return;
+        }
+
+        // Get allowed rules (refClazzes dependencies)
+        Set<String> allowedRules = module.getRefClazzesDependencies().stream()
+                .map(Dependency::getPackageName)
+                .filter(packageName -> packageName != null && !packageName.isEmpty())
+                .collect(Collectors.toSet());
+
+        // Count violations: module dependencies NOT in allowed rules
+        int violations = (int) module.getModuleDependencies().stream()
+                .map(Dependency::getPackageName)
+                .filter(packageName -> packageName != null && !packageName.isEmpty())
+                .filter(packageName -> !allowedRules.contains(packageName))
+                .count();
+
+        module.setViolations(violations);
+    }
+
     public void populateModuleDependencies(Module module) {
         if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
             module.setModuleDependencies(new ArrayList<>());
@@ -341,6 +460,7 @@ public class ModuleService {
         this.calculateModuleSimilarity(retainedModuleEntity);
         this.populateRefClazzesDependencies(retainedModuleEntity);
         this.populateModuleDependencies(retainedModuleEntity);
+        this.calculateModuleViolations(retainedModuleEntity);
 
         // Create the new module (with extracted classes)
         Module newModuleEntity = new Module();
@@ -355,6 +475,7 @@ public class ModuleService {
         this.calculateModuleSimilarity(newModuleEntity);
         this.populateRefClazzesDependencies(newModuleEntity);
         this.populateModuleDependencies(newModuleEntity);
+        this.calculateModuleViolations(newModuleEntity);
 
         // Convert back to DTOs
         ModuleDTO retainedDto = moduleMapper.toDto(retainedModuleEntity);
@@ -462,7 +583,8 @@ public class ModuleService {
                                         null, // moduleDependencies will be calculated later
                                         clazzes,
                                         0.0, // Similarity will be calculated later
-                                        0.0 // avgRefClazzesSimilarity will be calculated later
+                                        0.0, // avgRefClazzesSimilarity will be calculated later
+                                        0 // violations will be calculated later
                                 );
                                 this.modules.add(module);
                                 log.info("Added new module: {} with ID: {}", moduleName, moduleId);
@@ -514,6 +636,7 @@ public class ModuleService {
         this.calculateModuleSimilarity(moduleEntity);
         this.populateRefClazzesDependencies(moduleEntity);
         this.populateModuleDependencies(moduleEntity);
+        this.calculateModuleViolations(moduleEntity);
 
         // Create updated module with new reference classes
         ModuleDTO updatedModule = new ModuleDTO(

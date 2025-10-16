@@ -492,7 +492,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 module.getModuleDependencies(),
                 newClazzes,
                 0.0,
-                0.0
+                0.0,
+                0 // violations will be calculated later
         );
     }
 
@@ -508,7 +509,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
                 module.getModuleDependencies(),
                 newClazzes,
                 0.0,
-                0.0
+                0.0,
+                0 // violations will be calculated later
         );
     }
 

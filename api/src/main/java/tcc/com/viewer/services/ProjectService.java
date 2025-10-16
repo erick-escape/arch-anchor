@@ -34,11 +34,12 @@ public class ProjectService {
         List<Module> modules = moduleService.getModules(directoryPath);
 
         for (Module module : modules) {
+            moduleService.populateModuleDependencies(module);
             moduleService.calculateClassSimilarities(module);
             moduleService.calculateAvgSimilarityWithRefClazzes(module);
             moduleService.calculateModuleSimilarity(module);
             moduleService.populateRefClazzesDependencies(module);
-            moduleService.populateModuleDependencies(module);
+            moduleService.calculateModuleViolations(module);
         }
 
         analysesRunner.executeAll(modules);

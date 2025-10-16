@@ -119,6 +119,9 @@ public class MoveClass extends ArchitecturalAnalysis {
         this.moduleService.calculateClassSimilarities(tempSourceModule);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(tempSourceModule);
         this.moduleService.calculateModuleSimilarity(tempSourceModule);
+        this.moduleService.populateRefClazzesDependencies(tempSourceModule);
+        this.moduleService.populateModuleDependencies(tempSourceModule);
+        this.moduleService.calculateModuleViolations(tempSourceModule);
         double sourceModuleSimilarityAfter = tempSourceModule.getSimilarity() != null ? tempSourceModule.getSimilarity() : 0.0;
 
         // Create temporary target module with the class
@@ -134,13 +137,24 @@ public class MoveClass extends ArchitecturalAnalysis {
         this.moduleService.calculateClassSimilarities(tempTargetModule);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(tempTargetModule);
         this.moduleService.calculateModuleSimilarity(tempTargetModule);
+        this.moduleService.populateRefClazzesDependencies(tempTargetModule);
+        this.moduleService.populateModuleDependencies(tempTargetModule);
+        this.moduleService.calculateModuleViolations(tempTargetModule);
         double targetModuleSimilarityAfter = tempTargetModule.getSimilarity() != null ? tempTargetModule.getSimilarity() : 0.0;
 
         // Check if both conditions are met:
         // 1. Target module similarity improves with the class
         // 2. Source module similarity doesn't decrease without the class
+        // 3. Violations don't increase in either module
+        int sourceViolationsBefore = sourceModule.getViolations() != null ? sourceModule.getViolations() : 0;
+        int sourceViolationsAfter = tempSourceModule.getViolations() != null ? tempSourceModule.getViolations() : 0;
+        int targetViolationsBefore = targetModule.getViolations() != null ? targetModule.getViolations() : 0;
+        int targetViolationsAfter = tempTargetModule.getViolations() != null ? tempTargetModule.getViolations() : 0;
+
         boolean isValid = (targetModuleSimilarityAfter > targetModuleSimilarityBefore) &&
-                (sourceModuleSimilarityAfter >= sourceModuleSimilarityBefore);
+                (sourceModuleSimilarityAfter >= sourceModuleSimilarityBefore) &&
+                (sourceViolationsAfter <= sourceViolationsBefore) &&
+                (targetViolationsAfter <= targetViolationsBefore);
 
         return new MoveEvaluationResult(
                 isValid,

@@ -123,7 +123,7 @@ class MergeModuleTest {
         Module moduleWithoutRef = new Module("no-ref", "No Ref Module",
                 null, null, null,
                 List.of(createClazz("class1", "Class1", 0.5, "java.util")),
-                0.5, 0.0);
+                0.5, 0.0, 0);
 
         Module normalModule = createModuleWithHighCohesion("normal", 0.8);
         List<Module> modules = List.of(moduleWithoutRef, normalModule);
@@ -140,9 +140,9 @@ class MergeModuleTest {
     void testBothModulesWithoutRefClasses_shouldSkipPair() {
         // Given - both modules without reference classes
         Module module1 = new Module("no-ref-1", "No Ref 1", null, null, null,
-                List.of(createClazz("c1", "C1", 0.5, "java.util")), 0.5, 0.0);
+                List.of(createClazz("c1", "C1", 0.5, "java.util")), 0.5, 0.0, 0);
         Module module2 = new Module("no-ref-2", "No Ref 2", null, null, null,
-                List.of(createClazz("c2", "C2", 0.5, "java.io")), 0.5, 0.0);
+                List.of(createClazz("c2", "C2", 0.5, "java.io")), 0.5, 0.0, 0);
 
         List<Module> modules = List.of(module1, module2);
 
@@ -403,7 +403,7 @@ class MergeModuleTest {
 
         return new Module(id, id + " Module",
                 List.of(refClass), null, null, classes,
-                0.85, avgRefClazzesSimilarity);
+                0.85, avgRefClazzesSimilarity, 0);
     }
 
     private Module createModuleWithLowCohesion(String id, double avgRefClazzesSimilarity) {
@@ -416,7 +416,7 @@ class MergeModuleTest {
 
         return new Module(id, id + " Module",
                 List.of(refClass), null, null, classes,
-                0.55, avgRefClazzesSimilarity);
+                0.55, avgRefClazzesSimilarity, 0);
     }
 
     private Module createModuleWithVeryLowCohesion(String id, double avgRefClazzesSimilarity) {
@@ -429,7 +429,7 @@ class MergeModuleTest {
 
         return new Module(id, id + " Module",
                 List.of(refClass), null, null, classes,
-                0.32, avgRefClazzesSimilarity);
+                0.32, avgRefClazzesSimilarity, 0);
     }
 
     private Module createModuleWithModerateCohesion(String id, double avgRefClazzesSimilarity) {
@@ -442,7 +442,7 @@ class MergeModuleTest {
 
         return new Module(id, id + " Module",
                 List.of(refClass), null, null, classes,
-                0.7, avgRefClazzesSimilarity);
+                0.7, avgRefClazzesSimilarity, 0);
     }
 
     private Module createModuleWithRefClasses(String id, List<Clazz> refClasses, double avgRefClazzesSimilarity) {
@@ -451,7 +451,7 @@ class MergeModuleTest {
 
         return new Module(id, id + " Module",
                 refClasses, null, null, allClasses,
-                0.7, avgRefClazzesSimilarity);
+                0.7, avgRefClazzesSimilarity, 0);
     }
 
     private Module createModuleWithNullCohesion(String id) {
@@ -460,7 +460,7 @@ class MergeModuleTest {
 
         return new Module(id, id + " Module",
                 List.of(refClass), null, null, classes,
-                0.5, null); // null avgRefClazzesSimilarity
+                0.5, null, 0); // null avgRefClazzesSimilarity
     }
 
     // Helper methods for mocking

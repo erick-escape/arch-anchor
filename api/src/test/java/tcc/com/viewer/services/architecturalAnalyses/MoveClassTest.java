@@ -181,7 +181,7 @@ class MoveClassTest {
         Module moduleWithoutRefClasses = new Module("no-ref", "No Ref Module",
                 null, null, null,
                 List.of(createClazz("class1", "Class1", 0.5, "java.util")),
-                0.5, 0.0);
+                0.5, 0.0, 0);
 
         Module normalModule = createModuleWithWellPlacedClasses("normal", 0.8);
         List<Module> modules = List.of(moduleWithoutRefClasses, normalModule);
@@ -201,7 +201,7 @@ class MoveClassTest {
         Module targetWithoutRef = new Module("no-ref-target", "No Ref Target",
                 null, null, null,
                 List.of(createClazz("class1", "Class1", 0.5, "java.util")),
-                0.5, 0.0);
+                0.5, 0.0, 0);
 
         List<Module> modules = List.of(sourceModule, targetWithoutRef);
 
@@ -491,7 +491,7 @@ class MoveClassTest {
         Clazz targetRef3 = createClazz("tRef3", "TRef3", 0.88, "java.util", "java.io");
         Module targetModule = new Module("target", "Target Module",
                 List.of(targetRef1, targetRef2, targetRef3), null, null,
-                List.of(targetRef1, targetRef2, targetRef3), 0.87, 0.88);
+                List.of(targetRef1, targetRef2, targetRef3), 0.87, 0.88, 0);
 
         List<Module> modules = List.of(sourceModule, targetModule);
 
@@ -611,7 +611,7 @@ class MoveClassTest {
         return new Module(id, id + " Module",
                 List.of(refClass), null, null,
                 List.of(refClass, class1, class2),
-                0.85, avgRefClazzesSimilarity);
+                0.85, avgRefClazzesSimilarity, 0);
     }
 
     private Module createModuleWithClasses(String id, List<Clazz> classes, Clazz refClass) {
@@ -622,6 +622,6 @@ class MoveClassTest {
 
         return new Module(id, id + " Module",
                 List.of(refClass), null, null,
-                allClasses, 0.7, 0.75);
+                allClasses, 0.7, 0.75, 0);
     }
 }

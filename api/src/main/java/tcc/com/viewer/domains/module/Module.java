@@ -22,4 +22,5 @@ public class Module {
     private List<Clazz> clazzes;
     private Double similarity;
     private Double avgRefClazzesSimilarity;
+    private Integer violations;
 }

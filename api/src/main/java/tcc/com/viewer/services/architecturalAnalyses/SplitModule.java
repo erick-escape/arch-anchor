@@ -137,30 +137,48 @@ public class SplitModule extends ArchitecturalAnalysis {
                 null,
                 new ArrayList<>(classes),
                 0.0,
-                0.0
+                0.0,
+                0 // violations will be calculated later
         );
     }
 
     /**
      * Evaluates if splitting improves module cohesion.
      * Both split modules must have higher similarity than the original module.
+     * Both split modules must have equal or fewer violations than the original module.
      */
     private boolean isSplitBeneficial(Module original, Module module1, Module module2) {
         // Calculate all similarities for module1
         this.moduleService.calculateClassSimilarities(module1);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(module1);
         this.moduleService.calculateModuleSimilarity(module1);
+        this.moduleService.populateRefClazzesDependencies(module1);
+        this.moduleService.populateModuleDependencies(module1);
+        this.moduleService.calculateModuleViolations(module1);
 
         // Calculate all similarities for module2
         this.moduleService.calculateClassSimilarities(module2);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(module2);
         this.moduleService.calculateModuleSimilarity(module2);
+        this.moduleService.populateRefClazzesDependencies(module2);
+        this.moduleService.populateModuleDependencies(module2);
+        this.moduleService.calculateModuleViolations(module2);
 
         double originalSimilarity = original.getSimilarity();
         double module1Similarity = module1.getSimilarity();
         double module2Similarity = module2.getSimilarity();
 
-        return module1Similarity > originalSimilarity && module2Similarity > originalSimilarity;
+        // Check similarity improvement
+        boolean similarityImproved = module1Similarity > originalSimilarity && module2Similarity > originalSimilarity;
+
+        // Check violations don't increase
+        int originalViolations = original.getViolations() != null ? original.getViolations() : 0;
+        int module1Violations = module1.getViolations() != null ? module1.getViolations() : 0;
+        int module2Violations = module2.getViolations() != null ? module2.getViolations() : 0;
+
+        boolean violationsOk = module1Violations <= originalViolations && module2Violations <= originalViolations;
+
+        return similarityImproved && violationsOk;
     }
 
     /**

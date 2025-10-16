@@ -100,7 +100,7 @@ class SplitModuleTest {
                 List.of(createClazz("c1", "C1", 0.5, "java.util"),
                         createClazz("c2", "C2", 0.4, "java.io"),
                         createClazz("c3", "C3", 0.6, "java.lang")),
-                0.5, 0.0);
+                0.5, 0.0, 0);
 
         List<Module> modules = List.of(noRefModule);
 
@@ -119,7 +119,7 @@ class SplitModuleTest {
         Module tinyModule = new Module("tiny", "Tiny Module",
                 List.of(ref), null, null,
                 List.of(ref, createClazz("c1", "C1", 0.4, "java.util")),
-                0.6, 0.0);
+                0.6, 0.0, 0);
 
         List<Module> modules = List.of(tinyModule);
 
@@ -144,7 +144,7 @@ class SplitModuleTest {
                         createClazz("c2", "C2", 0.6, "com.example"),
                         deRef,
                         createClazz("c3", "C3", 0.3, "com.different")),
-                0.5, 0.0);
+                0.5, 0.0, 0);
 
         List<Module> modules = List.of(moduleWithEdges);
 
@@ -169,7 +169,7 @@ class SplitModuleTest {
         Module allRefModule = new Module("all-ref", "All Ref Module",
                 List.of(ref1, ref2, ref3), null, null,
                 List.of(ref1, ref2, ref3),
-                0.87, 0.0);
+                0.87, 0.0, 0);
 
         List<Module> modules = List.of(allRefModule);
 
@@ -191,7 +191,7 @@ class SplitModuleTest {
                 List.of(onlyRef,
                         createClazz("c1", "C1", 0.8, "com.example"), // Same similarity
                         createClazz("c2", "C2", 0.8, "com.example")),
-                0.8, 0.0);
+                0.8, 0.0, 0);
 
         List<Module> modules = List.of(singleRefModule);
 
@@ -217,7 +217,7 @@ class SplitModuleTest {
                         deRef,
                         createClazz("c3", "C3", 0.25, "com.group2"),
                         createClazz("c4", "C4", 0.3, "com.group2")),
-                0.5, 0.0);
+                0.5, 0.0, 0);
 
         List<Module> modules = List.of(balancedModule);
 
@@ -247,7 +247,7 @@ class SplitModuleTest {
                         createClazz("c3", "C3", 0.88, "com.core"),
                         createClazz("c4", "C4", 0.82, "com.core"),
                         deRef),
-                0.75, 0.0);
+                0.75, 0.0, 0);
 
         List<Module> modules = List.of(unbalancedModule);
 
@@ -276,7 +276,7 @@ class SplitModuleTest {
                         deRef,
                         createClazz("c3", "ViewPanel", 0.18, "javax.swing"),
                         createClazz("c4", "DialogBox", 0.2, "java.awt")),
-                0.3, 0.0);
+                0.3, 0.0, 0);
 
         List<Module> modules = List.of(disparateModule);
 
@@ -303,7 +303,7 @@ class SplitModuleTest {
                         createClazz("c1", "C1", 0.72, "com.example"),
                         createClazz("c2", "C2", 0.7, "com.example"),
                         deRef),
-                0.71, 0.0);
+                0.71, 0.0, 0);
 
         List<Module> modules = List.of(marginalModule);
 
@@ -330,7 +330,7 @@ class SplitModuleTest {
                         createClazz("c1", "C1", 0.85, "com.core"),
                         createClazz("c2", "C2", 0.82, "com.core"),
                         deRef),
-                0.72, 0.0);
+                0.72, 0.0, 0);
 
         List<Module> modules = List.of(asymmetricModule);
 
@@ -351,7 +351,7 @@ class SplitModuleTest {
         Module goodModule = createModuleWithHighCohesion("good", 0.9);
         Module badModule = createModuleWithLowCohesion("bad", 0.4);
         Module noRefModule = new Module("no-ref", "No Ref", null, null, null,
-                List.of(createClazz("c1", "C1", 0.5, "java.util")), 0.5, 0.0);
+                List.of(createClazz("c1", "C1", 0.5, "java.util")), 0.5, 0.0, 0);
 
         List<Module> modules = List.of(goodModule, badModule, noRefModule);
 
@@ -394,7 +394,7 @@ class SplitModuleTest {
         classes.add(deRef);
 
         Module largeModule = new Module("large", "Large Module",
-                List.of(superRef), null, null, classes, 0.55, 0.0);
+                List.of(superRef), null, null, classes, 0.55, 0.0, 0);
 
         List<Module> modules = List.of(largeModule);
 
@@ -433,7 +433,7 @@ class SplitModuleTest {
                 createClazz(id + "-c3", id + "C3", 0.92, "com.example." + id)
         );
 
-        return new Module(id, id + " Module", List.of(ref), null, null, classes, similarity, 0.9);
+        return new Module(id, id + " Module", List.of(ref), null, null, classes, similarity, 0.9, 0);
     }
 
     private Module createModuleWithLowCohesion(String id, double similarity) {
@@ -445,7 +445,7 @@ class SplitModuleTest {
                 createClazz(id + "-c3", id + "C3", 0.25, "com.group2")
         );
 
-        return new Module(id, id + " Module", List.of(ref), null, null, classes, similarity, 0.5);
+        return new Module(id, id + " Module", List.of(ref), null, null, classes, similarity, 0.5, 0);
     }
 
     // Helper methods for mocking

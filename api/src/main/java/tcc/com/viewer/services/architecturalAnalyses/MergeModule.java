@@ -73,7 +73,8 @@ public class MergeModule extends ArchitecturalAnalysis {
                 null, // moduleDependencies not needed for this analysis
                 mergedClazzes,
                 0.0,
-                0.0
+                0.0,
+                0 // violations will be calculated later
         );
     }
 
@@ -83,13 +84,31 @@ public class MergeModule extends ArchitecturalAnalysis {
      * is greater than both original modules' similarity. If so, return the sum of
      * the improvements and divide it by two. If not, return zero.
      *
-     * @return The minimum improvement (positive if merged is better than both originals)
+     * Also ensures that violations do not increase in the merged module compared to both original modules.
+     *
+     * @return The minimum improvement (positive if merged is better than both originals and violations don't increase)
      */
     private double calculateModuleSimilarityImprovement(Module module1, Module module2, Module mergedModule) {
         this.moduleService.calculateAvgSimilarityWithRefClazzes(mergedModule);
         this.moduleService.calculateModuleSimilarity(mergedModule);
+        this.moduleService.populateRefClazzesDependencies(mergedModule);
+        this.moduleService.populateModuleDependencies(mergedModule);
+        this.moduleService.calculateModuleViolations(mergedModule);
+
         Double mergedModuleSimilarity = mergedModule.getSimilarity();
-        if (mergedModuleSimilarity > module1.getSimilarity() && mergedModuleSimilarity > module2.getSimilarity()) {
+
+        // Check similarity improvement
+        boolean similarityImproved = mergedModuleSimilarity > module1.getSimilarity() &&
+                                     mergedModuleSimilarity > module2.getSimilarity();
+
+        // Check violations don't increase
+        int module1Violations = module1.getViolations() != null ? module1.getViolations() : 0;
+        int module2Violations = module2.getViolations() != null ? module2.getViolations() : 0;
+        int mergedViolations = mergedModule.getViolations() != null ? mergedModule.getViolations() : 0;
+
+        boolean violationsOk = mergedViolations <= module1Violations && mergedViolations <= module2Violations;
+
+        if (similarityImproved && violationsOk) {
             return ((mergedModuleSimilarity - module1.getSimilarity()) + (mergedModuleSimilarity - module2.getSimilarity())) / 2;
         }
 
