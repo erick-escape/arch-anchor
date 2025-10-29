@@ -40,9 +40,10 @@ public class ModuleService {
             "php", List.of(".php")
     );
 
-    // Weights for refClass selection: higher weight means more importance
-    private static final double SIMILARITY_WEIGHT = 0.7;
-    private static final double VIOLATION_WEIGHT = 0.3;
+    // Weights for refClass selection and architectural analyses: equal weights (0.5 each) mean both factors are equally important
+    // These can be adjusted in the future to give more importance to similarity or violations
+    public static final double SIMILARITY_WEIGHT = 0.5;
+    public static final double VIOLATION_WEIGHT = 0.5;
 
     public void saveModules(List<ModuleDTO> modulesList) {
         if (modulesList == null) {
@@ -151,7 +152,7 @@ public class ModuleService {
             clazz.setSimilarity(1.0);
         }
 
-        // Set refClazz based on weighted score combining similarity and violations
+        // Set refClazz based on weighted rate combining similarity and violations
         if (!clazzes.isEmpty()) {
             // Ensure module dependencies are populated for violation calculation
             populateModuleDependencies(module);
@@ -167,7 +168,18 @@ public class ModuleService {
                 maxViolations = Math.max(maxViolations, violations);
             }
 
-            // Select refClazz based on weighted score
+            // Find max similarity for normalization
+            double maxSimilarity = clazzes.stream()
+                    .mapToDouble(Clazz::getSimilarity)
+                    .max()
+                    .orElse(1.0);
+
+            // Prevent division by zero
+            if (maxSimilarity == 0.0) {
+                maxSimilarity = 1.0;
+            }
+
+            // Select refClazz based on weighted rate
             Clazz refClazz;
             if (maxViolations == 0) {
                 // If no violations exist, select based on similarity only
@@ -176,23 +188,27 @@ public class ModuleService {
                         .orElse(null);
                 log.info("Selected refClass based on similarity only (no violations): {}", refClazz != null ? refClazz.getName() : "null");
             } else {
-                // Calculate weighted score for each class
+                // Calculate weighted rate for each class
                 final int finalMaxViolations = maxViolations;
+                final double finalMaxSimilarity = maxSimilarity;
+
                 refClazz = clazzes.stream()
                         .max(Comparator.comparingDouble(clazz -> {
                             double similarity = clazz.getSimilarity();
                             int violations = violationsMap.get(clazz);
 
-                            // Normalize violations to [0, 1] where 0 is best (no violations)
-                            double normalizedViolations = (double) violations / finalMaxViolations;
+                            // Normalize similarity to [0, 1] where 1 is best (highest similarity)
+                            double normalizedSimilarity = similarity / finalMaxSimilarity;
 
-                            // Calculate combined score: higher is better
-                            // Subtract normalized violations because fewer violations is better
-                            double score = (SIMILARITY_WEIGHT * similarity) + (VIOLATION_WEIGHT * (1.0 - normalizedViolations));
+                            // Normalize violations to [0, 1] where 1 is best (no violations)
+                            double normalizedViolations = 1.0 - ((double) violations / finalMaxViolations);
 
-                            log.debug("Class: {}, Similarity: {}, Violations: {}, Score: {}",
-                                    clazz.getName(), similarity, violations, score);
-                            return score;
+                            // Calculate combined rate: higher is better
+                            double rate = (SIMILARITY_WEIGHT * normalizedSimilarity) + (VIOLATION_WEIGHT * normalizedViolations);
+
+                            log.debug("Class: {}, Similarity: {}, Normalized Similarity: {}, Violations: {}, Normalized Violations: {}, Rate: {}",
+                                    clazz.getName(), similarity, normalizedSimilarity, violations, normalizedViolations, rate);
+                            return rate;
                         }))
                         .orElse(null);
 
