@@ -36,7 +36,12 @@ public class SplitModule extends ArchitecturalAnalysis {
         double originalSimilarity;
         double module1Similarity;
         double module2Similarity;
-        double improvement;
+        int originalViolations;
+        int module1Violations;
+        int module2Violations;
+        double similarityImprovement;
+        double violationsImprovement;
+        double rate;
 
         public SplitModuleResult(String originalModuleId, String originalModuleName,
                                  String module1Id, String module1Name,
@@ -44,7 +49,9 @@ public class SplitModule extends ArchitecturalAnalysis {
                                  String superRefClassName, String deRefClassName,
                                  List<String> module1ClassNames, List<String> module2ClassNames,
                                  double originalSimilarity, double module1Similarity,
-                                 double module2Similarity, double improvement) {
+                                 double module2Similarity, int originalViolations,
+                                 int module1Violations, int module2Violations,
+                                 double similarityImprovement, double violationsImprovement, double rate) {
             this.originalModuleId = originalModuleId;
             this.originalModuleName = originalModuleName;
             this.module1Id = module1Id;
@@ -58,7 +65,12 @@ public class SplitModule extends ArchitecturalAnalysis {
             this.originalSimilarity = originalSimilarity;
             this.module1Similarity = module1Similarity;
             this.module2Similarity = module2Similarity;
-            this.improvement = improvement;
+            this.originalViolations = originalViolations;
+            this.module1Violations = module1Violations;
+            this.module2Violations = module2Violations;
+            this.similarityImprovement = similarityImprovement;
+            this.violationsImprovement = violationsImprovement;
+            this.rate = rate;
         }
     }
 
@@ -143,11 +155,12 @@ public class SplitModule extends ArchitecturalAnalysis {
     }
 
     /**
-     * Evaluates if splitting improves module cohesion.
-     * Both split modules must have higher similarity than the original module.
-     * Both split modules must have equal or fewer violations than the original module.
+     * Calculates the rate for splitting a module by considering both similarity and violations improvements.
+     * Uses normalized deltas for similarity and violations, weighted equally.
+     *
+     * @return A SplitRateResult containing the rate and detailed metrics (rate can be positive or negative)
      */
-    private boolean isSplitBeneficial(Module original, Module module1, Module module2) {
+    private SplitRateResult calculateSplitRate(Module original, Module module1, Module module2) {
         // Calculate all similarities for module1
         this.moduleService.calculateClassSimilarities(module1);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(module1);
@@ -164,35 +177,50 @@ public class SplitModule extends ArchitecturalAnalysis {
         this.moduleService.populateModuleDependencies(module2);
         this.moduleService.calculateModuleViolations(module2);
 
-        double originalSimilarity = original.getSimilarity();
-        double module1Similarity = module1.getSimilarity();
-        double module2Similarity = module2.getSimilarity();
+        // Get similarity values
+        double originalSimilarity = original.getSimilarity() != null ? original.getSimilarity() : 0.0;
+        double module1Similarity = module1.getSimilarity() != null ? module1.getSimilarity() : 0.0;
+        double module2Similarity = module2.getSimilarity() != null ? module2.getSimilarity() : 0.0;
 
-        // Check similarity improvement
-        boolean similarityImproved = module1Similarity > originalSimilarity && module2Similarity > originalSimilarity;
+        // Calculate similarity improvement (already normalized as similarity is [0, 1])
+        double avgSplitSimilarity = (module1Similarity + module2Similarity) / 2.0;
+        double similarityImprovement = avgSplitSimilarity - originalSimilarity;
 
-        // Check violations don't increase
+        // Get violations values
         int originalViolations = original.getViolations() != null ? original.getViolations() : 0;
         int module1Violations = module1.getViolations() != null ? module1.getViolations() : 0;
         int module2Violations = module2.getViolations() != null ? module2.getViolations() : 0;
 
-        boolean violationsOk = module1Violations <= originalViolations && module2Violations <= originalViolations;
+        // Calculate violations improvement (normalize by before state)
+        int totalSplitViolations = module1Violations + module2Violations;
+        double violationsReduction = originalViolations - totalSplitViolations;
+        double normalizedViolationsImprovement = violationsReduction / Math.max(originalViolations, 1.0);
 
-        return similarityImproved && violationsOk;
+        // Calculate rate using weighted combination
+        double rate = (ModuleService.SIMILARITY_WEIGHT * similarityImprovement) +
+                      (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
+
+        return new SplitRateResult(originalViolations, module1Violations, module2Violations,
+                                   similarityImprovement, normalizedViolationsImprovement, rate);
     }
 
-    /**
-     * Calculates the minimum improvement across both split modules
-     */
-    private double calculateImprovement(Module original, Module module1, Module module2) {
-        double originalSimilarity = original.getSimilarity();
-        double module1Similarity = module1.getSimilarity();
-        double module2Similarity = module2.getSimilarity();
+    private static class SplitRateResult {
+        int originalViolations;
+        int module1Violations;
+        int module2Violations;
+        double similarityImprovement;
+        double violationsImprovement;
+        double rate;
 
-        double improvement1 = module1Similarity - originalSimilarity;
-        double improvement2 = module2Similarity - originalSimilarity;
-
-        return (improvement1 + improvement2) / 2;
+        public SplitRateResult(int originalViolations, int module1Violations, int module2Violations,
+                               double similarityImprovement, double violationsImprovement, double rate) {
+            this.originalViolations = originalViolations;
+            this.module1Violations = module1Violations;
+            this.module2Violations = module2Violations;
+            this.similarityImprovement = similarityImprovement;
+            this.violationsImprovement = violationsImprovement;
+            this.rate = rate;
+        }
     }
 
     public void splitModuleAnalysis(List<Module> modules) {
@@ -247,10 +275,11 @@ public class SplitModule extends ArchitecturalAnalysis {
             Module module1 = createSplitModule(module, module1Classes, superRefClass, "high-cohesion");
             Module module2 = createSplitModule(module, module2Classes, deRefClass, "low-cohesion");
 
-            // Evaluate if split is beneficial
-            if (isSplitBeneficial(module, module1, module2)) {
-                double improvement = calculateImprovement(module, module1, module2);
+            // Calculate split rate
+            SplitRateResult rateResult = calculateSplitRate(module, module1, module2);
 
+            // Only recommend split if rate is positive (considering both similarity and violations)
+            if (rateResult.rate > 0) {
                 List<String> module1ClassNames = module1Classes.stream()
                         .map(Clazz::getName)
                         .collect(Collectors.toList());
@@ -273,15 +302,20 @@ public class SplitModule extends ArchitecturalAnalysis {
                         module.getSimilarity(),
                         module1.getSimilarity(),
                         module2.getSimilarity(),
-                        improvement
+                        rateResult.originalViolations,
+                        rateResult.module1Violations,
+                        rateResult.module2Violations,
+                        rateResult.similarityImprovement,
+                        rateResult.violationsImprovement,
+                        rateResult.rate
                 ));
 
-                log.debug("Beneficial split found for '{}': Module1 similarity: {}, Module2 similarity: {}, Improvement: {}",
-                        module.getName(), module1.getSimilarity(), module2.getSimilarity(), improvement);
+                log.debug("Beneficial split found for '{}': Rate: {}, Similarity improvement: {}, Violations improvement: {}",
+                        module.getName(), rateResult.rate, rateResult.similarityImprovement, rateResult.violationsImprovement);
             }
         }
 
-        potentialSplits.sort((a, b) -> Double.compare(b.improvement, a.improvement));
+        potentialSplits.sort((a, b) -> Double.compare(b.rate, a.rate));
 
         log.info("Found {} potential beneficial splits", potentialSplits.size());
         if (potentialSplits.isEmpty()) {
@@ -298,7 +332,11 @@ public class SplitModule extends ArchitecturalAnalysis {
                 log.info("     → Module 2 '{}' (ref: '{}'): {} classes, similarity: {}",
                         split.module2Name, split.deRefClassName, split.module2ClassNames.size(),
                         String.format("%.4f", split.module2Similarity));
-                log.info("     Improvement: +{}", String.format("%.4f", split.improvement));
+                log.info("     Rate: +{} (Similarity: {}, Violations: {} → {})",
+                        String.format("%.4f", split.rate),
+                        String.format("%.4f", split.similarityImprovement),
+                        split.originalViolations,
+                        (split.module1Violations + split.module2Violations));
             }
         }
     }

@@ -23,25 +23,40 @@ public class MoveClass extends ArchitecturalAnalysis {
     }
 
     private static class MoveEvaluationResult {
-        boolean isValid;
         double sourceModuleSimilarityBefore;
         double sourceModuleSimilarityAfter;
         double targetModuleSimilarityBefore;
         double targetModuleSimilarityAfter;
+        int sourceViolationsBefore;
+        int sourceViolationsAfter;
+        int targetViolationsBefore;
+        int targetViolationsAfter;
         double classCurrentAvgSimilarity;
         double classTargetAvgSimilarity;
+        double similarityImprovement;
+        double violationsImprovement;
+        double rate;
 
-        public MoveEvaluationResult(boolean isValid, double sourceModuleSimilarityBefore,
+        public MoveEvaluationResult(double sourceModuleSimilarityBefore,
                                     double sourceModuleSimilarityAfter, double targetModuleSimilarityBefore,
-                                    double targetModuleSimilarityAfter, double classCurrentAvgSimilarity,
-                                    double classTargetAvgSimilarity) {
-            this.isValid = isValid;
+                                    double targetModuleSimilarityAfter, int sourceViolationsBefore,
+                                    int sourceViolationsAfter, int targetViolationsBefore,
+                                    int targetViolationsAfter, double classCurrentAvgSimilarity,
+                                    double classTargetAvgSimilarity, double similarityImprovement,
+                                    double violationsImprovement, double rate) {
             this.sourceModuleSimilarityBefore = sourceModuleSimilarityBefore;
             this.sourceModuleSimilarityAfter = sourceModuleSimilarityAfter;
             this.targetModuleSimilarityBefore = targetModuleSimilarityBefore;
             this.targetModuleSimilarityAfter = targetModuleSimilarityAfter;
+            this.sourceViolationsBefore = sourceViolationsBefore;
+            this.sourceViolationsAfter = sourceViolationsAfter;
+            this.targetViolationsBefore = targetViolationsBefore;
+            this.targetViolationsAfter = targetViolationsAfter;
             this.classCurrentAvgSimilarity = classCurrentAvgSimilarity;
             this.classTargetAvgSimilarity = classTargetAvgSimilarity;
+            this.similarityImprovement = similarityImprovement;
+            this.violationsImprovement = violationsImprovement;
+            this.rate = rate;
         }
     }
 
@@ -50,15 +65,29 @@ public class MoveClass extends ArchitecturalAnalysis {
         String targetModuleId;
         String classId;
         String className;
-        double improvement;
+        int sourceViolationsBefore;
+        int sourceViolationsAfter;
+        int targetViolationsBefore;
+        int targetViolationsAfter;
+        double similarityImprovement;
+        double violationsImprovement;
+        double rate;
 
         public MoveClassResult(String sourceModuleId, String targetModuleId, String classId,
-                               String className, double improvement) {
+                               String className, int sourceViolationsBefore, int sourceViolationsAfter,
+                               int targetViolationsBefore, int targetViolationsAfter,
+                               double similarityImprovement, double violationsImprovement, double rate) {
             this.sourceModuleId = sourceModuleId;
             this.targetModuleId = targetModuleId;
             this.classId = classId;
             this.className = className;
-            this.improvement = improvement;
+            this.sourceViolationsBefore = sourceViolationsBefore;
+            this.sourceViolationsAfter = sourceViolationsAfter;
+            this.targetViolationsBefore = targetViolationsBefore;
+            this.targetViolationsAfter = targetViolationsAfter;
+            this.similarityImprovement = similarityImprovement;
+            this.violationsImprovement = violationsImprovement;
+            this.rate = rate;
         }
     }
 
@@ -89,16 +118,22 @@ public class MoveClass extends ArchitecturalAnalysis {
             );
         }
 
-        // If class's similarity wouldn't improve, reject the move
+        // If class's similarity wouldn't improve, reject the move with negative rate
         if (targetAvgSimilarity <= currentAvgSimilarity) {
             return new MoveEvaluationResult(
-                    false,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
                     0,
                     0,
                     0,
                     0,
                     currentAvgSimilarity,
-                    targetAvgSimilarity
+                    targetAvgSimilarity,
+                    0.0,
+                    0.0,
+                    -1.0  // Negative rate to indicate rejection
             );
         }
 
@@ -142,28 +177,41 @@ public class MoveClass extends ArchitecturalAnalysis {
         this.moduleService.calculateModuleViolations(tempTargetModule);
         double targetModuleSimilarityAfter = tempTargetModule.getSimilarity() != null ? tempTargetModule.getSimilarity() : 0.0;
 
-        // Check if both conditions are met:
-        // 1. Target module similarity improves with the class
-        // 2. Source module similarity doesn't decrease without the class
-        // 3. Violations don't increase in either module
+        // Calculate rate by considering both similarity and violations improvements
         int sourceViolationsBefore = sourceModule.getViolations() != null ? sourceModule.getViolations() : 0;
         int sourceViolationsAfter = tempSourceModule.getViolations() != null ? tempSourceModule.getViolations() : 0;
         int targetViolationsBefore = targetModule.getViolations() != null ? targetModule.getViolations() : 0;
         int targetViolationsAfter = tempTargetModule.getViolations() != null ? tempTargetModule.getViolations() : 0;
 
-        boolean isValid = (targetModuleSimilarityAfter > targetModuleSimilarityBefore) &&
-                (sourceModuleSimilarityAfter >= sourceModuleSimilarityBefore) &&
-                (sourceViolationsAfter <= sourceViolationsBefore) &&
-                (targetViolationsAfter <= targetViolationsBefore);
+        // Calculate similarity improvement (already normalized as similarity is [0, 1])
+        double avgOriginalSimilarity = (sourceModuleSimilarityBefore + targetModuleSimilarityBefore) / 2.0;
+        double avgAfterSimilarity = (sourceModuleSimilarityAfter + targetModuleSimilarityAfter) / 2.0;
+        double similarityImprovement = avgAfterSimilarity - avgOriginalSimilarity;
+
+        // Calculate violations improvement (normalize by before state)
+        int totalOriginalViolations = sourceViolationsBefore + targetViolationsBefore;
+        int totalAfterViolations = sourceViolationsAfter + targetViolationsAfter;
+        double violationsReduction = totalOriginalViolations - totalAfterViolations;
+        double normalizedViolationsImprovement = violationsReduction / Math.max(totalOriginalViolations, 1.0);
+
+        // Calculate rate using weighted combination
+        double rate = (ModuleService.SIMILARITY_WEIGHT * similarityImprovement) +
+                      (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
 
         return new MoveEvaluationResult(
-                isValid,
                 sourceModuleSimilarityBefore,
                 sourceModuleSimilarityAfter,
                 targetModuleSimilarityBefore,
                 targetModuleSimilarityAfter,
+                sourceViolationsBefore,
+                sourceViolationsAfter,
+                targetViolationsBefore,
+                targetViolationsAfter,
                 currentAvgSimilarity,
-                targetAvgSimilarity
+                targetAvgSimilarity,
+                similarityImprovement,
+                normalizedViolationsImprovement,
+                rate
         );
     }
 
@@ -200,41 +248,47 @@ public class MoveClass extends ArchitecturalAnalysis {
                     // Evaluate if moving this class would be beneficial
                     MoveEvaluationResult evaluation = evaluateMoveClassBenefit(classToMove, sourceModule, targetModule);
 
-                    // Only consider valid moves that benefit both modules
-                    if (evaluation.isValid) {
-                        // Calculate improvement as average of target and source module improvements
-                        double targetImprovement = evaluation.targetModuleSimilarityAfter - evaluation.targetModuleSimilarityBefore;
-                        double sourceImprovement = evaluation.sourceModuleSimilarityAfter - evaluation.sourceModuleSimilarityBefore;
-                        double improvement = (targetImprovement + sourceImprovement) / 2.0;
-
+                    // Only consider moves with positive rate (considering both similarity and violations)
+                    if (evaluation.rate > 0) {
                         potentialMoves.add(new MoveClassResult(
                                 sourceModule.getId(),
                                 targetModule.getId(),
                                 classToMove.getId(),
                                 classToMove.getName(),
-                                improvement
+                                evaluation.sourceViolationsBefore,
+                                evaluation.sourceViolationsAfter,
+                                evaluation.targetViolationsBefore,
+                                evaluation.targetViolationsAfter,
+                                evaluation.similarityImprovement,
+                                evaluation.violationsImprovement,
+                                evaluation.rate
                         ));
 
-                        log.debug("Potential move: '{}' from '{}' to '{}' - Improvement: {}",
-                                classToMove.getName(), sourceModule.getName(), targetModule.getName(), improvement);
+                        log.debug("Potential move: '{}' from '{}' to '{}' - Rate: {}, Similarity improvement: {}, Violations improvement: {}",
+                                classToMove.getName(), sourceModule.getName(), targetModule.getName(),
+                                evaluation.rate, evaluation.similarityImprovement, evaluation.violationsImprovement);
                     }
                 }
             }
         }
 
-        // Sort by improvement (descending order)
-        potentialMoves.sort((a, b) -> Double.compare(b.improvement, a.improvement));
+        // Sort by rate (descending order)
+        potentialMoves.sort((a, b) -> Double.compare(b.rate, a.rate));
 
         log.info("Found {} potential beneficial moves", potentialMoves.size());
         if (potentialMoves.isEmpty()) {
             log.info("No beneficial move class suggestions found. All classes appear to be optimally placed.");
         } else {
-            log.info("Top move suggestions (based on module similarity improvements):");
+            log.info("Top move suggestions:");
             for (int i = 0; i < Math.min(5, potentialMoves.size()); i++) {
                 MoveClassResult move = potentialMoves.get(i);
-                log.info("  {}. Move '{}' from module '{}' to module '{}' - Improvement: +{}",
-                        (i + 1), move.className, move.sourceModuleId, move.targetModuleId,
-                        String.format("%.4f", move.improvement));
+                log.info("  {}. Move '{}' from module '{}' to module '{}'",
+                        (i + 1), move.className, move.sourceModuleId, move.targetModuleId);
+                log.info("      Rate: +{} (Similarity: {}, Violations: {} → {})",
+                        String.format("%.4f", move.rate),
+                        String.format("%.4f", move.similarityImprovement),
+                        (move.sourceViolationsBefore + move.targetViolationsBefore),
+                        (move.sourceViolationsAfter + move.targetViolationsAfter));
             }
         }
     }

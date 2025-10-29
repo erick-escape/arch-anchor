@@ -29,11 +29,18 @@ public class MergeModule extends ArchitecturalAnalysis {
         double module1AvgRefSim;
         double module2AvgRefSim;
         double mergedAvgRefSim;
-        double improvement;
+        int module1Violations;
+        int module2Violations;
+        int mergedViolations;
+        double similarityImprovement;
+        double violationsImprovement;
+        double rate;
 
         public MergeModuleResult(String module1Id, String module1Name, String module2Id,
                                  String module2Name, double module1AvgRefSim,
-                                 double module2AvgRefSim, double mergedAvgRefSim, double improvement) {
+                                 double module2AvgRefSim, double mergedAvgRefSim,
+                                 int module1Violations, int module2Violations, int mergedViolations,
+                                 double similarityImprovement, double violationsImprovement, double rate) {
             this.module1Id = module1Id;
             this.module1Name = module1Name;
             this.module2Id = module2Id;
@@ -41,7 +48,12 @@ public class MergeModule extends ArchitecturalAnalysis {
             this.module1AvgRefSim = module1AvgRefSim;
             this.module2AvgRefSim = module2AvgRefSim;
             this.mergedAvgRefSim = mergedAvgRefSim;
-            this.improvement = improvement;
+            this.module1Violations = module1Violations;
+            this.module2Violations = module2Violations;
+            this.mergedViolations = mergedViolations;
+            this.similarityImprovement = similarityImprovement;
+            this.violationsImprovement = violationsImprovement;
+            this.rate = rate;
         }
     }
 
@@ -79,40 +91,62 @@ public class MergeModule extends ArchitecturalAnalysis {
     }
 
     /**
-     * Calculates the improvement in the modules similarity when merging two modules.
-     * The improvement is calculated by checking if the merged module's similarity
-     * is greater than both original modules' similarity. If so, return the sum of
-     * the improvements and divide it by two. If not, return zero.
+     * Calculates the rate for merging two modules by considering both similarity and violations improvements.
+     * Uses normalized deltas for similarity and violations, weighted equally.
      *
-     * Also ensures that violations do not increase in the merged module compared to both original modules.
-     *
-     * @return The minimum improvement (positive if merged is better than both originals and violations don't increase)
+     * @return A MergeRateResult containing the rate and detailed metrics (rate can be positive or negative)
      */
-    private double calculateModuleSimilarityImprovement(Module module1, Module module2, Module mergedModule) {
+    private MergeRateResult calculateModuleMergeRate(Module module1, Module module2, Module mergedModule) {
         this.moduleService.calculateAvgSimilarityWithRefClazzes(mergedModule);
         this.moduleService.calculateModuleSimilarity(mergedModule);
         this.moduleService.populateRefClazzesDependencies(mergedModule);
         this.moduleService.populateModuleDependencies(mergedModule);
         this.moduleService.calculateModuleViolations(mergedModule);
 
-        Double mergedModuleSimilarity = mergedModule.getSimilarity();
+        // Get similarity values
+        double module1Similarity = module1.getSimilarity() != null ? module1.getSimilarity() : 0.0;
+        double module2Similarity = module2.getSimilarity() != null ? module2.getSimilarity() : 0.0;
+        double mergedSimilarity = mergedModule.getSimilarity() != null ? mergedModule.getSimilarity() : 0.0;
 
-        // Check similarity improvement
-        boolean similarityImproved = mergedModuleSimilarity > module1.getSimilarity() &&
-                                     mergedModuleSimilarity > module2.getSimilarity();
+        // Calculate similarity improvement (already normalized as similarity is [0, 1])
+        double avgOriginalSimilarity = (module1Similarity + module2Similarity) / 2.0;
+        double similarityImprovement = mergedSimilarity - avgOriginalSimilarity;
 
-        // Check violations don't increase
+        // Get violations values
         int module1Violations = module1.getViolations() != null ? module1.getViolations() : 0;
         int module2Violations = module2.getViolations() != null ? module2.getViolations() : 0;
         int mergedViolations = mergedModule.getViolations() != null ? mergedModule.getViolations() : 0;
 
-        boolean violationsOk = mergedViolations <= module1Violations && mergedViolations <= module2Violations;
+        // Calculate violations improvement (normalize by before state)
+        int totalOriginalViolations = module1Violations + module2Violations;
+        double violationsReduction = totalOriginalViolations - mergedViolations;
+        double normalizedViolationsImprovement = violationsReduction / Math.max(totalOriginalViolations, 1.0);
 
-        if (similarityImproved && violationsOk) {
-            return ((mergedModuleSimilarity - module1.getSimilarity()) + (mergedModuleSimilarity - module2.getSimilarity())) / 2;
+        // Calculate rate using weighted combination
+        double rate = (ModuleService.SIMILARITY_WEIGHT * similarityImprovement) +
+                      (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
+
+        return new MergeRateResult(module1Violations, module2Violations, mergedViolations,
+                                   similarityImprovement, normalizedViolationsImprovement, rate);
+    }
+
+    private static class MergeRateResult {
+        int module1Violations;
+        int module2Violations;
+        int mergedViolations;
+        double similarityImprovement;
+        double violationsImprovement;
+        double rate;
+
+        public MergeRateResult(int module1Violations, int module2Violations, int mergedViolations,
+                               double similarityImprovement, double violationsImprovement, double rate) {
+            this.module1Violations = module1Violations;
+            this.module2Violations = module2Violations;
+            this.mergedViolations = mergedViolations;
+            this.similarityImprovement = similarityImprovement;
+            this.violationsImprovement = violationsImprovement;
+            this.rate = rate;
         }
-
-        return 0;
     }
 
     public void mergeModuleAnalysis(List<Module> modules) {
@@ -144,10 +178,10 @@ public class MergeModule extends ArchitecturalAnalysis {
                     continue;
                 }
 
-                double improvement = calculateModuleSimilarityImprovement(module1, module2, mergedModule);
+                MergeRateResult rateResult = calculateModuleMergeRate(module1, module2, mergedModule);
 
-                // Only recommend merge if avgRefClazzesSimilarity improves for BOTH modules
-                if (improvement > 0) {
+                // Only recommend merge if rate is positive (considering both similarity and violations)
+                if (rateResult.rate > 0) {
                     double module1AvgRefSim = module1.getAvgRefClazzesSimilarity() != null ? module1.getAvgRefClazzesSimilarity() : 0.0;
                     double module2AvgRefSim = module2.getAvgRefClazzesSimilarity() != null ? module2.getAvgRefClazzesSimilarity() : 0.0;
                     double mergedAvgRefSim = mergedModule.getAvgRefClazzesSimilarity();
@@ -160,16 +194,22 @@ public class MergeModule extends ArchitecturalAnalysis {
                             module1AvgRefSim,
                             module2AvgRefSim,
                             mergedAvgRefSim,
-                            improvement
+                            rateResult.module1Violations,
+                            rateResult.module2Violations,
+                            rateResult.mergedViolations,
+                            rateResult.similarityImprovement,
+                            rateResult.violationsImprovement,
+                            rateResult.rate
                     ));
 
-                    log.debug("Potential merge: '{}' with '{}' - Improvement: {}",
-                            module1.getName(), module2.getName(), improvement);
+                    log.debug("Potential merge: '{}' with '{}' - Rate: {}, Similarity improvement: {}, Violations improvement: {}",
+                            module1.getName(), module2.getName(), rateResult.rate,
+                            rateResult.similarityImprovement, rateResult.violationsImprovement);
                 }
             }
         }
 
-        potentialMerges.sort((a, b) -> Double.compare(b.improvement, a.improvement));
+        potentialMerges.sort((a, b) -> Double.compare(b.rate, a.rate));
 
         log.info("Found {} potential beneficial merges", potentialMerges.size());
         if (potentialMerges.isEmpty()) {
@@ -180,7 +220,11 @@ public class MergeModule extends ArchitecturalAnalysis {
                 MergeModuleResult merge = potentialMerges.get(i);
                 log.info("  {}. Merge module '{}' with module '{}'",
                         (i + 1), merge.module1Name, merge.module2Name);
-                log.info("      Improvement: +{}", String.format("%.4f", merge.improvement));
+                log.info("      Rate: +{} (Similarity: {}, Violations: {} → {})",
+                        String.format("%.4f", merge.rate),
+                        String.format("%.4f", merge.similarityImprovement),
+                        (merge.module1Violations + merge.module2Violations),
+                        merge.mergedViolations);
             }
         }
     }
