@@ -134,6 +134,13 @@ public class ModuleService {
                 .count();
     }
 
+    /**
+     * Calculates pairwise similarity between all classes within a module.
+     * Sets the similarity field on each Clazz object.
+     * Does NOT modify the module's reference classes.
+     *
+     * @param module The module containing classes to calculate similarities for
+     */
     public void calculateClassSimilarities(Module module) {
         List<Clazz> clazzes = module.getClazzes();
 
@@ -151,76 +158,99 @@ public class ModuleService {
             Clazz clazz = clazzes.get(0);
             clazz.setSimilarity(1.0);
         }
+    }
 
-        // Set refClazz based on weighted rate combining similarity and violations
-        if (!clazzes.isEmpty()) {
-            // Ensure module dependencies are populated for violation calculation
-            populateModuleDependencies(module);
-            List<Dependency> moduleDependencies = module.getModuleDependencies();
+    /**
+     * Selects and sets reference classes for a module based on weighted rating.
+     * Uses a combination of similarity and violations to select the best reference class.
+     * Requires that class similarities have been previously calculated.
+     *
+     * @param module The module to select reference classes for
+     */
+    public void selectReferenceClasses(Module module) {
+        List<Clazz> clazzes = module.getClazzes();
 
-            // Calculate violations for each class and find max for normalization
-            Map<Clazz, Integer> violationsMap = new HashMap<>();
-            int maxViolations = 0;
-
-            for (Clazz clazz : clazzes) {
-                int violations = calculateViolations(clazz, moduleDependencies);
-                violationsMap.put(clazz, violations);
-                maxViolations = Math.max(maxViolations, violations);
-            }
-
-            // Find max similarity for normalization
-            double maxSimilarity = clazzes.stream()
-                    .mapToDouble(Clazz::getSimilarity)
-                    .max()
-                    .orElse(1.0);
-
-            // Prevent division by zero
-            if (maxSimilarity == 0.0) {
-                maxSimilarity = 1.0;
-            }
-
-            // Select refClazz based on weighted rate
-            Clazz refClazz;
-            if (maxViolations == 0) {
-                // If no violations exist, select based on similarity only
-                refClazz = clazzes.stream()
-                        .max(Comparator.comparingDouble(Clazz::getSimilarity))
-                        .orElse(null);
-                log.info("Selected refClass based on similarity only (no violations): {}", refClazz != null ? refClazz.getName() : "null");
-            } else {
-                // Calculate weighted rate for each class
-                final int finalMaxViolations = maxViolations;
-                final double finalMaxSimilarity = maxSimilarity;
-
-                refClazz = clazzes.stream()
-                        .max(Comparator.comparingDouble(clazz -> {
-                            double similarity = clazz.getSimilarity();
-                            int violations = violationsMap.get(clazz);
-
-                            // Normalize similarity to [0, 1] where 1 is best (highest similarity)
-                            double normalizedSimilarity = similarity / finalMaxSimilarity;
-
-                            // Normalize violations to [0, 1] where 1 is best (no violations)
-                            double normalizedViolations = 1.0 - ((double) violations / finalMaxViolations);
-
-                            // Calculate combined rate: higher is better
-                            double rate = (SIMILARITY_WEIGHT * normalizedSimilarity) + (VIOLATION_WEIGHT * normalizedViolations);
-
-                            log.debug("Class: {}, Similarity: {}, Normalized Similarity: {}, Violations: {}, Normalized Violations: {}, Rate: {}",
-                                    clazz.getName(), similarity, normalizedSimilarity, violations, normalizedViolations, rate);
-                            return rate;
-                        }))
-                        .orElse(null);
-
-                if (refClazz != null) {
-                    log.info("Selected refClass: {} with similarity: {} and violations: {}",
-                            refClazz.getName(), refClazz.getSimilarity(), violationsMap.get(refClazz));
-                }
-            }
-
-            List<Clazz> refClazzes = List.of(refClazz);
-            module.setRefClazzes(refClazzes);
+        if (clazzes.isEmpty()) {
+            return;
         }
+
+        // Ensure module dependencies are populated for violation calculation
+        populateModuleDependencies(module);
+        List<Dependency> moduleDependencies = module.getModuleDependencies();
+
+        // Calculate violations for each class and find max for normalization
+        Map<Clazz, Integer> violationsMap = new HashMap<>();
+        int maxViolations = 0;
+
+        for (Clazz clazz : clazzes) {
+            int violations = calculateViolations(clazz, moduleDependencies);
+            violationsMap.put(clazz, violations);
+            maxViolations = Math.max(maxViolations, violations);
+        }
+
+        // Find max similarity for normalization
+        double maxSimilarity = clazzes.stream()
+                .mapToDouble(Clazz::getSimilarity)
+                .max()
+                .orElse(1.0);
+
+        // Prevent division by zero
+        if (maxSimilarity == 0.0) {
+            maxSimilarity = 1.0;
+        }
+
+        // Select refClazz based on weighted rate
+        Clazz refClazz;
+        if (maxViolations == 0) {
+            // If no violations exist, select based on similarity only
+            refClazz = clazzes.stream()
+                    .max(Comparator.comparingDouble(Clazz::getSimilarity))
+                    .orElse(null);
+            log.info("Selected refClass based on similarity only (no violations): {}", refClazz != null ? refClazz.getName() : "null");
+        } else {
+            // Calculate weighted rate for each class
+            final int finalMaxViolations = maxViolations;
+            final double finalMaxSimilarity = maxSimilarity;
+
+            refClazz = clazzes.stream()
+                    .max(Comparator.comparingDouble(clazz -> {
+                        double similarity = clazz.getSimilarity();
+                        int violations = violationsMap.get(clazz);
+
+                        // Normalize similarity to [0, 1] where 1 is best (highest similarity)
+                        double normalizedSimilarity = similarity / finalMaxSimilarity;
+
+                        // Normalize violations to [0, 1] where 1 is best (no violations)
+                        double normalizedViolations = 1.0 - ((double) violations / finalMaxViolations);
+
+                        // Calculate combined rate: higher is better
+                        double rate = (SIMILARITY_WEIGHT * normalizedSimilarity) + (VIOLATION_WEIGHT * normalizedViolations);
+
+                        log.debug("Class: {}, Similarity: {}, Normalized Similarity: {}, Violations: {}, Normalized Violations: {}, Rate: {}",
+                                clazz.getName(), similarity, normalizedSimilarity, violations, normalizedViolations, rate);
+                        return rate;
+                    }))
+                    .orElse(null);
+
+            if (refClazz != null) {
+                log.info("Selected refClass: {} with similarity: {} and violations: {}",
+                        refClazz.getName(), refClazz.getSimilarity(), violationsMap.get(refClazz));
+            }
+        }
+
+        List<Clazz> refClazzes = List.of(refClazz);
+        module.setRefClazzes(refClazzes);
+    }
+
+    /**
+     * Convenience method that calculates class similarities and then selects reference classes.
+     * This provides the same behavior as the original calculateClassSimilarities method.
+     *
+     * @param module The module to process
+     */
+    public void calculateClassSimilaritiesAndSelectRefClasses(Module module) {
+        calculateClassSimilarities(module);
+        selectReferenceClasses(module);
     }
 
     public void calculateAvgSimilarityWithRefClazzes(Module module) {
@@ -471,7 +501,7 @@ public class ModuleService {
                 .map(clazzMapper::toEntity)
                 .toList());
 
-        this.calculateClassSimilarities(retainedModuleEntity);
+        this.calculateClassSimilaritiesAndSelectRefClasses(retainedModuleEntity);
         this.calculateAvgSimilarityWithRefClazzes(retainedModuleEntity);
         this.calculateModuleSimilarity(retainedModuleEntity);
         this.populateRefClazzesDependencies(retainedModuleEntity);
@@ -486,7 +516,7 @@ public class ModuleService {
                 .map(clazzMapper::toEntity)
                 .toList());
 
-        this.calculateClassSimilarities(newModuleEntity);
+        this.calculateClassSimilaritiesAndSelectRefClasses(newModuleEntity);
         this.calculateAvgSimilarityWithRefClazzes(newModuleEntity);
         this.calculateModuleSimilarity(newModuleEntity);
         this.populateRefClazzesDependencies(newModuleEntity);

@@ -462,9 +462,9 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         double originalSourceSimilarity = sourceModule.getSimilarity();
         double originalTargetSimilarity = targetModule.getSimilarity();
 
-        this.moduleService.calculateClassSimilarities(sourceWithoutClass);
+        this.moduleService.calculateClassSimilaritiesAndSelectRefClasses(sourceWithoutClass);
         this.moduleService.calculateModuleSimilarity(sourceWithoutClass);
-        this.moduleService.calculateClassSimilarities(targetWithClass);
+        this.moduleService.calculateClassSimilaritiesAndSelectRefClasses(targetWithClass);
         this.moduleService.calculateModuleSimilarity(targetWithClass);
 
         double newSourceSimilarity = sourceWithoutClass.getSimilarity();

@@ -162,7 +162,7 @@ public class SplitModule extends ArchitecturalAnalysis {
      */
     private SplitRateResult calculateSplitRate(Module original, Module module1, Module module2) {
         // Calculate all similarities for module1
-        this.moduleService.calculateClassSimilarities(module1);
+        this.moduleService.calculateClassSimilaritiesAndSelectRefClasses(module1);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(module1);
         this.moduleService.calculateModuleSimilarity(module1);
         this.moduleService.populateRefClazzesDependencies(module1);
@@ -170,7 +170,7 @@ public class SplitModule extends ArchitecturalAnalysis {
         this.moduleService.calculateModuleViolations(module1);
 
         // Calculate all similarities for module2
-        this.moduleService.calculateClassSimilarities(module2);
+        this.moduleService.calculateClassSimilaritiesAndSelectRefClasses(module2);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(module2);
         this.moduleService.calculateModuleSimilarity(module2);
         this.moduleService.populateRefClazzesDependencies(module2);

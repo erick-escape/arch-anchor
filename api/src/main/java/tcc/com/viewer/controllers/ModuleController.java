@@ -95,7 +95,7 @@ public class ModuleController {
                 0 // violations will be calculated later
         );
         // Recalculate similarities using ModuleService
-        moduleService.calculateClassSimilarities(newModule);
+        moduleService.calculateClassSimilaritiesAndSelectRefClasses(newModule);
         moduleService.calculateAvgSimilarityWithRefClazzes(newModule);
         moduleService.calculateModuleSimilarity(newModule);
         moduleService.populateRefClazzesDependencies(newModule);

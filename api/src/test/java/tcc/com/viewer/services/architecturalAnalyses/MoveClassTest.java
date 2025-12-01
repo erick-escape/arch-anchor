@@ -50,7 +50,7 @@ class MoveClassTest {
         }).when(moduleService).calculateModuleSimilarity(any(Module.class));
 
         // Mock these as no-ops since they're intermediate calculations
-        lenient().doNothing().when(moduleService).calculateClassSimilarities(any(Module.class));
+        lenient().doNothing().when(moduleService).calculateClassSimilaritiesAndSelectRefClasses(any(Module.class));
         lenient().doNothing().when(moduleService).calculateAvgSimilarityWithRefClazzes(any(Module.class));
     }
 

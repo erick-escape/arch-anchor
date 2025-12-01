@@ -97,6 +97,8 @@ public class MergeModule extends ArchitecturalAnalysis {
      * @return A MergeRateResult containing the rate and detailed metrics (rate can be positive or negative)
      */
     private MergeRateResult calculateModuleMergeRate(Module module1, Module module2, Module mergedModule) {
+        // Calculate class similarities without overwriting the manually merged reference classes
+        this.moduleService.calculateClassSimilarities(mergedModule);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(mergedModule);
         this.moduleService.calculateModuleSimilarity(mergedModule);
         this.moduleService.populateRefClazzesDependencies(mergedModule);
@@ -124,10 +126,10 @@ public class MergeModule extends ArchitecturalAnalysis {
 
         // Calculate rate using weighted combination
         double rate = (ModuleService.SIMILARITY_WEIGHT * similarityImprovement) +
-                      (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
+                (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
 
         return new MergeRateResult(module1Violations, module2Violations, mergedViolations,
-                                   similarityImprovement, normalizedViolationsImprovement, rate);
+                similarityImprovement, normalizedViolationsImprovement, rate);
     }
 
     private static class MergeRateResult {

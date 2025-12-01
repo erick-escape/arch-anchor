@@ -151,7 +151,7 @@ public class MoveClass extends ArchitecturalAnalysis {
                 .collect(Collectors.toList()));
 
         // Recalculate source module similarity without the class
-        this.moduleService.calculateClassSimilarities(tempSourceModule);
+        this.moduleService.calculateClassSimilaritiesAndSelectRefClasses(tempSourceModule);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(tempSourceModule);
         this.moduleService.calculateModuleSimilarity(tempSourceModule);
         this.moduleService.populateRefClazzesDependencies(tempSourceModule);
@@ -169,7 +169,7 @@ public class MoveClass extends ArchitecturalAnalysis {
         tempTargetModule.setClazzes(targetClazzes);
 
         // Recalculate target module similarity with the class
-        this.moduleService.calculateClassSimilarities(tempTargetModule);
+        this.moduleService.calculateClassSimilaritiesAndSelectRefClasses(tempTargetModule);
         this.moduleService.calculateAvgSimilarityWithRefClazzes(tempTargetModule);
         this.moduleService.calculateModuleSimilarity(tempTargetModule);
         this.moduleService.populateRefClazzesDependencies(tempTargetModule);

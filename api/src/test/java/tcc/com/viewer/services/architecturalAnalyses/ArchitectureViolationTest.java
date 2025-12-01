@@ -274,14 +274,14 @@ class ArchitectureViolationTest {
         // Ensure all lists are mutable and dependencies are deep copied to avoid ConcurrentModificationException
         Module module = new Module(id,
                 name,
-                new ArrayList<>(),  // refClazzes - will be set by calculateClassSimilarities
+                new ArrayList<>(),  // refClazzes - will be set by calculateClassSimilaritiesAndSelectRefClasses
                 copyDependencies(refClazzesDependencies),  // Deep copy dependencies
                 copyDependencies(moduleDependencies),  // Deep copy dependencies
                 new ArrayList<>(classes),  // Make mutable copy
                 0.0, 0.0, 0);
 
         // Calculate all similarities using real ModuleService methods
-        moduleService.calculateClassSimilarities(module);
+        moduleService.calculateClassSimilaritiesAndSelectRefClasses(module);
         moduleService.calculateAvgSimilarityWithRefClazzes(module);
         moduleService.calculateModuleSimilarity(module);
         moduleService.populateRefClazzesDependencies(module);

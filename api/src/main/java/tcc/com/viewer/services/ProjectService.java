@@ -35,7 +35,7 @@ public class ProjectService {
 
         for (Module module : modules) {
             moduleService.populateModuleDependencies(module);
-            moduleService.calculateClassSimilarities(module);
+            moduleService.calculateClassSimilaritiesAndSelectRefClasses(module);
             moduleService.calculateAvgSimilarityWithRefClazzes(module);
             moduleService.calculateModuleSimilarity(module);
             moduleService.populateRefClazzesDependencies(module);
