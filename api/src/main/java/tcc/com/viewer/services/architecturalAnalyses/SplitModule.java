@@ -13,35 +13,42 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class SplitModule extends ArchitecturalAnalysis {
+    private List<SplitModuleResult> results;
+
     public SplitModule(ModuleService moduleService) {
         super(moduleService);
     }
 
     @Override
     public void execute(List<Module> modules) {
+        this.results = new ArrayList<>();
         splitModuleAnalysis(modules);
     }
 
-    private static class SplitModuleResult {
-        String originalModuleId;
-        String originalModuleName;
-        String module1Id;
-        String module1Name;
-        String module2Id;
-        String module2Name;
-        String superRefClassName;
-        String deRefClassName;
-        List<String> module1ClassNames;
-        List<String> module2ClassNames;
-        double originalSimilarity;
-        double module1Similarity;
-        double module2Similarity;
-        int originalViolations;
-        int module1Violations;
-        int module2Violations;
-        double similarityImprovement;
-        double violationsImprovement;
-        double rate;
+    public List<SplitModuleResult> getResults() {
+        return results != null ? new ArrayList<>(results) : new ArrayList<>();
+    }
+
+    public static class SplitModuleResult {
+        public String originalModuleId;
+        public String originalModuleName;
+        public String module1Id;
+        public String module1Name;
+        public String module2Id;
+        public String module2Name;
+        public String superRefClassName;
+        public String deRefClassName;
+        public List<String> module1ClassNames;
+        public List<String> module2ClassNames;
+        public double originalSimilarity;
+        public double module1Similarity;
+        public double module2Similarity;
+        public int originalViolations;
+        public int module1Violations;
+        public int module2Violations;
+        public double similarityImprovement;
+        public double violationsImprovement;
+        public double rate;
 
         public SplitModuleResult(String originalModuleId, String originalModuleName,
                                  String module1Id, String module1Name,
@@ -226,8 +233,6 @@ public class SplitModule extends ArchitecturalAnalysis {
     public void splitModuleAnalysis(List<Module> modules) {
         log.info("Starting edge-based split module analysis for {} modules...", modules.size());
 
-        List<SplitModuleResult> potentialSplits = new ArrayList<>();
-
         for (Module module : modules) {
             // Skip modules without reference classes
             if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty()) {
@@ -288,7 +293,7 @@ public class SplitModule extends ArchitecturalAnalysis {
                         .map(Clazz::getName)
                         .collect(Collectors.toList());
 
-                potentialSplits.add(new SplitModuleResult(
+                results.add(new SplitModuleResult(
                         module.getId(),
                         module.getName(),
                         module1.getId(),
@@ -315,15 +320,15 @@ public class SplitModule extends ArchitecturalAnalysis {
             }
         }
 
-        potentialSplits.sort((a, b) -> Double.compare(b.rate, a.rate));
+        results.sort((a, b) -> Double.compare(b.rate, a.rate));
 
-        log.info("Found {} potential beneficial splits", potentialSplits.size());
-        if (potentialSplits.isEmpty()) {
+        log.info("Found {} potential beneficial splits", results.size());
+        if (results.isEmpty()) {
             log.info("No beneficial split suggestions found. All modules appear to have optimal cohesion.");
         } else {
             log.info("Top split suggestions:");
-            for (int i = 0; i < Math.min(5, potentialSplits.size()); i++) {
-                SplitModuleResult split = potentialSplits.get(i);
+            for (int i = 0; i < Math.min(5, results.size()); i++) {
+                SplitModuleResult split = results.get(i);
                 log.info("  {}. Split module '{}'", (i + 1), split.originalModuleName);
                 log.info("     Original similarity: {}", String.format("%.4f", split.originalSimilarity));
                 log.info("     → Module 1 '{}' (ref: '{}'): {} classes, similarity: {}",

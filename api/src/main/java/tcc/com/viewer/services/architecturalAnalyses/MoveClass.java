@@ -13,13 +13,20 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class MoveClass extends ArchitecturalAnalysis {
+    private List<MoveClassResult> results;
+
     public MoveClass(ModuleService moduleService) {
         super(moduleService);
     }
 
     @Override
     public void execute(List<Module> modules) {
+        this.results = new ArrayList<>();
         moveClassAnalysis(modules);
+    }
+
+    public List<MoveClassResult> getResults() {
+        return results != null ? new ArrayList<>(results) : new ArrayList<>();
     }
 
     private static class MoveEvaluationResult {
@@ -60,18 +67,18 @@ public class MoveClass extends ArchitecturalAnalysis {
         }
     }
 
-    private static class MoveClassResult {
-        String sourceModuleId;
-        String targetModuleId;
-        String classId;
-        String className;
-        int sourceViolationsBefore;
-        int sourceViolationsAfter;
-        int targetViolationsBefore;
-        int targetViolationsAfter;
-        double similarityImprovement;
-        double violationsImprovement;
-        double rate;
+    public static class MoveClassResult {
+        public String sourceModuleId;
+        public String targetModuleId;
+        public String classId;
+        public String className;
+        public int sourceViolationsBefore;
+        public int sourceViolationsAfter;
+        public int targetViolationsBefore;
+        public int targetViolationsAfter;
+        public double similarityImprovement;
+        public double violationsImprovement;
+        public double rate;
 
         public MoveClassResult(String sourceModuleId, String targetModuleId, String classId,
                                String className, int sourceViolationsBefore, int sourceViolationsAfter,
@@ -274,6 +281,9 @@ public class MoveClass extends ArchitecturalAnalysis {
 
         // Sort by rate (descending order)
         potentialMoves.sort((a, b) -> Double.compare(b.rate, a.rate));
+
+        // Store results
+        this.results = potentialMoves;
 
         log.info("Found {} potential beneficial moves", potentialMoves.size());
         if (potentialMoves.isEmpty()) {

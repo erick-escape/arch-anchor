@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class ArchitectureViolation extends ArchitecturalAnalysis {
+    private ArchitectureViolationResult result;
 
     public ArchitectureViolation(ModuleService moduleService) {
         super(moduleService);
@@ -26,7 +27,11 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         architectureViolationAnalysis(modules);
     }
 
-    private static class ArchitectureViolationResult {
+    public ArchitectureViolationResult getResult() {
+        return result != null ? result : new ArchitectureViolationResult(new ArrayList<>(), new ArrayList<>(), 0, 0, 0);
+    }
+
+    public static class ArchitectureViolationResult {
         private final List<ModuleViolation> moduleViolations;
         private final List<ViolationCluster> clusters;
         private final int totalViolations;
@@ -48,9 +53,29 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         public boolean hasViolations() {
             return totalViolations > 0;
         }
+
+        public List<ModuleViolation> getModuleViolations() {
+            return new ArrayList<>(moduleViolations);
+        }
+
+        public List<ViolationCluster> getClusters() {
+            return new ArrayList<>(clusters);
+        }
+
+        public int getTotalViolations() {
+            return totalViolations;
+        }
+
+        public int getMoveableClasses() {
+            return moveableClasses;
+        }
+
+        public int getNewModulesRequired() {
+            return newModulesRequired;
+        }
     }
 
-    static class ModuleViolation {
+    public static class ModuleViolation {
         private final String moduleId;
         private final String moduleName;
         private final List<Violation> violations;
@@ -60,9 +85,21 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
             this.moduleName = moduleName;
             this.violations = new ArrayList<>(violations);
         }
+
+        public String getModuleId() {
+            return moduleId;
+        }
+
+        public String getModuleName() {
+            return moduleName;
+        }
+
+        public List<Violation> getViolations() {
+            return new ArrayList<>(violations);
+        }
     }
 
-    static class Violation {
+    public static class Violation {
         private final String violation;
         private final List<ViolatingClass> violatingClasses;
         private final boolean isCluster;
@@ -72,9 +109,21 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
             this.violatingClasses = new ArrayList<>(violatingClasses);
             this.isCluster = isCluster;
         }
+
+        public String getViolation() {
+            return violation;
+        }
+
+        public List<ViolatingClass> getViolatingClasses() {
+            return new ArrayList<>(violatingClasses);
+        }
+
+        public boolean isCluster() {
+            return isCluster;
+        }
     }
 
-    static class ViolatingClass {
+    public static class ViolatingClass {
         private final String classId;
         private final String className;
         private final List<String> violatingDependencyFQNs;
@@ -91,9 +140,29 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
             this.bestSuggestion = bestSuggestion;
             this.alternativeSuggestions = new ArrayList<>(alternativeSuggestions);
         }
+
+        public String getClassId() {
+            return classId;
+        }
+
+        public String getClassName() {
+            return className;
+        }
+
+        public List<String> getViolatingDependencyFQNs() {
+            return new ArrayList<>(violatingDependencyFQNs);
+        }
+
+        public MoveSuggestion getBestSuggestion() {
+            return bestSuggestion;
+        }
+
+        public List<MoveSuggestion> getAlternativeSuggestions() {
+            return new ArrayList<>(alternativeSuggestions);
+        }
     }
 
-    static class MoveSuggestion {
+    public static class MoveSuggestion {
         private final String targetModuleId;
         private final String targetModuleName;
         private final double similarityImprovement;
@@ -111,9 +180,33 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
             this.requiresNewModule = requiresNewModule;
             this.suggestionReason = suggestionReason;
         }
+
+        public String getTargetModuleId() {
+            return targetModuleId;
+        }
+
+        public String getTargetModuleName() {
+            return targetModuleName;
+        }
+
+        public double getSimilarityImprovement() {
+            return similarityImprovement;
+        }
+
+        public int getNewViolationsCreated() {
+            return newViolationsCreated;
+        }
+
+        public boolean isRequiresNewModule() {
+            return requiresNewModule;
+        }
+
+        public String getSuggestionReason() {
+            return suggestionReason;
+        }
     }
 
-    static class ViolationCluster {
+    public static class ViolationCluster {
         private final String violation;
         private final String affectedModuleId;
         private final int classCount;
@@ -132,14 +225,14 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
         log.info("Starting Architecture Violation Analysis for {} modules...", modules.size());
 
         // TODO: Implement the analysis logic
-        ArchitectureViolationResult result = analyzeViolations(modules);
+        this.result = analyzeViolations(modules);
 
-        if (!result.hasViolations()) {
+        if (!this.result.hasViolations()) {
             log.info("Architecture Violation Analysis completed successfully. No violations found across {} modules.", modules.size());
             return;
         }
 
-        logResults(result, modules.size());
+        logResults(this.result, modules.size());
     }
 
     private ArchitectureViolationResult analyzeViolations(List<Module> modules) {

@@ -241,4 +241,124 @@ public class ModuleController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @PostMapping("/move-class")
+    public ResponseEntity<Map<String, ModuleDTO>> moveClass(
+            @RequestParam String classId,
+            @RequestParam String sourceModuleId,
+            @RequestParam String targetModuleId) {
+        try {
+            log.info("Moving class {} from module {} to module {}", classId, sourceModuleId, targetModuleId);
+
+            // Load existing modules
+            List<ModuleDTO> modules = moduleService.getModulesFromFile();
+
+            // Find source and target modules
+            Optional<ModuleDTO> sourceModuleOptional = modules.stream()
+                    .filter(module -> module.id().equals(sourceModuleId))
+                    .findFirst();
+
+            Optional<ModuleDTO> targetModuleOptional = modules.stream()
+                    .filter(module -> module.id().equals(targetModuleId))
+                    .findFirst();
+
+            if (sourceModuleOptional.isEmpty() || targetModuleOptional.isEmpty()) {
+                log.error("Source or target module not found");
+                return ResponseEntity.notFound().build();
+            }
+
+            ModuleDTO sourceModule = sourceModuleOptional.get();
+            ModuleDTO targetModule = targetModuleOptional.get();
+
+            // Find the class to move
+            Optional<ClazzResponseDTO> classToMoveOptional = Arrays.stream(sourceModule.clazzes())
+                    .filter(clazz -> clazz.id().equals(classId))
+                    .findFirst();
+
+            if (classToMoveOptional.isEmpty()) {
+                log.error("Class {} not found in source module {}", classId, sourceModuleId);
+                return ResponseEntity.badRequest().build();
+            }
+
+            ClazzResponseDTO classToMove = classToMoveOptional.get();
+
+            // Create updated source module (remove class)
+            List<Clazz> sourceClasses = Arrays.stream(sourceModule.clazzes())
+                    .filter(clazz -> !clazz.id().equals(classId))
+                    .map(clazzMapper::toEntity)
+                    .collect(Collectors.toList());
+
+            Module updatedSourceModule = new Module(
+                    sourceModule.id(),
+                    sourceModule.name(),
+                    null, // will be recalculated
+                    null,
+                    null,
+                    sourceClasses,
+                    0.0,
+                    0.0,
+                    0
+            );
+
+            // Recalculate source module metrics
+            moduleService.calculateClassSimilaritiesAndSelectRefClasses(updatedSourceModule);
+            moduleService.calculateAvgSimilarityWithRefClazzes(updatedSourceModule);
+            moduleService.calculateModuleSimilarity(updatedSourceModule);
+            moduleService.populateRefClazzesDependencies(updatedSourceModule);
+            moduleService.populateModuleDependencies(updatedSourceModule);
+            moduleService.calculateModuleViolations(updatedSourceModule);
+
+            // Create updated target module (add class)
+            List<Clazz> targetClasses = new ArrayList<>(
+                    Arrays.stream(targetModule.clazzes())
+                            .map(clazzMapper::toEntity)
+                            .collect(Collectors.toList())
+            );
+            targetClasses.add(clazzMapper.toEntity(classToMove));
+
+            Module updatedTargetModule = new Module(
+                    targetModule.id(),
+                    targetModule.name(),
+                    null, // will be recalculated
+                    null,
+                    null,
+                    targetClasses,
+                    0.0,
+                    0.0,
+                    0
+            );
+
+            // Recalculate target module metrics
+            moduleService.calculateClassSimilaritiesAndSelectRefClasses(updatedTargetModule);
+            moduleService.calculateAvgSimilarityWithRefClazzes(updatedTargetModule);
+            moduleService.calculateModuleSimilarity(updatedTargetModule);
+            moduleService.populateRefClazzesDependencies(updatedTargetModule);
+            moduleService.populateModuleDependencies(updatedTargetModule);
+            moduleService.calculateModuleViolations(updatedTargetModule);
+
+            // Update modules list
+            List<ModuleDTO> updatedModules = modules.stream()
+                    .filter(module -> !module.id().equals(sourceModuleId) && !module.id().equals(targetModuleId))
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+            ModuleDTO updatedSourceDTO = moduleMapper.toDto(updatedSourceModule);
+            ModuleDTO updatedTargetDTO = moduleMapper.toDto(updatedTargetModule);
+
+            updatedModules.add(updatedSourceDTO);
+            updatedModules.add(updatedTargetDTO);
+
+            // Save updated modules
+            moduleService.saveModules(updatedModules);
+
+            Map<String, ModuleDTO> result = new HashMap<>();
+            result.put("source", updatedSourceDTO);
+            result.put("target", updatedTargetDTO);
+
+            log.info("Successfully moved class {} from {} to {}", classId, sourceModuleId, targetModuleId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error moving class", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

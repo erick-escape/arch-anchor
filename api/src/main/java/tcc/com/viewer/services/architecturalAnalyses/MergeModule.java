@@ -12,29 +12,36 @@ import java.util.List;
 @Slf4j
 @Component
 public class MergeModule extends ArchitecturalAnalysis {
+    private List<MergeModuleResult> results;
+
     public MergeModule(ModuleService moduleService) {
         super(moduleService);
     }
 
     @Override
     public void execute(List<Module> modules) {
+        this.results = new ArrayList<>();
         mergeModuleAnalysis(modules);
     }
 
-    private static class MergeModuleResult {
-        String module1Id;
-        String module1Name;
-        String module2Id;
-        String module2Name;
-        double module1AvgRefSim;
-        double module2AvgRefSim;
-        double mergedAvgRefSim;
-        int module1Violations;
-        int module2Violations;
-        int mergedViolations;
-        double similarityImprovement;
-        double violationsImprovement;
-        double rate;
+    public List<MergeModuleResult> getResults() {
+        return results != null ? new ArrayList<>(results) : new ArrayList<>();
+    }
+
+    public static class MergeModuleResult {
+        public String module1Id;
+        public String module1Name;
+        public String module2Id;
+        public String module2Name;
+        public double module1AvgRefSim;
+        public double module2AvgRefSim;
+        public double mergedAvgRefSim;
+        public int module1Violations;
+        public int module2Violations;
+        public int mergedViolations;
+        public double similarityImprovement;
+        public double violationsImprovement;
+        public double rate;
 
         public MergeModuleResult(String module1Id, String module1Name, String module2Id,
                                  String module2Name, double module1AvgRefSim,
@@ -188,7 +195,7 @@ public class MergeModule extends ArchitecturalAnalysis {
                     double module2AvgRefSim = module2.getAvgRefClazzesSimilarity() != null ? module2.getAvgRefClazzesSimilarity() : 0.0;
                     double mergedAvgRefSim = mergedModule.getAvgRefClazzesSimilarity();
 
-                    potentialMerges.add(new MergeModuleResult(
+                    results.add(new MergeModuleResult(
                             module1.getId(),
                             module1.getName(),
                             module2.getId(),
@@ -211,15 +218,15 @@ public class MergeModule extends ArchitecturalAnalysis {
             }
         }
 
-        potentialMerges.sort((a, b) -> Double.compare(b.rate, a.rate));
+        results.sort((a, b) -> Double.compare(b.rate, a.rate));
 
-        log.info("Found {} potential beneficial merges", potentialMerges.size());
-        if (potentialMerges.isEmpty()) {
+        log.info("Found {} potential beneficial merges", results.size());
+        if (results.isEmpty()) {
             log.info("No beneficial merge suggestions found. All modules appear to be optimally separated.");
         } else {
             log.info("Top merge suggestions:");
-            for (int i = 0; i < Math.min(5, potentialMerges.size()); i++) {
-                MergeModuleResult merge = potentialMerges.get(i);
+            for (int i = 0; i < Math.min(5, results.size()); i++) {
+                MergeModuleResult merge = results.get(i);
                 log.info("  {}. Merge module '{}' with module '{}'",
                         (i + 1), merge.module1Name, merge.module2Name);
                 log.info("      Rate: +{} (Similarity: {}, Violations: {} → {})",
