@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.dto.projects.ArchitecturalConstraintDTO;
+import tcc.com.viewer.dto.projects.ProjectAnalysesDTO;
 import tcc.com.viewer.mapstruct.ModuleMapper;
 import tcc.com.viewer.mapstruct.ModuleMapperImpl;
 import tcc.com.viewer.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
@@ -11,6 +13,7 @@ import tcc.com.viewer.services.parsers.ParserFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,7 +30,7 @@ public class ProjectService {
         this.analysesRunner = analysesRunner;
     }
 
-    public List<ModuleDTO> analyzeProject(String directoryPath) throws IOException {
+    public ProjectAnalysesDTO analyzeProject(String projectName, String directoryPath) throws IOException {
         // Clear parser cache for fresh analysis to prevent duplicate processing
         parserFactory.clearProcessingCache();
 
@@ -50,6 +53,21 @@ public class ProjectService {
                 .collect(Collectors.toList());
         moduleService.saveModules(modulesList);
 
-        return modulesList;
+        double projectSimilarity = modulesList.stream()
+                .mapToDouble(ModuleDTO::similarity)
+                .average()
+                .orElse(0.0);
+
+        List<ArchitecturalConstraintDTO> architecturalConstraints = modulesList.stream()
+                .map(m -> new ArchitecturalConstraintDTO(m.id(), m.name(), m.refClazzesDependencies()))
+                .collect(Collectors.toList());
+
+        return new ProjectAnalysesDTO(
+                UUID.randomUUID().toString(),
+                projectName,
+                modulesList,
+                projectSimilarity,
+                architecturalConstraints
+        );
     }
 }

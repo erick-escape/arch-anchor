@@ -3,7 +3,7 @@ package tcc.com.viewer.controllers;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.dto.projects.ProjectAnalysesDTO;
 import tcc.com.viewer.dto.projects.ProjectDetailDTO;
 import tcc.com.viewer.dto.projects.ProjectsListResponseDTO;
 import tcc.com.viewer.services.ProjectService;
@@ -99,14 +99,14 @@ public class ProjectController {
     }
 
     @PostMapping("/analyze")
-    public List<ModuleDTO> analyzeProject(@RequestParam String projectName) {
+    public ProjectAnalysesDTO analyzeProject(@RequestParam String projectName) {
         try {
             Path projectPath = Paths.get(UPLOAD_DIR, projectName);
             if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
                 throw new RuntimeException("Project not found!");
             }
 
-            return projectService.analyzeProject(projectPath.toString());
+            return projectService.analyzeProject(projectName, projectPath.toString());
         } catch (Exception e) {
             log.error("ProjectController -> analyzeProject: ", e);
             throw new RuntimeException("Project analysis failed!");

@@ -427,16 +427,26 @@ public class ModuleService {
                         String packageName = dependency.getPackageName();
 
                         if (uniqueDependencies.containsKey(packageName)) {
-                            // Merge types from this dependency into the existing one
+                            // Merge types into the aggregated dependency with deduplication
                             Dependency existingDependency = uniqueDependencies.get(packageName);
                             if (dependency.getTypes() != null) {
                                 for (var type : dependency.getTypes()) {
-                                    existingDependency.addType(type);
+                                    boolean typeExists = existingDependency.getTypes().stream()
+                                            .anyMatch(t -> t.getFullyQualifiedName().equals(type.getFullyQualifiedName()));
+                                    if (!typeExists) {
+                                        existingDependency.addType(type);
+                                    }
                                 }
                             }
                         } else {
-                            // Add new dependency
-                            uniqueDependencies.put(packageName, dependency);
+                            // Create a new Dependency copy so we never mutate the class's own object
+                            Dependency copy = new Dependency(packageName);
+                            if (dependency.getTypes() != null) {
+                                for (var type : dependency.getTypes()) {
+                                    copy.addType(type);
+                                }
+                            }
+                            uniqueDependencies.put(packageName, copy);
                         }
                     }
                 }
@@ -462,16 +472,26 @@ public class ModuleService {
                         String packageName = dependency.getPackageName();
 
                         if (uniqueDependencies.containsKey(packageName)) {
-                            // Merge types from this dependency into the existing one
+                            // Merge types into the aggregated dependency with deduplication
                             Dependency existingDependency = uniqueDependencies.get(packageName);
                             if (dependency.getTypes() != null) {
                                 for (var type : dependency.getTypes()) {
-                                    existingDependency.addType(type);
+                                    boolean typeExists = existingDependency.getTypes().stream()
+                                            .anyMatch(t -> t.getFullyQualifiedName().equals(type.getFullyQualifiedName()));
+                                    if (!typeExists) {
+                                        existingDependency.addType(type);
+                                    }
                                 }
                             }
                         } else {
-                            // Add new dependency
-                            uniqueDependencies.put(packageName, dependency);
+                            // Create a new Dependency copy so we never mutate the class's own object
+                            Dependency copy = new Dependency(packageName);
+                            if (dependency.getTypes() != null) {
+                                for (var type : dependency.getTypes()) {
+                                    copy.addType(type);
+                                }
+                            }
+                            uniqueDependencies.put(packageName, copy);
                         }
                     }
                 }
