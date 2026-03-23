@@ -8,6 +8,7 @@ import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.dependencies.DependencyDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
+import tcc.com.viewer.dto.projects.ProjectAnalysesDTO;
 import tcc.com.viewer.mapstruct.*;
 import tcc.com.viewer.services.parsers.ParserFactory;
 
@@ -72,6 +73,25 @@ public class ModuleService {
             throw new RuntimeException("Error reading modules: Class not found", e);
         } catch (IOException e) {
             throw new RuntimeException("Error reading modules from file: " + e.getMessage(), e);
+        }
+    }
+
+    public void saveProjectAnalyses(ProjectAnalysesDTO projectAnalyses) {
+        File file = new File("project-analyses.bin");
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
+            out.writeObject(projectAnalyses);
+        } catch (IOException e) {
+            throw new RuntimeException("Error saving project analyses: " + e.getMessage(), e);
+        }
+    }
+
+    public ProjectAnalysesDTO getProjectAnalysesFromFile() {
+        File file = new File("project-analyses.bin");
+        if (!file.exists() || file.length() == 0) return null;
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+            return (ProjectAnalysesDTO) in.readObject();
+        } catch (ClassNotFoundException | IOException e) {
+            throw new RuntimeException("Error reading project analyses: " + e.getMessage(), e);
         }
     }
 

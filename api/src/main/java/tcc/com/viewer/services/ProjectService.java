@@ -62,12 +62,15 @@ public class ProjectService {
                 .map(m -> new ArchitecturalConstraintDTO(m.id(), m.name(), m.refClazzesDependencies()))
                 .collect(Collectors.toList());
 
-        return new ProjectAnalysesDTO(
+        ProjectAnalysesDTO projectAnalysesDTO = new ProjectAnalysesDTO(
                 UUID.randomUUID().toString(),
                 projectName,
                 modulesList,
                 projectSimilarity,
                 architecturalConstraints
         );
+        moduleService.saveProjectAnalyses(projectAnalysesDTO);
+
+        return projectAnalysesDTO;
     }
 }
