@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addEdge, Background, Controls, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, useReactFlow } from '@xyflow/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ModuleData } from '../../interface/ModuleData';
+import { ProjectAnalyses } from '../../interface/ProjectAnalyses';
+import { generateAcsPdf } from '../../utils/exportACs';
 import '@xyflow/react/dist/style.css';
 import axios from 'axios';
 
@@ -10,6 +13,7 @@ import CustomNode from './nodeTypes.tsx';
 import { MergeConfirmPopup } from '../../components/Popup/MergeConfirmPopup.tsx';
 import Header from '../../components/Header/index.tsx';
 import Sidebar from '../../components/Sidebar/index.tsx';
+import RecommendationsSidebar from '../../components/RecommendationsSidebar/index.tsx';
 
 // 1) Provide a nodeTypes mapping
 const nodeTypes = {
@@ -20,12 +24,18 @@ const AnalyzePage = () => {
     const { projectName } = useParams();
     const [loading, setLoading] = useState(false);
     const [modules, setModules] = useState<ModuleData[]>();
+    const [projectAnalyses, setProjectAnalyses] = useState<ProjectAnalyses>();
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const { getIntersectingNodes } = useReactFlow();
+    const queryClient = useQueryClient();
 
     // State for sidebar and layout
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isRecommendationsSidebarOpen] = useState(true);
+
+    // Ref to track if we've already initiated analysis for this project
+    const analysisInitiated = useRef<string | null>(null);
 
     // State for the merge confirmation popup
     const [mergePopup, setMergePopup] = useState({
@@ -34,7 +44,7 @@ const AnalyzePage = () => {
         targetNode: null
     });
 
-    const showNodes = (data) => {
+    const showNodes = (data: ModuleData[]) => {
         // Calculate positions using a concentric circle layout:
         const centerX = window.innerWidth / 2;
         const centerY = window.innerHeight / 2;
@@ -93,25 +103,60 @@ const AnalyzePage = () => {
     };
 
     const fetchModules = async () => {
+        // Prevent duplicate calls using ref (StrictMode protection)
+        if (analysisInitiated.current === projectName) {
+            console.log('🟡 [FRONTEND] fetchModules() called but analysis already initiated for project:', projectName, ', skipping...');
+            return;
+        }
+        
+        // Prevent duplicate calls if already loading
+        if (loading) {
+            console.log('🟡 [FRONTEND] fetchModules() called but already loading, skipping...');
+            return;
+        }
+        
+        // Mark this project as analysis initiated
+        analysisInitiated.current = projectName;
+        
+        console.log('🟢 [FRONTEND] fetchModules() START for project:', projectName);
         setLoading(true);
         try {
-            const response = await axios.post('/api/analyze', null, {
+            const response = await axios.post<ProjectAnalyses>('/api/analyze', null, {
                 params: { projectName }
             });
-            const data = response.data;
+            const projectData = response.data;
+            const data = projectData.modulesList;
+            setProjectAnalyses(projectData);
             setModules(data);
             // For each module, create a node with type 'customNode'
             //    and pass the module object via data: { module: mod }
             showNodes(data);
+            console.log('🟢 [FRONTEND] fetchModules() completed, received', data.length, 'modules');
+
+            // Refetch recommendations after analysis completes
+            console.log('🔄 [FRONTEND] Invalidating recommendations query to fetch fresh data');
+            queryClient.invalidateQueries({ queryKey: ['recommendations'] });
         } catch (error) {
-            console.error('Failed to analyze project', error);
+            console.error('🔴 [FRONTEND] Failed to analyze project', error);
+            // Reset the ref on error so retry is possible
+            analysisInitiated.current = null;
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchModules();
+        // Add defensive logging to track when useEffect runs
+        console.log('🔵 [FRONTEND] useEffect triggered for projectName:', projectName);
+        
+        // Reset analysis tracking when project changes
+        if (analysisInitiated.current !== projectName) {
+            analysisInitiated.current = null;
+        }
+        
+        if (projectName) {
+            fetchModules();
+        }
     }, [projectName]);
 
     // Toggle sidebar
@@ -271,6 +316,115 @@ const AnalyzePage = () => {
         });
     };
 
+    // Smart update that preserves node positions when possible
+    const updateNodesSmartly = (newModules: ModuleData[]) => {
+        setNodes((currentNodes) => {
+            // Create a map of existing positions
+            const positionMap = new Map();
+            currentNodes.forEach(node => {
+                positionMap.set(node.id, node.position);
+            });
+
+            // Get current module IDs
+            const currentModuleIds = new Set(currentNodes.map(n => n.id));
+            const newModuleIds = new Set(newModules.map(m => m.id));
+
+            // Check if there are any changes
+            const hasChanges =
+                currentModuleIds.size !== newModuleIds.size ||
+                [...currentModuleIds].some(id => !newModuleIds.has(id)) ||
+                [...newModuleIds].some(id => !currentModuleIds.has(id));
+
+            if (!hasChanges) {
+                // No structural changes, just update data
+                console.log('📝 [FRONTEND] No structural changes, updating node data only');
+                return currentNodes.map(node => {
+                    const moduleData = newModules.find(m => m.id === node.id);
+                    return moduleData ? {
+                        ...node,
+                        data: { module: moduleData }
+                    } : node;
+                });
+            }
+
+            console.log('🔄 [FRONTEND] Structural changes detected, rebuilding nodes');
+
+            // Calculate center for new nodes
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+
+            // Build new nodes array, preserving positions where possible
+            const newNodes = newModules.map((module, index) => {
+                const existingPosition = positionMap.get(module.id);
+
+                if (existingPosition) {
+                    // Keep existing position
+                    return {
+                        id: module.id,
+                        name: module.name,
+                        type: 'customNode',
+                        data: { module },
+                        position: existingPosition,
+                        draggable: true
+                    };
+                } else {
+                    // New module - place in a new position
+                    const angle = (2 * Math.PI * index) / newModules.length;
+                    const radius = 300;
+                    return {
+                        id: module.id,
+                        name: module.name,
+                        type: 'customNode',
+                        data: { module },
+                        position: {
+                            x: centerX + radius * Math.cos(angle),
+                            y: centerY + radius * Math.sin(angle)
+                        },
+                        draggable: true
+                    };
+                }
+            });
+
+            return newNodes;
+        });
+    };
+
+    const handleExportACs = () => {
+        if (!projectAnalyses) return;
+        const doc = generateAcsPdf(projectAnalyses.projectName, projectAnalyses.architecturalConstraints);
+        doc.save(`architectural-constraints-${projectAnalyses.projectName}.pdf`);
+    };
+
+    // Refresh all modules by refetching from backend
+    const onRecommendationApplied = async () => {
+        try {
+            console.log('🔄 [FRONTEND] Refreshing modules after recommendation applied');
+
+            // Re-analyze to get updated modules
+            const response = await axios.post<ProjectAnalyses>('/api/analyze', null, {
+                params: { projectName }
+            });
+            const projectData = response.data;
+            const data = projectData.modulesList;
+
+            console.log('✅ [FRONTEND] Received', data.length, 'modules from backend');
+
+            // Update project and modules state
+            setProjectAnalyses(projectData);
+            setModules(data);
+
+            // Smart update that preserves positions
+            updateNodesSmartly(data);
+
+            console.log('✅ [FRONTEND] UI updated with new modules');
+
+            // Invalidate recommendations to fetch fresh ones
+            queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+        } catch (error) {
+            console.error('❌ [FRONTEND] Failed to refresh modules', error);
+        }
+    };
+
     return (
         <div style={{
             ...containerStyle,
@@ -280,6 +434,7 @@ const AnalyzePage = () => {
                 projectName={projectName}
                 isSidebarOpen={isSidebarOpen}
                 onToggleSidebar={toggleSidebar}
+                onExportACs={handleExportACs}
             />
 
             <div style={{
@@ -287,7 +442,8 @@ const AnalyzePage = () => {
                 width: '100%',
                 height: 'calc(100vh - 60px)', // Adjust for header height
                 marginLeft: isSidebarOpen ? '300px' : '0',
-                transition: 'margin-left 0.3s ease'
+                marginRight: isRecommendationsSidebarOpen ? '350px' : '0',
+                transition: 'margin-left 0.3s ease, margin-right 0.3s ease'
             }}>
                 {loading ? (
                     <p>Loading...</p>
@@ -345,6 +501,8 @@ const AnalyzePage = () => {
                 onRenameRefresh={onRenameRefresh}
                 onSplitRefresh={onSplitRefresh}
             />
+
+            <RecommendationsSidebar onRecommendationApplied={onRecommendationApplied} />
         </div>
     );
 };

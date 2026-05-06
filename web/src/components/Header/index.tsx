@@ -3,13 +3,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
 import { HeaderProps, HeaderMenuOption } from './headerTypes';
 
-const Header = ({ projectName, isSidebarOpen, onToggleSidebar }: HeaderProps) => {
+const Header = ({ projectName, isSidebarOpen, onToggleSidebar, onExportACs }: HeaderProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    
+
     // Example menu options - can be expanded later
     const menuOptions: HeaderMenuOption[] = [
-        { label: 'Export', onClick: () => console.log('Export clicked') },
+        { label: 'Export ACs', onClick: onExportACs },
         { label: 'Settings', onClick: () => console.log('Settings clicked') },
     ];
     
