@@ -11,11 +11,19 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 public class Clazz {
-    private String id;
-    private String name;
-    private List<Dependency> dependencies;
-    private Double similarity;
-    private Double avgSimilarityWithRefClazzes;
-    private final String firstModule;
-    private String currentModule;
+
+	private String id;
+
+	private String name;
+
+	private List<Dependency> dependencies;
+
+	private Double similarity;
+
+	private Double avgSimilarityWithRefClazzes;
+
+	private final String firstModule;
+
+	private String currentModule;
+
 }

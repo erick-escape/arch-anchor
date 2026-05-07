@@ -11,38 +11,41 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Implementation for Java files that can use either JDT or JavaParser
- * Based on configuration, it will use JavaParserService (default) or fallback to JDTParserService
+ * Implementation for Java files that can use either JDT or JavaParser Based on
+ * configuration, it will use JavaParserService (default) or fallback to JDTParserService
  */
 @Slf4j
 @Component
 public class JavaParser implements LanguageParser {
-    private final JavaParserService javaParserService;
 
-    public JavaParser(@Autowired(required = false) JavaParserService javaParserService) {
-        this.javaParserService = javaParserService;
+	private final JavaParserService javaParserService;
 
-        log.info("JavaParser initialized");
-    }
+	public JavaParser(@Autowired(required = false) JavaParserService javaParserService) {
+		this.javaParserService = javaParserService;
 
-    @Override
-    public boolean canHandle(Path filePath) {
-        return filePath.toString().toLowerCase().endsWith(".java");
-    }
+		log.info("JavaParser initialized");
+	}
 
-    @Override
-    public List<Dependency> getDependencies(Path filePath) {
-        try {
-            if (javaParserService != null) {
-                log.debug("Using JavaParserService for: {}", filePath.getFileName());
-                return javaParserService.getDependencies(filePath);
-            }
-            return Collections.emptyList();
-        } catch (Exception e) {
-            log.warn("JavaParserService failed for {}, falling back to JDT: {}",
-                    filePath.getFileName(), e.getMessage());
+	@Override
+	public boolean canHandle(Path filePath) {
+		return filePath.toString().toLowerCase().endsWith(".java");
+	}
 
-            return Collections.emptyList();
-        }
-    }
+	@Override
+	public List<Dependency> getDependencies(Path filePath) {
+		try {
+			if (javaParserService != null) {
+				log.debug("Using JavaParserService for: {}", filePath.getFileName());
+				return javaParserService.getDependencies(filePath);
+			}
+			return Collections.emptyList();
+		}
+		catch (Exception e) {
+			log.warn("JavaParserService failed for {}, falling back to JDT: {}", filePath.getFileName(),
+					e.getMessage());
+
+			return Collections.emptyList();
+		}
+	}
+
 }

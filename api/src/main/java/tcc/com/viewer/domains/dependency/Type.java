@@ -10,24 +10,27 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Type {
-    private String fullyQualifiedName;
-    private String className;
 
-    public Type(String fullyQualifiedName) {
-        this.fullyQualifiedName = fullyQualifiedName;
-        this.className = extractClassName(fullyQualifiedName);
-    }
+	private String fullyQualifiedName;
 
-    private String extractClassName(String fullyQualifiedName) {
-        if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
-            return "";
-        }
+	private String className;
 
-        int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
-        if (lastDotIndex == -1) {
-            return fullyQualifiedName;
-        }
+	public Type(String fullyQualifiedName) {
+		this.fullyQualifiedName = fullyQualifiedName;
+		this.className = extractClassName(fullyQualifiedName);
+	}
 
-        return fullyQualifiedName.substring(lastDotIndex + 1);
-    }
+	private String extractClassName(String fullyQualifiedName) {
+		if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
+			return "";
+		}
+
+		int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
+		if (lastDotIndex == -1) {
+			return fullyQualifiedName;
+		}
+
+		return fullyQualifiedName.substring(lastDotIndex + 1);
+	}
+
 }

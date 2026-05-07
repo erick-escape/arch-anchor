@@ -14,13 +14,23 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Module {
-    private String id;
-    private String name;
-    private List<Clazz> refClazzes;
-    private List<Dependency> refClazzesDependencies;
-    private List<Dependency> moduleDependencies;
-    private List<Clazz> clazzes;
-    private Double similarity;
-    private Double avgRefClazzesSimilarity;
-    private Integer violations;
+
+	private String id;
+
+	private String name;
+
+	private List<Clazz> refClazzes;
+
+	private List<Dependency> refClazzesDependencies;
+
+	private List<Dependency> moduleDependencies;
+
+	private List<Clazz> clazzes;
+
+	private Double similarity;
+
+	private Double avgRefClazzesSimilarity;
+
+	private Integer violations;
+
 }

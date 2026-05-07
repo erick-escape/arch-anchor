@@ -5,13 +5,7 @@ import tcc.com.viewer.dto.dependencies.DependencyDTO;
 
 import java.io.Serializable;
 
-public record ModuleDTO(
-        String id,
-        String name,
-        ClazzResponseDTO[] refClazzes,
-        DependencyDTO[] refClazzesDependencies,
-        DependencyDTO[] allDependencies,
-        ClazzResponseDTO[] clazzes,
-        Double similarity,
-        Double avgRefClazzesSimilarity) implements Serializable {
+public record ModuleDTO(String id, String name, ClazzResponseDTO[] refClazzes, DependencyDTO[] refClazzesDependencies,
+		DependencyDTO[] allDependencies, ClazzResponseDTO[] clazzes, Double similarity,
+		Double avgRefClazzesSimilarity) implements Serializable {
 }

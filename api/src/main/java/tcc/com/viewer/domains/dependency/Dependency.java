@@ -13,18 +13,21 @@ import java.util.ArrayList;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Dependency {
-    private String packageName;
-    private List<Type> types;
 
-    public Dependency(String packageName) {
-        this.packageName = packageName;
-        this.types = new ArrayList<>();
-    }
+	private String packageName;
 
-    public void addType(Type type) {
-        if (types == null) {
-            types = new ArrayList<>();
-        }
-        types.add(type);
-    }
+	private List<Type> types;
+
+	public Dependency(String packageName) {
+		this.packageName = packageName;
+		this.types = new ArrayList<>();
+	}
+
+	public void addType(Type type) {
+		if (types == null) {
+			types = new ArrayList<>();
+		}
+		types.add(type);
+	}
+
 }

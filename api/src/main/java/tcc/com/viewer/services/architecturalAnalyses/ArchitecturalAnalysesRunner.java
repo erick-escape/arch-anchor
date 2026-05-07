@@ -9,6 +9,7 @@ import java.util.List;
 @Slf4j
 @Service
 public class ArchitecturalAnalysesRunner {
+
     private final List<ArchitecturalAnalysis> analyses;
 
     public ArchitecturalAnalysesRunner(List<ArchitecturalAnalysis> analyses) {
@@ -23,4 +24,5 @@ public class ArchitecturalAnalysesRunner {
         });
         log.info("Completed execution of all analyses");
     }
+
 }

@@ -14,69 +14,73 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 public class ParserFactory {
-    private final Map<String, LanguageParser> parsers = new ConcurrentHashMap<>();
-    private final JavaParserService javaParserService;
 
-    // Constructor for Spring dependency injection
-    public ParserFactory(@Autowired(required = false) JavaParserService javaParserService) {
-        this.javaParserService = javaParserService;
-    }
+	private final Map<String, LanguageParser> parsers = new ConcurrentHashMap<>();
 
-    @Autowired(required = false)  // Make it optional in case no parsers are available
-    public void setParsers(List<LanguageParser> parsersList) {
-        if (parsersList != null) {
-            for (LanguageParser parser : parsersList) {
-                registerParser(parser);
-            }
-        }
-    }
+	private final JavaParserService javaParserService;
 
-    public void registerParser(LanguageParser parser) {
-        // We could be more sophisticated here and register by file extension
-        // For now just add to our collection
-        parsers.put(parser.getClass().getSimpleName(), parser);
-    }
+	// Constructor for Spring dependency injection
+	public ParserFactory(@Autowired(required = false) JavaParserService javaParserService) {
+		this.javaParserService = javaParserService;
+	}
 
-    /**
-     * Returns the appropriate parser for the given file
-     */
-    public LanguageParser getParser(Path filePath) {
-        if (filePath == null) {
-            throw new IllegalArgumentException("File path cannot be null");
-        }
+	@Autowired(required = false) // Make it optional in case no parsers are available
+	public void setParsers(List<LanguageParser> parsersList) {
+		if (parsersList != null) {
+			for (LanguageParser parser : parsersList) {
+				registerParser(parser);
+			}
+		}
+	}
 
-        String filePathStr = filePath.toString().toLowerCase();
+	public void registerParser(LanguageParser parser) {
+		// We could be more sophisticated here and register by file extension
+		// For now just add to our collection
+		parsers.put(parser.getClass().getSimpleName(), parser);
+	}
 
-        // Find a parser that can handle this file
-        for (LanguageParser parser : parsers.values()) {
-            if (parser.canHandle(filePath)) {
-                return parser;
-            }
-        }
+	/**
+	 * Returns the appropriate parser for the given file
+	 */
+	public LanguageParser getParser(Path filePath) {
+		if (filePath == null) {
+			throw new IllegalArgumentException("File path cannot be null");
+		}
 
-        if (filePathStr.endsWith(".java")) {
-            // Try to create a JavaParser with dependency injection
-            // This should use the JavaParser @Component that we just updated
-            for (LanguageParser parser : parsers.values()) {
-                if (parser instanceof JavaParser) {
-                    return parser;
-                }
-            }
+		String filePathStr = filePath.toString().toLowerCase();
 
-            // If no JavaParser bean is found, create one manually (should not happen with Spring)
-            // This is kept for backward compatibility but shouldn't be needed
-            throw new UnsupportedOperationException("No JavaParser found - check Spring configuration");
-        }
+		// Find a parser that can handle this file
+		for (LanguageParser parser : parsers.values()) {
+			if (parser.canHandle(filePath)) {
+				return parser;
+			}
+		}
 
-        throw new UnsupportedOperationException("No parser available for file: " + filePath);
-    }
+		if (filePathStr.endsWith(".java")) {
+			// Try to create a JavaParser with dependency injection
+			// This should use the JavaParser @Component that we just updated
+			for (LanguageParser parser : parsers.values()) {
+				if (parser instanceof JavaParser) {
+					return parser;
+				}
+			}
 
-    /**
-     * Clears the processing cache for fresh analysis
-     */
-    public void clearProcessingCache() {
-        if (javaParserService != null) {
-            javaParserService.clearCache();
-        }
-    }
+			// If no JavaParser bean is found, create one manually (should not happen with
+			// Spring)
+			// This is kept for backward compatibility but shouldn't be needed
+			throw new UnsupportedOperationException("No JavaParser found - check Spring configuration");
+		}
+
+		throw new UnsupportedOperationException("No parser available for file: " + filePath);
+	}
+
+	/**
+	 * Clears the processing cache for fresh analysis
+	 */
+	public void clearProcessingCache() {
+		if (javaParserService != null) {
+			javaParserService.clearCache();
+		}
+	}
+
 }

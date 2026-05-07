@@ -20,96 +20,99 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 public class ProjectController {
-    private static final String UPLOAD_DIR = "uploads";
 
-    private final ProjectService projectService;
+	private static final String UPLOAD_DIR = "uploads";
 
-    public ProjectController(ProjectService projectService) {
-        this.projectService = projectService;
-    }
+	private final ProjectService projectService;
 
-    @GetMapping("/projects")
-    public ProjectsListResponseDTO listProjects() {
-        File projectsDir = new File(UPLOAD_DIR);
-        if (!projectsDir.exists() || !projectsDir.isDirectory()) {
-            return new ProjectsListResponseDTO(Collections.emptyList());
-        }
+	public ProjectController(ProjectService projectService) {
+		this.projectService = projectService;
+	}
 
-        List<ProjectDetailDTO> projects = Arrays.stream(Objects.requireNonNull(projectsDir.listFiles()))
-                .filter(File::isDirectory)
-                .map(directory -> new ProjectDetailDTO(directory.getName()))
-                .collect(Collectors.toList());
+	@GetMapping("/projects")
+	public ProjectsListResponseDTO listProjects() {
+		File projectsDir = new File(UPLOAD_DIR);
+		if (!projectsDir.exists() || !projectsDir.isDirectory()) {
+			return new ProjectsListResponseDTO(Collections.emptyList());
+		}
 
-        return new ProjectsListResponseDTO(projects);
-    }
+		List<ProjectDetailDTO> projects = Arrays.stream(Objects.requireNonNull(projectsDir.listFiles()))
+			.filter(File::isDirectory)
+			.map(directory -> new ProjectDetailDTO(directory.getName()))
+			.collect(Collectors.toList());
 
-    @PostMapping("/upload")
-    public void postProject(@RequestParam("files") MultipartFile[] files) {
-        try {
-            for (MultipartFile file : files) {
-                // Skip empty files if not required
-                if (file.getOriginalFilename() == null) {
-                    System.out.println("Skipping file with no original filename.");
-                    continue;
-                }
+		return new ProjectsListResponseDTO(projects);
+	}
 
-                Path uploadPath = Paths.get(UPLOAD_DIR);
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
+	@PostMapping("/upload")
+	public void postProject(@RequestParam("files") MultipartFile[] files) {
+		try {
+			for (MultipartFile file : files) {
+				// Skip empty files if not required
+				if (file.getOriginalFilename() == null) {
+					System.out.println("Skipping file with no original filename.");
+					continue;
+				}
 
-                // Extract the relative path (subdirectories + filename)
-                String relativePath = file.getOriginalFilename();
+				Path uploadPath = Paths.get(UPLOAD_DIR);
+				if (!Files.exists(uploadPath)) {
+					Files.createDirectories(uploadPath);
+				}
 
-                // Resolve the full path for the file, including subdirectories
-                Path filePath = uploadPath.resolve(relativePath);
-                // Ensure all parent directories for this file exist
-                Files.createDirectories(filePath.getParent());
+				// Extract the relative path (subdirectories + filename)
+				String relativePath = file.getOriginalFilename();
 
-                // Create the file if it does not exist
-                if (!Files.exists(filePath)) {
-                    Files.createFile(filePath);
-                }
+				// Resolve the full path for the file, including subdirectories
+				Path filePath = uploadPath.resolve(relativePath);
+				// Ensure all parent directories for this file exist
+				Files.createDirectories(filePath.getParent());
 
-                // Save the file to disk
-                file.transferTo(Paths.get(filePath.toUri()));
-            }
-        } catch (IOException e) {
-            log.error("ProjectController -> postProject: ", e);
-        }
-    }
+				// Create the file if it does not exist
+				if (!Files.exists(filePath)) {
+					Files.createFile(filePath);
+				}
 
-    @DeleteMapping("/projects/{projectName}")
-    public String deleteProject(@PathVariable String projectName) {
-        Path projectDir = Paths.get(UPLOAD_DIR, projectName);
+				// Save the file to disk
+				file.transferTo(Paths.get(filePath.toUri()));
+			}
+		}
+		catch (IOException e) {
+			log.error("ProjectController -> postProject: ", e);
+		}
+	}
 
-        try {
-            if (Files.exists(projectDir) && Files.isDirectory(projectDir)) {
-                Files.walk(projectDir)
-                        .sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
-                return "Project " + projectName + " deleted successfully!";
-            } else {
-                throw new IllegalArgumentException("Project not found or is not a directory");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to delete project: " + e.getMessage());
-        }
-    }
+	@DeleteMapping("/projects/{projectName}")
+	public String deleteProject(@PathVariable String projectName) {
+		Path projectDir = Paths.get(UPLOAD_DIR, projectName);
 
-    @PostMapping("/analyze")
-    public ProjectAnalysesDTO analyzeProject(@RequestParam String projectName) {
-        try {
-            Path projectPath = Paths.get(UPLOAD_DIR, projectName);
-            if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
-                throw new RuntimeException("Project not found!");
-            }
+		try {
+			if (Files.exists(projectDir) && Files.isDirectory(projectDir)) {
+				Files.walk(projectDir).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+				return "Project " + projectName + " deleted successfully!";
+			}
+			else {
+				throw new IllegalArgumentException("Project not found or is not a directory");
+			}
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Failed to delete project: " + e.getMessage());
+		}
+	}
 
-            return projectService.analyzeProject(projectName, projectPath.toString());
-        } catch (Exception e) {
-            log.error("ProjectController -> analyzeProject: ", e);
-            throw new RuntimeException("Project analysis failed!");
-        }
-    }
+	@PostMapping("/analyze")
+	public ProjectAnalysesDTO analyzeProject(@RequestParam String projectName) {
+		try {
+			Path projectPath = Paths.get(UPLOAD_DIR, projectName);
+			if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
+				throw new RuntimeException("Project not found!");
+			}
+
+			return projectService.analyzeProject(projectName, projectPath.toString());
+		}
+		catch (Exception e) {
+			log.error("ProjectController -> analyzeProject: ", e);
+			throw new RuntimeException("Project analysis failed!");
+		}
+	}
+
 }

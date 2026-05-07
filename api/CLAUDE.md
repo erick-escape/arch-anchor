@@ -66,20 +66,26 @@ JavaParser library and provides architectural analysis capabilities through REST
 
 **Core Entities** (`src/main/java/tcc/com/viewer/domains/`)
 
-- `Module` - Represents a logical module with fields: `id`, `name`, `refClazzes` (List<Clazz>), `refClazzesDependencies` (List<Dependency>), `moduleDependencies` (List<Dependency>), `clazzes` (List<Clazz>), `similarity` (Double), `avgRefClazzesSimilarity` (Double), `violations` (Integer)
-- `Clazz` - Represents a class with fields: `id`, `name`, `dependencies` (List<Dependency>), `similarity` (Double), `avgSimilarityWithRefClazzes` (Double), `firstModule` (String), `currentModule` (String)
+- `Module` - Represents a logical module with fields: `id`, `name`, `refClazzes` (List<Clazz>), `refClazzesDependencies` (List<Dependency>),
+  `moduleDependencies` (List<Dependency>), `clazzes` (List<Clazz>), `similarity` (Double), `avgRefClazzesSimilarity` (Double),
+  `violations` (Integer)
+- `Clazz` - Represents a class with fields: `id`, `name`, `dependencies` (List<Dependency>), `similarity` (Double),
+  `avgSimilarityWithRefClazzes` (Double), `firstModule` (String), `currentModule` (String)
 - `Dependency` - Models a dependency on an external package with fields: `packageName` (String), `types` (List<Type>)
 - `Type` - Represents a specific type within a dependency with fields: `fullyQualifiedName` (String), `className` (String)
 
 ### Architectural Analysis Framework
 
-The system includes a sophisticated architectural analysis framework located in `src/main/java/tcc/com/viewer/services/architecturalAnalyses/` that processes the parsed modules to provide architectural insights and recommendations.
+The system includes a sophisticated architectural analysis framework located in
+`src/main/java/tcc/com/viewer/services/architecturalAnalyses/` that processes the parsed modules to provide architectural insights and
+recommendations.
 
 #### Rating Mechanism
 
 All structural analyses (Split, Merge, Move) use a balanced rating mechanism that combines two key factors:
 
 **Rating Formula:**
+
 ```
 rate(Δ) = ω_sim × Δ_sim + ω_vio × Δ_vio_norm
 
@@ -91,6 +97,7 @@ Where:
 ```
 
 **Key Properties:**
+
 - Positive rate indicates net architectural benefit (required for recommendations)
 - Allows trade-offs between similarity and violations
 - Both factors equally weighted by default (configurable in ModuleService)
@@ -100,11 +107,13 @@ Where:
 #### Framework Components
 
 **ArchitecturalAnalysis** (Abstract Base Class)
+
 - Abstract base class that all analyses must extend
 - Provides access to `ModuleService` for module manipulation operations
 - Defines the `execute(List<Module> modules)` contract that all analyses implement
 
 **ArchitecturalAnalysesRunner** (Service)
+
 - Spring service that orchestrates the execution of all registered analyses
 - Automatically discovers and injects all `ArchitecturalAnalysis` implementations via dependency injection
 - Executes analyses sequentially after project parsing is complete
@@ -121,6 +130,7 @@ Where:
 #### Current Analysis Implementations
 
 **SplitModule Analysis**
+
 - Identifies modules that could benefit from being split into smaller, more cohesive modules
 - Analyzes class similarity patterns within modules to find natural split points
 - Finds a "super ref class" (highest similarity) and a "de-ref class" (lowest similarity non-reference class) as anchors
@@ -129,6 +139,7 @@ Where:
 - Only recommends splits with positive rate (net architectural benefit)
 
 **MergeModule Analysis**
+
 - Identifies pairs of modules that could be merged to improve overall architecture
 - Analyzes cross-module dependencies and class relationships
 - Uses balanced rating mechanism to evaluate merge benefits
@@ -136,6 +147,7 @@ Where:
 - Only recommends merges with positive rate
 
 **MoveClass Analysis**
+
 - Identifies individual classes that could be moved to different modules
 - Two-step validation: class-level filter (avgSimilarityWithRefClazzes) + module-level simulation
 - Simulates the move and evaluates impact using balanced rating mechanism
@@ -144,6 +156,7 @@ Where:
 - Never moves reference classes to preserve module architectural anchors
 
 **ArchitectureViolation Analysis**
+
 - Analyzes architectural rule violations (dependencies not in reference class dependencies)
 - Identifies violation clusters (3+ classes with the same violation)
 - Generates move suggestions for violating classes with impact analysis
@@ -153,6 +166,7 @@ Where:
 #### Reference Classes and Violations
 
 **Reference Classes:**
+
 - Exemplar classes that embody a module's architectural intent through their dependency patterns
 - Every module MUST have at least one reference class for objective evaluation
 - Modules can have multiple reference classes to recognize heterogeneous architectural patterns
@@ -162,12 +176,14 @@ Where:
 
 **Reference Class Selection Algorithm:**
 For each class in a module:
+
 1. Calculate normalized similarity: `norm_sim = similarity / max_similarity`
 2. Calculate normalized violations: `norm_vio = 1.0 - (violations / max_violations)`
 3. Calculate combined rate: `rate = 0.5 × norm_sim + 0.5 × norm_vio`
 4. Select class with highest rate as reference class
 
 **Violations:**
+
 - Count of dependencies used in module NOT present in the reference classes' dependencies
 - Formula: `V(m) = |D(m) \ R(m)|` where `D(m)` = module dependencies, `R(m)` = reference class dependencies (`refClazzesDependencies`)
 - Tracked at module level (`module.getViolations()`)
@@ -187,7 +203,9 @@ To create a new architectural analysis:
 7. **Generate Logging**: Use slf4j to log user-friendly results and recommendations
 
 **Example Structure:**
+
 ```java
+
 @Slf4j
 @Component
 public class YourAnalysis extends ArchitecturalAnalysis {
@@ -216,6 +234,7 @@ public class YourAnalysis extends ArchitecturalAnalysis {
 #### Analysis Data Access
 
 Analyses have access to complete `Module` objects containing:
+
 - Class definitions and metadata (`module.getClazzes()`)
 - Reference classes (`module.getRefClazzes()`)
 - Reference class dependencies / architectural constraints (`module.getRefClazzesDependencies()`)
@@ -225,11 +244,13 @@ Analyses have access to complete `Module` objects containing:
 - Average reference class similarity (`module.getAvgRefClazzesSimilarity()`)
 
 Each `Clazz` object includes:
+
 - Per-class dependencies (`clazz.getDependencies()`)
 - Average similarity with module's reference classes (`clazz.getAvgSimilarityWithRefClazzes()`)
 - Used to evaluate if a class fits better in another module
 
 The analyses can utilize `ModuleService` methods for:
+
 - Similarity calculations (`calculateClassSimilarities()`, `calculateAvgSimilarityWithRefClazzes()`)
 - Violation calculations (`calculateModuleViolations()`)
 - Module manipulation operations (clone, split, merge)
@@ -252,13 +273,14 @@ The analyses can utilize `ModuleService` methods for:
 
 The architectural analysis framework relies on three core metrics:
 
-| Metric | Formula | Range | Purpose |
-|--------|---------|-------|---------|
-| **Similarity** | `0.5 × [a/(a+b) + a/(a+c)]` where a=shared deps, b=unique to class 1, c=unique to class 2 | [0, 1] | Measures structural alignment between classes |
-| **Avg Similarity with RefClazzes** | `(1/\|R\|) × Σ sim(c, rᵢ)` for reference classes R | [0, 1] | Evaluates how well a class fits module's architectural pattern |
-| **Violations** | `\|D(m) \ R(m)\|` where D(m)=module deps, R(m)=ref class deps | [0, ∞) | Counts architectural rule violations |
+| Metric                             | Formula                                                                                   | Range  | Purpose                                                        |
+|------------------------------------|-------------------------------------------------------------------------------------------|--------|----------------------------------------------------------------|
+| **Similarity**                     | `0.5 × [a/(a+b) + a/(a+c)]` where a=shared deps, b=unique to class 1, c=unique to class 2 | [0, 1] | Measures structural alignment between classes                  |
+| **Avg Similarity with RefClazzes** | `(1/\|R\|) × Σ sim(c, rᵢ)` for reference classes R                                        | [0, 1] | Evaluates how well a class fits module's architectural pattern |
+| **Violations**                     | `\|D(m) \ R(m)\|` where D(m)=module deps, R(m)=ref class deps                             | [0, ∞) | Counts architectural rule violations                           |
 
 **Rating Mechanism:**
+
 - Used by Split, Merge, and Move analyses to evaluate recommendations
 - `rate = 0.5 × Δ_sim + 0.5 × Δ_vio_norm`
 - Only positive rates are recommended (net architectural benefit)
@@ -267,31 +289,43 @@ The architectural analysis framework relies on three core metrics:
 ### DTO Structure
 
 **Project DTOs** (`dto/projects/`)
-- `ProjectAnalysesDTO` - Main analysis response: `id`, `projectName`, `modulesList`, `projectSimilarity`, `architecturalConstraints` (List<ArchitecturalConstraintDTO>)
+
+- `ProjectAnalysesDTO` - Main analysis response: `id`, `projectName`, `modulesList`, `projectSimilarity`, `architecturalConstraints` (
+  List<ArchitecturalConstraintDTO>)
 - `ArchitecturalConstraintDTO` - Per-module constraints: `moduleId`, `moduleName`, `refClazzesDependencies`
 - `ProjectDetailDTO` - Project summary: `name`
 - `ProjectsListResponseDTO` - List of projects
 
 **Module DTOs** (`dto/modules/`)
-- `ModuleDTO` (Serializable record) - Complete module: `id`, `name`, `refClazzes`, `refClazzesDependencies`, `allDependencies`, `clazzes`, `similarity`, `avgRefClazzesSimilarity`
+
+- `ModuleDTO` (Serializable record) - Complete module: `id`, `name`, `refClazzes`, `refClazzesDependencies`, `allDependencies`, `clazzes`,
+  `similarity`, `avgRefClazzesSimilarity`
 - `SplitModuleRequest` - `moduleId`, `classIds`
 - `SetRefClazzesRequest` - `moduleId`, `classIds`
 - `SplitModuleResponse` - `splitModules`
 
 **Class DTOs** (`dto/clazzes/`)
-- `ClazzResponseDTO` (Serializable record) - `id`, `name`, `dependencies`, `similarity`, `avgSimilarityWithRefClazzes`, `firstModule`, `currentModule`
+
+- `ClazzResponseDTO` (Serializable record) - `id`, `name`, `dependencies`, `similarity`, `avgSimilarityWithRefClazzes`, `firstModule`,
+  `currentModule`
 
 **Dependency DTOs** (`dto/dependencies/`)
+
 - `DependencyDTO` (Serializable record) - `packageName`, `types` (List<TypeDTO>)
 - `DependencyDTO.TypeDTO` - nested record: `fullyQualifiedName`, `className`
 
 **Recommendation DTOs** (`dto/recommendations/`)
+
 - `RecommendationsResponseDTO` - `splits`, `merges`, `moves`, `violations`, `summary`
-- `SplitModuleRecommendationDTO` - `originalModuleId`, `originalModuleName`, `superRefClassName`, `deRefClassName`, `module1ClassIds`, `module2ClassIds`, `metrics`
+- `SplitModuleRecommendationDTO` - `originalModuleId`, `originalModuleName`, `superRefClassName`, `deRefClassName`, `module1ClassIds`,
+  `module2ClassIds`, `metrics`
 - `MergeModuleRecommendationDTO` - `module1Id`, `module1Name`, `module2Id`, `module2Name`, `metrics`
-- `MoveClassRecommendationDTO` - `classId`, `className`, `sourceModuleId`, `sourceModuleName`, `targetModuleId`, `targetModuleName`, `metrics`
-- `ArchitectureViolationRecommendationDTO` - `classId`, `className`, `sourceModuleId`, `sourceModuleName`, `violation`, `violatingDependencies`, `bestSuggestion`, `alternativeSuggestions`
-- `MoveSuggestionDTO` - `targetModuleId`, `targetModuleName`, `similarityImprovement`, `newViolationsCreated`, `requiresNewModule`, `suggestionReason`
+- `MoveClassRecommendationDTO` - `classId`, `className`, `sourceModuleId`, `sourceModuleName`, `targetModuleId`, `targetModuleName`,
+  `metrics`
+- `ArchitectureViolationRecommendationDTO` - `classId`, `className`, `sourceModuleId`, `sourceModuleName`, `violation`,
+  `violatingDependencies`, `bestSuggestion`, `alternativeSuggestions`
+- `MoveSuggestionDTO` - `targetModuleId`, `targetModuleName`, `similarityImprovement`, `newViolationsCreated`, `requiresNewModule`,
+  `suggestionReason`
 - `SplitMetricsDTO`, `MergeMetricsDTO`, `MoveMetricsDTO` - Detailed metrics for each operation type
 - `RecommendationsSummaryDTO` - `totalRecommendations`, `highPriority`, `mediumPriority`, `lowPriority`
 
@@ -330,9 +364,3 @@ The architectural analysis framework relies on three core metrics:
 dependencies. The parser must work generically with any Java project and any external libraries, not just the ones we're testing with. The
 goal is to create a robust, generic solution that works with Spring Boot, plain Maven projects, and any other Java frameworks without
 requiring specific library knowledge.
-
-# important-instruction-reminders
-
-Do what has been asked; nothing more, nothing less.
-
-      IMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.

@@ -19,58 +19,54 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class ProjectService {
-    private final ModuleService moduleService;
-    private final ParserFactory parserFactory;
-    private final ArchitecturalAnalysesRunner analysesRunner;
-    private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
-    public ProjectService(ModuleService moduleService, ParserFactory parserFactory, ArchitecturalAnalysesRunner analysesRunner) {
-        this.moduleService = moduleService;
-        this.parserFactory = parserFactory;
-        this.analysesRunner = analysesRunner;
-    }
+	private final ModuleService moduleService;
 
-    public ProjectAnalysesDTO analyzeProject(String projectName, String directoryPath) throws IOException {
-        // Clear parser cache for fresh analysis to prevent duplicate processing
-        parserFactory.clearProcessingCache();
+	private final ParserFactory parserFactory;
 
-        List<Module> modules = moduleService.getModules(directoryPath);
+	private final ArchitecturalAnalysesRunner analysesRunner;
 
-        for (Module module : modules) {
-            moduleService.populateModuleDependencies(module);
-            moduleService.calculateClassSimilaritiesAndSelectRefClasses(module);
-            moduleService.calculateAvgSimilarityWithRefClazzes(module);
-            moduleService.calculateModuleSimilarity(module);
-            moduleService.populateRefClazzesDependencies(module);
-            moduleService.calculateModuleViolations(module);
-        }
+	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
-        analysesRunner.executeAll(modules);
+	public ProjectService(ModuleService moduleService, ParserFactory parserFactory,
+			ArchitecturalAnalysesRunner analysesRunner) {
+		this.moduleService = moduleService;
+		this.parserFactory = parserFactory;
+		this.analysesRunner = analysesRunner;
+	}
 
-        // Convert modules to ModuleDTO
-        List<ModuleDTO> modulesList = modules.stream()
-                .map(moduleMapper::toDto)
-                .collect(Collectors.toList());
-        moduleService.saveModules(modulesList);
+	public ProjectAnalysesDTO analyzeProject(String projectName, String directoryPath) throws IOException {
+		// Clear parser cache for fresh analysis to prevent duplicate processing
+		parserFactory.clearProcessingCache();
 
-        double projectSimilarity = modulesList.stream()
-                .mapToDouble(ModuleDTO::similarity)
-                .average()
-                .orElse(0.0);
+		List<Module> modules = moduleService.getModules(directoryPath);
 
-        List<ArchitecturalConstraintDTO> architecturalConstraints = modulesList.stream()
-                .map(m -> new ArchitecturalConstraintDTO(m.id(), m.name(), m.refClazzesDependencies()))
-                .collect(Collectors.toList());
+		for (Module module : modules) {
+			moduleService.populateModuleDependencies(module);
+			moduleService.calculateClassSimilaritiesAndSelectRefClasses(module);
+			moduleService.calculateAvgSimilarityWithRefClazzes(module);
+			moduleService.calculateModuleSimilarity(module);
+			moduleService.populateRefClazzesDependencies(module);
+			moduleService.calculateModuleViolations(module);
+		}
 
-        ProjectAnalysesDTO projectAnalysesDTO = new ProjectAnalysesDTO(
-                UUID.randomUUID().toString(),
-                projectName,
-                modulesList,
-                projectSimilarity,
-                architecturalConstraints
-        );
-        moduleService.saveProjectAnalyses(projectAnalysesDTO);
+		analysesRunner.executeAll(modules);
 
-        return projectAnalysesDTO;
-    }
+		// Convert modules to ModuleDTO
+		List<ModuleDTO> modulesList = modules.stream().map(moduleMapper::toDto).collect(Collectors.toList());
+		moduleService.saveModules(modulesList);
+
+		double projectSimilarity = modulesList.stream().mapToDouble(ModuleDTO::similarity).average().orElse(0.0);
+
+		List<ArchitecturalConstraintDTO> architecturalConstraints = modulesList.stream()
+			.map(m -> new ArchitecturalConstraintDTO(m.id(), m.name(), m.refClazzesDependencies()))
+			.collect(Collectors.toList());
+
+		ProjectAnalysesDTO projectAnalysesDTO = new ProjectAnalysesDTO(UUID.randomUUID().toString(), projectName,
+				modulesList, projectSimilarity, architecturalConstraints);
+		moduleService.saveProjectAnalyses(projectAnalysesDTO);
+
+		return projectAnalysesDTO;
+	}
+
 }

@@ -6,9 +6,9 @@ import tcc.com.viewer.dto.module.ModuleDTO;
 
 @Mapper(componentModel = "spring")
 public interface ModuleMapper {
-    // Convert from DTO to entity
-    Module toEntity(ModuleDTO dto);
 
-    // Convert from entity to DTO (if needed)
-    ModuleDTO toDto(Module entity);
+	Module toEntity(ModuleDTO dto);
+
+	ModuleDTO toDto(Module entity);
+
 }

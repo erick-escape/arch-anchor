@@ -9,19 +9,16 @@ import tcc.com.viewer.dto.dependencies.DependencyDTO;
 @Mapper(componentModel = "spring")
 public interface DependencyMapper {
 
-    // Convert from DTO to entity
-    Dependency toEntity(DependencyDTO dto);
+	Dependency toEntity(DependencyDTO dto);
 
-    // Convert from entity to DTO (if needed)
-    DependencyDTO toDto(Dependency entity);
+	DependencyDTO toDto(Dependency entity);
 
-    // Convert Type to TypeDTO
-    @Mapping(source = "fullyQualifiedName", target = "fullyQualifiedName")
-    @Mapping(source = "className", target = "className")
-    DependencyDTO.TypeDTO toTypeDto(Type type);
+	@Mapping(source = "fullyQualifiedName", target = "fullyQualifiedName")
+	@Mapping(source = "className", target = "className")
+	DependencyDTO.TypeDTO toTypeDto(Type type);
 
-    // Convert TypeDTO to Type
-    @Mapping(source = "fullyQualifiedName", target = "fullyQualifiedName")
-    @Mapping(source = "className", target = "className")
-    Type toTypeEntity(DependencyDTO.TypeDTO typeDto);
+	@Mapping(source = "fullyQualifiedName", target = "fullyQualifiedName")
+	@Mapping(source = "className", target = "className")
+	Type toTypeEntity(DependencyDTO.TypeDTO typeDto);
+
 }
