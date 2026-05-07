@@ -6,5 +6,6 @@ import java.io.Serializable;
 import java.util.List;
 
 public record ClazzResponseDTO(String id, String name, List<DependencyDTO> dependencies, Double similarity,
-		Double avgSimilarityWithRefClazzes, String firstModule, String currentModule) implements Serializable {
+		Double avgSimilarityWithRefClazzes, String firstModule, String currentModule,
+		String enforceMode) implements Serializable {
 }

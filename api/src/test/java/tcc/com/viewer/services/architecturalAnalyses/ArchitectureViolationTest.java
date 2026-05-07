@@ -250,7 +250,7 @@ class ArchitectureViolationTest {
 	 * references)
 	 */
 	private Clazz createClazz(String id, String name, String moduleId, List<Dependency> dependencies) {
-		return new Clazz(id, name, copyDependencies(dependencies), 0.0, 0.0, moduleId, moduleId);
+		return new Clazz(id, name, copyDependencies(dependencies), 0.0, 0.0, moduleId, moduleId, "ALLOW");
 	}
 
 	/**

@@ -9,6 +9,7 @@ import tcc.com.viewer.domains.module.Module;
 import tcc.com.viewer.dto.clazz.ClazzResponseDTO;
 import tcc.com.viewer.dto.module.ModuleDTO;
 import tcc.com.viewer.dto.module.SetRefClazzesRequest;
+import tcc.com.viewer.dto.module.SetRefClazzModeRequest;
 import tcc.com.viewer.dto.module.SplitModuleRequest;
 import tcc.com.viewer.dto.module.SplitModuleResponse;
 import tcc.com.viewer.mapstruct.ClazzMapper;
@@ -242,6 +243,20 @@ public class ModuleController {
 		catch (Exception pException) {
 			log.error("Error setting reference classes: ", pException);
 			return ResponseEntity.internalServerError().build();
+		}
+	}
+
+	@PostMapping("/ref-clazz-mode")
+	public ResponseEntity<ModuleDTO> setRefClazzMode(@RequestBody SetRefClazzModeRequest request) {
+		if (request.moduleId() == null || request.classId() == null || request.mode() == null) {
+			return ResponseEntity.badRequest().build();
+		}
+		try {
+			ModuleDTO updated = moduleService.setRefClazzMode(request.moduleId(), request.classId(), request.mode());
+			return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
+		}
+		catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().build();
 		}
 	}
 

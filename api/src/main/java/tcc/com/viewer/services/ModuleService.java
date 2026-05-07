@@ -608,7 +608,8 @@ public class ModuleService {
 																							// later
 						0.0, // avgSimilarityWithRefClazzes will be calculated later
 						modulePath.getFileName().toString(), // firstModule
-						modulePath.getFileName().toString() // currentModule
+						modulePath.getFileName().toString(), // currentModule
+						"ALLOW" // enforceMode default
 				);
 				clazzes.add(clazz);
 			}
@@ -773,6 +774,39 @@ public class ModuleService {
 		saveModules(updatedModules);
 
 		return updatedModule;
+	}
+
+	public ModuleDTO setRefClazzMode(String moduleId, String classId, String mode) {
+		if (!mode.equals("ALLOW") && !mode.equals("MUST")) {
+			throw new IllegalArgumentException("Invalid enforceMode: " + mode + "; expected ALLOW or MUST");
+		}
+
+		List<ModuleDTO> modules = getModulesFromFile();
+		Optional<ModuleDTO> targetOpt = modules.stream().filter(m -> moduleId.equals(m.id())).findFirst();
+		if (targetOpt.isEmpty()) {
+			return null;
+		}
+
+		Module entity = moduleMapper.toEntity(targetOpt.get());
+
+		entity.getRefClazzes()
+			.stream()
+			.filter(c -> classId.equals(c.getId()))
+			.findFirst()
+			.ifPresent(c -> c.setEnforceMode(mode));
+
+		entity.getClazzes()
+			.stream()
+			.filter(c -> classId.equals(c.getId()))
+			.findFirst()
+			.ifPresent(c -> c.setEnforceMode(mode));
+
+		ModuleDTO updated = moduleMapper.toDto(entity);
+		List<ModuleDTO> updatedModules = modules.stream()
+			.map(m -> m.id().equals(moduleId) ? updated : m)
+			.collect(Collectors.toList());
+		saveModules(updatedModules);
+		return updated;
 	}
 
 }

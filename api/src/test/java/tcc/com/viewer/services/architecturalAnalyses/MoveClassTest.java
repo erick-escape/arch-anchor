@@ -436,8 +436,8 @@ class MoveClassTest {
 	void testClassWithNullAvgSimilarity_shouldHandleGracefully() {
 		// Given
 		Clazz classWithNullSim = new Clazz("null-sim", "NullSimClass",
-				List.of(createDependency("java.util.List", "java.util")), 0.5, null, "source", "source"); // null
-																											// avgSimilarityWithRefClazzes
+				List.of(createDependency("java.util.List", "java.util")), 0.5, null, "source", "source", "ALLOW"); // null
+		// avgSimilarityWithRefClazzes
 
 		Module sourceModule = createModuleWithClasses("source", List.of(classWithNullSim),
 				createClazz("ref", "Ref", 0.8, "java.util"));
@@ -603,7 +603,8 @@ class MoveClassTest {
 		for (String pkg : packageNames) {
 			dependencies.add(createDependency(pkg + ".SomeClass", pkg));
 		}
-		return new Clazz(id, name, dependencies, 0.7, avgSimilarityWithRefClazzes, "test-module", "test-module");
+		return new Clazz(id, name, dependencies, 0.7, avgSimilarityWithRefClazzes, "test-module", "test-module",
+				"ALLOW");
 	}
 
 	private Module createModuleWithWellPlacedClasses(String id, double avgRefClazzesSimilarity) {

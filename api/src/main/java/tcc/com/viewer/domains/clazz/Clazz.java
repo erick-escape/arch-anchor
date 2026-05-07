@@ -26,4 +26,7 @@ public class Clazz {
 
 	private String currentModule;
 
+	// "ALLOW" (default) or "MUST" — only meaningful when this class is a ref class
+	private String enforceMode;
+
 }

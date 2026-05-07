@@ -10,19 +10,19 @@ import java.util.List;
 @Service
 public class ArchitecturalAnalysesRunner {
 
-    private final List<ArchitecturalAnalysis> analyses;
+	private final List<ArchitecturalAnalysis> analyses;
 
-    public ArchitecturalAnalysesRunner(List<ArchitecturalAnalysis> analyses) {
-        this.analyses = analyses;
-    }
+	public ArchitecturalAnalysesRunner(List<ArchitecturalAnalysis> analyses) {
+		this.analyses = analyses;
+	}
 
-    public void executeAll(List<Module> modules) {
-        log.info("Starting execution of {} analyses", analyses.size());
-        analyses.forEach(analysis -> {
-            log.info("Executing analysis: {}", analysis.getClass().getSimpleName());
-            analysis.execute(modules);
-        });
-        log.info("Completed execution of all analyses");
-    }
+	public void executeAll(List<Module> modules) {
+		log.info("Starting execution of {} analyses", analyses.size());
+		analyses.forEach(analysis -> {
+			log.info("Executing analysis: {}", analysis.getClass().getSimpleName());
+			analysis.execute(modules);
+		});
+		log.info("Completed execution of all analyses");
+	}
 
 }

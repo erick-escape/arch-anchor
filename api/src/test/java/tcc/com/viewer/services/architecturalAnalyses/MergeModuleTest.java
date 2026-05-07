@@ -388,7 +388,8 @@ class MergeModuleTest {
 		for (String pkg : packageNames) {
 			dependencies.add(createDependency(pkg + ".SomeClass", pkg));
 		}
-		return new Clazz(id, name, dependencies, 0.7, avgSimilarityWithRefClazzes, "test-module", "test-module");
+		return new Clazz(id, name, dependencies, 0.7, avgSimilarityWithRefClazzes, "test-module", "test-module",
+				"ALLOW");
 	}
 
 	private Module createModuleWithHighCohesion(String id, double avgRefClazzesSimilarity) {
