@@ -5,14 +5,14 @@ import {
   useRecommendations,
   useApplySplit,
   useApplyMerge,
-  useApplyMove
+  useApplyMove,
 } from '../../hooks/useRecommendations';
 import {
   UnifiedRecommendation,
   SplitModuleRecommendation,
   MergeModuleRecommendation,
   MoveClassRecommendation,
-  ArchitectureViolationRecommendation
+  ArchitectureViolationRecommendation,
 } from '../../interface/Recommendations';
 import RecommendationCard from './RecommendationCard';
 
@@ -20,7 +20,9 @@ interface RecommendationsSidebarProps {
   onRecommendationApplied?: () => void;
 }
 
-const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecommendationApplied }) => {
+const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
+  onRecommendationApplied,
+}) => {
   const [isOpen, setIsOpen] = useState(true);
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
@@ -42,7 +44,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
         rating: split.metrics.rate,
         title: `Split "${split.originalModuleName}"`,
         description: `Split into 2 modules with ${split.metrics.rate.toFixed(2)} improvement`,
-        data: split
+        data: split,
       });
     });
 
@@ -54,7 +56,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
         rating: merge.metrics.rate,
         title: `Merge "${merge.module1Name}" and "${merge.module2Name}"`,
         description: `Combine modules with ${merge.metrics.rate.toFixed(2)} improvement`,
-        data: merge
+        data: merge,
       });
     });
 
@@ -66,7 +68,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
         rating: move.metrics.rate,
         title: `Move "${move.className}"`,
         description: `Move class with ${move.metrics.rate.toFixed(2)} improvement`,
-        data: move
+        data: move,
       });
     });
 
@@ -78,7 +80,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
         rating: 0.3,
         title: `Fix violation in "${violation.className}"`,
         description: `Resolve ${violation.violation} dependency violation`,
-        data: violation
+        data: violation,
       });
     });
 
@@ -95,7 +97,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
           const data = recommendation.data as SplitModuleRecommendation;
           await applySplit.mutateAsync({
             moduleId: data.originalModuleId,
-            classIds: data.module1ClassIds
+            classIds: data.module1ClassIds,
           });
           break;
         }
@@ -103,7 +105,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
           const data = recommendation.data as MergeModuleRecommendation;
           await applyMerge.mutateAsync({
             sourceId: data.module1Id,
-            targetId: data.module2Id
+            targetId: data.module2Id,
           });
           break;
         }
@@ -112,7 +114,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
           await applyMove.mutateAsync({
             classId: data.classId,
             sourceModuleId: data.sourceModuleId,
-            targetModuleId: data.targetModuleId
+            targetModuleId: data.targetModuleId,
           });
           break;
         }
@@ -122,7 +124,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
             await applyMove.mutateAsync({
               classId: data.classId,
               sourceModuleId: data.sourceModuleId,
-              targetModuleId: data.bestSuggestion.targetModuleId
+              targetModuleId: data.bestSuggestion.targetModuleId,
             });
           }
           break;
@@ -149,7 +151,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
     transition: 'right 0.3s ease',
     zIndex: 100,
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
   };
 
   const toggleButtonStyle: React.CSSProperties = {
@@ -168,13 +170,13 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
-    fontSize: '20px'
+    fontSize: '20px',
   };
 
   const headerStyle: React.CSSProperties = {
     padding: '16px',
     borderBottom: '1px solid #333',
-    backgroundColor: '#111'
+    backgroundColor: '#111',
   };
 
   const summaryStyle: React.CSSProperties = {
@@ -182,7 +184,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
     gap: '12px',
     padding: '12px 16px',
     borderBottom: '1px solid #333',
-    backgroundColor: '#0a0a0a'
+    backgroundColor: '#0a0a0a',
   };
 
   const summaryItemStyle = (color: string): React.CSSProperties => ({
@@ -191,13 +193,13 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({ onRecom
     padding: '8px',
     backgroundColor: '#1a1a1a',
     borderRadius: '4px',
-    border: `1px solid ${color}`
+    border: `1px solid ${color}`,
   });
 
   const contentStyle: React.CSSProperties = {
     flex: 1,
     overflowY: 'auto',
-    padding: '16px'
+    padding: '16px',
   };
 
   return (

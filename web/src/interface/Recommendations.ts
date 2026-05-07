@@ -108,5 +108,9 @@ export interface UnifiedRecommendation {
   rating: number; // For sorting (rate for split/merge/move, 0.3 default for violations)
   title: string;
   description: string;
-  data: SplitModuleRecommendation | MergeModuleRecommendation | MoveClassRecommendation | ArchitectureViolationRecommendation;
+  data:
+    | SplitModuleRecommendation
+    | MergeModuleRecommendation
+    | MoveClassRecommendation
+    | ArchitectureViolationRecommendation;
 }

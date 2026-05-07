@@ -4,14 +4,14 @@ import {
   SplitCellsOutlined,
   MergeCellsOutlined,
   ArrowRightOutlined,
-  WarningOutlined
+  WarningOutlined,
 } from '@ant-design/icons';
 import {
   UnifiedRecommendation,
   SplitModuleRecommendation,
   MergeModuleRecommendation,
   MoveClassRecommendation,
-  ArchitectureViolationRecommendation
+  ArchitectureViolationRecommendation,
 } from '../../interface/Recommendations';
 
 const { Panel } = Collapse;
@@ -25,7 +25,7 @@ interface RecommendationCardProps {
 const RecommendationCard: React.FC<RecommendationCardProps> = ({
   recommendation,
   onApply,
-  isApplying
+  isApplying,
 }) => {
   const getPriorityColor = (rating: number): string => {
     if (rating > 0.5) return '#ff4d4f'; // red
@@ -67,45 +67,98 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
 
   const renderSplitDetails = (data: SplitModuleRecommendation) => (
     <div style={{ fontSize: '12px', color: '#999' }}>
-      <p><strong>Original Similarity:</strong> {(data.metrics.originalSimilarity * 100).toFixed(1)}%</p>
-      <p><strong>After Split (Avg):</strong> {(data.metrics.avgSplitSimilarity * 100).toFixed(1)}%</p>
-      <p><strong>Similarity Improvement:</strong> +{(data.metrics.similarityImprovement * 100).toFixed(1)}%</p>
-      <p><strong>Violations:</strong> {data.metrics.originalViolations} → {data.metrics.totalSplitViolations}</p>
-      <p><strong>Module 1 Classes:</strong> {data.module1ClassIds.length}</p>
-      <p><strong>Module 2 Classes:</strong> {data.module2ClassIds.length}</p>
+      <p>
+        <strong>Original Similarity:</strong> {(data.metrics.originalSimilarity * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>After Split (Avg):</strong> {(data.metrics.avgSplitSimilarity * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Similarity Improvement:</strong> +
+        {(data.metrics.similarityImprovement * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Violations:</strong> {data.metrics.originalViolations} →{' '}
+        {data.metrics.totalSplitViolations}
+      </p>
+      <p>
+        <strong>Module 1 Classes:</strong> {data.module1ClassIds.length}
+      </p>
+      <p>
+        <strong>Module 2 Classes:</strong> {data.module2ClassIds.length}
+      </p>
     </div>
   );
 
   const renderMergeDetails = (data: MergeModuleRecommendation) => (
     <div style={{ fontSize: '12px', color: '#999' }}>
-      <p><strong>Module 1 Similarity:</strong> {(data.metrics.module1Similarity * 100).toFixed(1)}%</p>
-      <p><strong>Module 2 Similarity:</strong> {(data.metrics.module2Similarity * 100).toFixed(1)}%</p>
-      <p><strong>Merged Similarity:</strong> {(data.metrics.mergedSimilarity * 100).toFixed(1)}%</p>
-      <p><strong>Similarity Improvement:</strong> +{(data.metrics.similarityImprovement * 100).toFixed(1)}%</p>
-      <p><strong>Violations:</strong> {data.metrics.module1Violations + data.metrics.module2Violations} → {data.metrics.mergedViolations}</p>
+      <p>
+        <strong>Module 1 Similarity:</strong> {(data.metrics.module1Similarity * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Module 2 Similarity:</strong> {(data.metrics.module2Similarity * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Merged Similarity:</strong> {(data.metrics.mergedSimilarity * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Similarity Improvement:</strong> +
+        {(data.metrics.similarityImprovement * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Violations:</strong>{' '}
+        {data.metrics.module1Violations + data.metrics.module2Violations} →{' '}
+        {data.metrics.mergedViolations}
+      </p>
     </div>
   );
 
   const renderMoveDetails = (data: MoveClassRecommendation) => (
     <div style={{ fontSize: '12px', color: '#999' }}>
-      <p><strong>From Module:</strong> {data.sourceModuleId}</p>
-      <p><strong>To Module:</strong> {data.targetModuleId}</p>
-      <p><strong>Similarity Improvement:</strong> +{(data.metrics.similarityImprovement * 100).toFixed(1)}%</p>
-      <p><strong>Source Violations:</strong> {data.metrics.sourceViolationsBefore} → {data.metrics.sourceViolationsAfter}</p>
-      <p><strong>Target Violations:</strong> {data.metrics.targetViolationsBefore} → {data.metrics.targetViolationsAfter}</p>
+      <p>
+        <strong>From Module:</strong> {data.sourceModuleId}
+      </p>
+      <p>
+        <strong>To Module:</strong> {data.targetModuleId}
+      </p>
+      <p>
+        <strong>Similarity Improvement:</strong> +
+        {(data.metrics.similarityImprovement * 100).toFixed(1)}%
+      </p>
+      <p>
+        <strong>Source Violations:</strong> {data.metrics.sourceViolationsBefore} →{' '}
+        {data.metrics.sourceViolationsAfter}
+      </p>
+      <p>
+        <strong>Target Violations:</strong> {data.metrics.targetViolationsBefore} →{' '}
+        {data.metrics.targetViolationsAfter}
+      </p>
     </div>
   );
 
   const renderViolationDetails = (data: ArchitectureViolationRecommendation) => (
     <div style={{ fontSize: '12px', color: '#999' }}>
-      <p><strong>Source Module:</strong> {data.sourceModuleName}</p>
-      <p><strong>Violation:</strong> {data.violation}</p>
-      <p><strong>Violating Dependencies:</strong> {data.violatingDependencies.length}</p>
+      <p>
+        <strong>Source Module:</strong> {data.sourceModuleName}
+      </p>
+      <p>
+        <strong>Violation:</strong> {data.violation}
+      </p>
+      <p>
+        <strong>Violating Dependencies:</strong> {data.violatingDependencies.length}
+      </p>
       {data.bestSuggestion && (
         <>
-          <p><strong>Suggested Target:</strong> {data.bestSuggestion.targetModuleName}</p>
-          <p><strong>Similarity Improvement:</strong> +{(data.bestSuggestion.similarityImprovement * 100).toFixed(1)}%</p>
-          <p><strong>New Violations:</strong> {data.bestSuggestion.newViolationsCreated}</p>
+          <p>
+            <strong>Suggested Target:</strong> {data.bestSuggestion.targetModuleName}
+          </p>
+          <p>
+            <strong>Similarity Improvement:</strong> +
+            {(data.bestSuggestion.similarityImprovement * 100).toFixed(1)}%
+          </p>
+          <p>
+            <strong>New Violations:</strong> {data.bestSuggestion.newViolationsCreated}
+          </p>
         </>
       )}
     </div>
@@ -125,27 +178,26 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        <div style={{ color: priorityColor }}>
-          {getIcon()}
-        </div>
+        <div style={{ color: priorityColor }}>{getIcon()}</div>
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '8px',
+            }}
+          >
             <div>
               <div style={{ fontWeight: 'bold', color: '#fff', marginBottom: '4px' }}>
                 {recommendation.title}
               </div>
-              <div style={{ fontSize: '12px', color: '#999' }}>
-                {recommendation.description}
-              </div>
+              <div style={{ fontSize: '12px', color: '#999' }}>{recommendation.description}</div>
             </div>
             <Tag color={priorityColor}>{priorityLabel}</Tag>
           </div>
 
-          <Collapse
-            ghost
-            bordered={false}
-            style={{ backgroundColor: 'transparent' }}
-          >
+          <Collapse ghost bordered={false} style={{ backgroundColor: 'transparent' }}>
             <Panel
               header={<span style={{ color: '#1890ff', fontSize: '12px' }}>View Details</span>}
               key="1"

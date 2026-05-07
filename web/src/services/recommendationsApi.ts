@@ -17,7 +17,7 @@ export const applySplit = async (request: ApplySplitRequest): Promise<void> => {
 
 export const applyMerge = async (sourceId: string, targetId: string): Promise<void> => {
   await api.post('/api/recommendations/apply/merge', null, {
-    params: { sourceId, targetId }
+    params: { sourceId, targetId },
   });
 };
 
@@ -27,6 +27,6 @@ export const applyMove = async (
   targetModuleId: string
 ): Promise<void> => {
   await api.post('/api/recommendations/apply/move', null, {
-    params: { classId, sourceModuleId, targetModuleId }
+    params: { classId, sourceModuleId, targetModuleId },
   });
 };

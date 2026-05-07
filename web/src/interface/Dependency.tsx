@@ -1,3 +1,3 @@
 export interface Dependency {
-    name: string;
+  name: string;
 }

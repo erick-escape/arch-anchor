@@ -1,6 +1,6 @@
 export type MergeData = {
-    source: string,
-    target: string,
-    onCancel?: () => void,
-    onConfirm?: () => Promise<void>
-}
+  source: string;
+  target: string;
+  onCancel?: () => void;
+  onConfirm?: () => Promise<void>;
+};

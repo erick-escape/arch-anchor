@@ -5,7 +5,7 @@ import {
   applySplit,
   applyMerge,
   applyMove,
-  ApplySplitRequest
+  ApplySplitRequest,
 } from '../services/recommendationsApi';
 
 export const useRecommendations = () => {
@@ -26,7 +26,7 @@ export const useApplySplit = () => {
       queryClient.invalidateQueries({ queryKey: ['recommendations'] });
       queryClient.invalidateQueries({ queryKey: ['project'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`Failed to apply split: ${error.message || 'Unknown error'}`);
     },
   });
@@ -43,7 +43,7 @@ export const useApplyMerge = () => {
       queryClient.invalidateQueries({ queryKey: ['recommendations'] });
       queryClient.invalidateQueries({ queryKey: ['project'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`Failed to apply merge: ${error.message || 'Unknown error'}`);
     },
   });
@@ -67,7 +67,7 @@ export const useApplyMove = () => {
       queryClient.invalidateQueries({ queryKey: ['recommendations'] });
       queryClient.invalidateQueries({ queryKey: ['project'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       message.error(`Failed to apply move: ${error.message || 'Unknown error'}`);
     },
   });
