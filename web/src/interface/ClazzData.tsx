@@ -7,4 +7,5 @@ export interface ClazzData {
   similarity: number;
   firstModule: string;
   currentModule: string;
+  enforceMode: string;
 }

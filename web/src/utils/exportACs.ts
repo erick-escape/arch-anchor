@@ -12,14 +12,17 @@ export function generateAcsPdf(projectName: string, constraints: ArchitecturalCo
   let acIndex = 1;
 
   for (const constraint of constraints) {
-    for (const dep of constraint.refClazzesDependencies) {
-      if (y > 275) {
-        doc.addPage();
-        y = 20;
+    for (const rc of constraint.refClassConstraints) {
+      const rule = rc.enforceMode === 'MUST' ? 'MUST-DEPEND' : 'CAN-DEPEND';
+      for (const dep of rc.dependencies) {
+        if (y > 275) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(`AC${acIndex} - ${constraint.moduleName} ${rule} ${dep.packageName}`, 20, y);
+        y += 8;
+        acIndex++;
       }
-      doc.text(`AC${acIndex} - ${constraint.moduleName} CAN-DEPEND ${dep.packageName}`, 20, y);
-      y += 8;
-      acIndex++;
     }
   }
 

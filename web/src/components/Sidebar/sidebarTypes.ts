@@ -6,6 +6,7 @@ export interface SidebarProps {
   onDeleteRefresh: (deletedModuleId: string) => void;
   onRenameRefresh: (moduleId: string, newName: string) => void;
   onSplitRefresh: (oldModuleId: string, newModules: ModuleData[]) => void;
+  onRefClazzModeRefresh: (moduleId: string, updatedModule: ModuleData) => void;
 }
 
 export interface ModuleListViewProps {

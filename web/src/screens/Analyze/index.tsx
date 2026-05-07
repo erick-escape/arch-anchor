@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModuleData } from '../../interface/ModuleData';
-import { ProjectAnalyses } from '../../interface/ProjectAnalyses';
+import { ProjectAnalyses, RefClassConstraint } from '../../interface/ProjectAnalyses';
 import { generateAcsPdf } from '../../utils/exportACs';
 import '@xyflow/react/dist/style.css';
 import axios from 'axios';
@@ -314,6 +314,27 @@ const AnalyzePage = () => {
     );
   };
 
+  const onRefClazzModeRefresh = (moduleId: string, updatedModule: ModuleData) => {
+    setModules((prev) => prev.map((m) => (m.id === moduleId ? updatedModule : m)));
+
+    setProjectAnalyses((prev) => {
+      if (!prev) return prev;
+      const updatedConstraints = prev.architecturalConstraints.map((constraint) => {
+        if (constraint.moduleId !== moduleId) return constraint;
+        return {
+          ...constraint,
+          refClassConstraints: updatedModule.refClazzes.map((rc) => ({
+            refClassId: rc.id,
+            refClassName: rc.name,
+            enforceMode: (rc.enforceMode || 'ALLOW') as 'ALLOW' | 'MUST',
+            dependencies: rc.dependencies as unknown as RefClassConstraint['dependencies'],
+          })),
+        };
+      });
+      return { ...prev, architecturalConstraints: updatedConstraints };
+    });
+  };
+
   const onSplitRefresh = (oldModuleId: string, newModules: ModuleData[]) => {
     // Find original node position
     const oldNode = nodes.find((n) => n.id === oldModuleId);
@@ -533,6 +554,7 @@ const AnalyzePage = () => {
         onDeleteRefresh={onDeleteRefresh}
         onRenameRefresh={onRenameRefresh}
         onSplitRefresh={onSplitRefresh}
+        onRefClazzModeRefresh={onRefClazzModeRefresh}
       />
 
       <RecommendationsSidebar onRecommendationApplied={onRecommendationApplied} />

@@ -303,7 +303,7 @@ const ModuleListView = ({ modules, onModuleClick, onModuleRename, onModuleDelete
 };
 
 // Module Detail View
-const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes }) => {
+const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes, onSetRefClazzMode }) => {
   const [selectedClazzes, setSelectedClazzes] = useState<string[]>([]);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -444,14 +444,42 @@ const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes }) => {
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
+                      alignItems: 'center',
                       padding: '8px 10px',
-                      color: '#4CAF50', // Green text for reference classes
+                      color: '#4CAF50',
                       borderRadius: '4px',
                       marginBottom: '2px',
                     }}
                   >
-                    <div>{classItem.name}</div>
-                    <div>{(classItem.similarity * 100).toFixed(2)}%</div>
+                    <div style={{ flex: 1 }}>{classItem.name}</div>
+                    <div style={{ marginRight: '8px', fontSize: '12px' }}>
+                      {(classItem.similarity * 100).toFixed(2)}%
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const nextMode = classItem.enforceMode === 'MUST' ? 'ALLOW' : 'MUST';
+                        onSetRefClazzMode(module.id, classItem.id, nextMode);
+                      }}
+                      title={
+                        classItem.enforceMode === 'MUST'
+                          ? 'MUST mode: peer classes must include all these dependencies. Click to switch to ALLOW.'
+                          : 'ALLOW mode: peer classes may use any subset of these dependencies. Click to switch to MUST.'
+                      }
+                      style={{
+                        padding: '2px 8px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        backgroundColor: classItem.enforceMode === 'MUST' ? '#e67e22' : '#27ae60',
+                        color: 'white',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {classItem.enforceMode === 'MUST' ? 'MUST' : 'ALLOW'}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -602,6 +630,7 @@ const Sidebar = ({
   onDeleteRefresh,
   onRenameRefresh,
   onSplitRefresh,
+  onRefClazzModeRefresh,
 }: SidebarProps) => {
   const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
   const [selectedModule, setSelectedModule] = useState<ModuleData | null>(null);
@@ -720,6 +749,28 @@ const Sidebar = ({
     }
   };
 
+  const handleSetRefClazzMode = async (moduleId: string, classId: string, mode: string) => {
+    try {
+      const response = await axios.post('/api/module/ref-clazz-mode', {
+        moduleId,
+        classId,
+        mode,
+      });
+
+      if (selectedModule && selectedModule.id === moduleId) {
+        const updatedModule = {
+          ...selectedModule,
+          refClazzes: response.data.refClazzes,
+          clazzes: response.data.clazzes,
+        };
+        setSelectedModule(updatedModule);
+        onRefClazzModeRefresh(moduleId, updatedModule);
+      }
+    } catch (error) {
+      console.error('Failed to set enforce mode', error);
+    }
+  };
+
   return (
     <>
       <div
@@ -751,6 +802,7 @@ const Sidebar = ({
               onBack={handleBackToList}
               onSplit={handleSplitModule}
               onSetRefClazzes={handleSetRefClazzes}
+              onSetRefClazzMode={handleSetRefClazzMode}
             />
           )
         )}
