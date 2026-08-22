@@ -1,0 +1,33 @@
+name: API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/ci-api.yml'
+  pull_request:
+    paths:
+      - 'api/**'
+      - '.github/workflows/ci-api.yml'
+
+jobs:
+  test:
+    name: Test (Java 17)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      # Also runs spring-javaformat:validate, bound to the validate phase.
+      - name: Run tests
+        run: ./mvnw -B --no-transfer-progress test

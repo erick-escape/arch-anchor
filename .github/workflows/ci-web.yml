@@ -1,0 +1,42 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/ci-web.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/ci-web.yml'
+
+jobs:
+  test:
+    name: Lint and test (Node 20)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # `npm run build` is deliberately absent: `tsc -b` still fails on
+      # pre-existing type errors in the UI components. Add the step here as
+      # soon as those are cleared.
