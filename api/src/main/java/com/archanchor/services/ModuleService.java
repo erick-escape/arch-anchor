@@ -1,0 +1,812 @@
+package com.archanchor.services;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import com.archanchor.domains.clazz.Clazz;
+import com.archanchor.domains.dependency.Dependency;
+import com.archanchor.domains.module.Module;
+import com.archanchor.dto.clazz.ClazzResponseDTO;
+import com.archanchor.dto.dependencies.DependencyDTO;
+import com.archanchor.dto.module.ModuleDTO;
+import com.archanchor.dto.projects.ProjectAnalysesDTO;
+import com.archanchor.mapstruct.*;
+import com.archanchor.services.parsers.ParserFactory;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+public class ModuleService {
+
+	private final List<Module> modules = new ArrayList<>();
+
+	private final ParserFactory parserFactory;
+
+	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
+
+	private final ClazzMapper clazzMapper = new ClazzMapperImpl();
+
+	private final DependencyMapper dependencyMapper = new DependencyMapperImpl();
+
+	public ModuleService(ParserFactory parserFactory) {
+		this.parserFactory = parserFactory;
+	}
+
+	// Define file extensions to consider for each language
+	private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of("java", List.of(".java"), "python",
+			List.of(".py"), "javascript", List.of(".js", ".ts"), "php", List.of(".php"));
+
+	// Weights for refClass selection and architectural analyses: equal weights (0.5 each)
+	// mean both factors are equally important
+	// These can be adjusted in the future to give more importance to similarity or
+	// violations
+	public static final double SIMILARITY_WEIGHT = 0.5;
+
+	public static final double VIOLATION_WEIGHT = 0.5;
+
+	public void saveModules(List<ModuleDTO> modulesList) {
+		if (modulesList == null) {
+			throw new IllegalArgumentException("Modules list cannot be null");
+		}
+
+		File file = new File("modules.bin");
+		try (ObjectOutputStream objectOutput = new ObjectOutputStream(new FileOutputStream(file))) {
+			objectOutput.writeObject(modulesList);
+		}
+		catch (IOException e) {
+			throw new RuntimeException("Error saving modules to file: " + e.getMessage(), e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<ModuleDTO> getModulesFromFile() {
+		File file = new File("modules.bin");
+
+		if (!file.exists() || file.length() == 0) {
+			return new ArrayList<>();
+		}
+
+		try (ObjectInputStream objectInput = new ObjectInputStream(new FileInputStream(file))) {
+			return (List<ModuleDTO>) objectInput.readObject();
+		}
+		catch (ClassNotFoundException e) {
+			throw new RuntimeException("Error reading modules: Class not found", e);
+		}
+		catch (IOException e) {
+			throw new RuntimeException("Error reading modules from file: " + e.getMessage(), e);
+		}
+	}
+
+	public void saveProjectAnalyses(ProjectAnalysesDTO projectAnalyses) {
+		File file = new File("project-analyses.bin");
+		try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
+			out.writeObject(projectAnalyses);
+		}
+		catch (IOException e) {
+			throw new RuntimeException("Error saving project analyses: " + e.getMessage(), e);
+		}
+	}
+
+	public ProjectAnalysesDTO getProjectAnalysesFromFile() {
+		File file = new File("project-analyses.bin");
+		if (!file.exists() || file.length() == 0)
+			return null;
+		try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+			return (ProjectAnalysesDTO) in.readObject();
+		}
+		catch (ClassNotFoundException | IOException e) {
+			throw new RuntimeException("Error reading project analyses: " + e.getMessage(), e);
+		}
+	}
+
+	public String generateNewUUID() {
+		return UUID.randomUUID().toString();
+	}
+
+	/**
+	 * Generates a deterministic UUID based on a string input to prevent duplicate modules
+	 */
+	private String generateDeterministicUUID(String input) {
+		try {
+			// Use a hash of the input string to generate a consistent UUID
+			java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+			byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+
+			// Convert the hash bytes to a UUID format
+			StringBuilder sb = new StringBuilder();
+			for (byte b : hash) {
+				sb.append(String.format("%02x", b));
+			}
+
+			String hashString = sb.toString();
+			// Format as UUID: 8-4-4-4-12
+			return String.format("%s-%s-%s-%s-%s", hashString.substring(0, 8), hashString.substring(8, 12),
+					hashString.substring(12, 16), hashString.substring(16, 20), hashString.substring(20, 32));
+		}
+		catch (Exception e) {
+			// Fallback to random UUID if hashing fails
+			return UUID.randomUUID().toString();
+		}
+	}
+
+	/**
+	 * Calculates the number of violations if the given class were to be selected as
+	 * refClass. Violations are dependencies present in module dependencies but not in the
+	 * candidate class's dependencies.
+	 * @param candidateClass The class being evaluated as a potential refClass
+	 * @param moduleDependencies All dependencies from all classes in the module
+	 * @return The number of violations (dependencies that would not be allowed)
+	 */
+	private int calculateViolations(Clazz candidateClass, List<Dependency> moduleDependencies) {
+		if (moduleDependencies == null || moduleDependencies.isEmpty()) {
+			return 0;
+		}
+
+		// Get the dependency package names from the candidate class
+		Set<String> candidateDependencies = candidateClass.getDependencies()
+			.stream()
+			.map(Dependency::getPackageName)
+			.collect(Collectors.toSet());
+
+		// Count how many module dependencies are NOT in the candidate's dependencies
+		// These would be violations if this class became the refClass
+		return (int) moduleDependencies.stream()
+			.map(Dependency::getPackageName)
+			.filter(packageName -> !candidateDependencies.contains(packageName))
+			.count();
+	}
+
+	/**
+	 * Calculates pairwise similarity between all classes within a module. Sets the
+	 * similarity field on each Clazz object. Does NOT modify the module's reference
+	 * classes.
+	 * @param module The module containing classes to calculate similarities for
+	 */
+	public void calculateClassSimilarities(Module module) {
+		List<Clazz> clazzes = module.getClazzes();
+
+		if (clazzes.size() > 1) {
+			for (Clazz clazz : clazzes) {
+				double totalSimilarity = 0.0;
+				for (Clazz otherClazz : clazzes) {
+					if (!clazz.equals(otherClazz)) {
+						totalSimilarity += calculateSimilarity(clazz, otherClazz);
+					}
+				}
+				clazz.setSimilarity(totalSimilarity / (clazzes.size() - 1));
+			}
+		}
+		else if (clazzes.size() == 1) {
+			Clazz clazz = clazzes.get(0);
+			clazz.setSimilarity(1.0);
+		}
+	}
+
+	/**
+	 * Selects and sets reference classes for a module based on weighted rating. Uses a
+	 * combination of similarity and violations to select the best reference class.
+	 * Requires that class similarities have been previously calculated.
+	 * @param module The module to select reference classes for
+	 */
+	public void selectReferenceClasses(Module module) {
+		List<Clazz> clazzes = module.getClazzes();
+
+		if (clazzes.isEmpty()) {
+			return;
+		}
+
+		// Ensure module dependencies are populated for violation calculation
+		populateModuleDependencies(module);
+		List<Dependency> moduleDependencies = module.getModuleDependencies();
+
+		// Calculate violations for each class and find max for normalization
+		Map<Clazz, Integer> violationsMap = new HashMap<>();
+		int maxViolations = 0;
+
+		for (Clazz clazz : clazzes) {
+			int violations = calculateViolations(clazz, moduleDependencies);
+			violationsMap.put(clazz, violations);
+			maxViolations = Math.max(maxViolations, violations);
+		}
+
+		// Find max similarity for normalization
+		double maxSimilarity = clazzes.stream().mapToDouble(Clazz::getSimilarity).max().orElse(1.0);
+
+		// Prevent division by zero
+		if (maxSimilarity == 0.0) {
+			maxSimilarity = 1.0;
+		}
+
+		// Select refClazz based on weighted rate
+		Clazz refClazz;
+		if (maxViolations == 0) {
+			// If no violations exist, select based on similarity only
+			refClazz = clazzes.stream().max(Comparator.comparingDouble(Clazz::getSimilarity)).orElse(null);
+			log.info("Selected refClass based on similarity only (no violations): {}",
+					refClazz != null ? refClazz.getName() : "null");
+		}
+		else {
+			// Calculate weighted rate for each class
+			final int finalMaxViolations = maxViolations;
+			final double finalMaxSimilarity = maxSimilarity;
+
+			refClazz = clazzes.stream().max(Comparator.comparingDouble(clazz -> {
+				double similarity = clazz.getSimilarity();
+				int violations = violationsMap.get(clazz);
+
+				// Normalize similarity to [0, 1] where 1 is best (highest similarity)
+				double normalizedSimilarity = similarity / finalMaxSimilarity;
+
+				// Normalize violations to [0, 1] where 1 is best (no violations)
+				double normalizedViolations = 1.0 - ((double) violations / finalMaxViolations);
+
+				// Calculate combined rate: higher is better
+				double rate = (SIMILARITY_WEIGHT * normalizedSimilarity) + (VIOLATION_WEIGHT * normalizedViolations);
+
+				log.debug(
+						"Class: {}, Similarity: {}, Normalized Similarity: {}, Violations: {}, Normalized Violations: {}, Rate: {}",
+						clazz.getName(), similarity, normalizedSimilarity, violations, normalizedViolations, rate);
+				return rate;
+			})).orElse(null);
+
+			if (refClazz != null) {
+				log.info("Selected refClass: {} with similarity: {} and violations: {}", refClazz.getName(),
+						refClazz.getSimilarity(), violationsMap.get(refClazz));
+			}
+		}
+
+		List<Clazz> refClazzes = List.of(refClazz);
+		module.setRefClazzes(refClazzes);
+	}
+
+	/**
+	 * Convenience method that calculates class similarities and then selects reference
+	 * classes. This provides the same behavior as the original calculateClassSimilarities
+	 * method.
+	 * @param module The module to process
+	 */
+	public void calculateClassSimilaritiesAndSelectRefClasses(Module module) {
+		calculateClassSimilarities(module);
+		selectReferenceClasses(module);
+	}
+
+	public void calculateAvgSimilarityWithRefClazzes(Module module) {
+		List<Clazz> clazzes = module.getClazzes();
+		List<Clazz> refClazzes = module.getRefClazzes();
+
+		if (refClazzes == null || refClazzes.isEmpty()) {
+			// If no reference classes, set all avgSimilarityWithRefClazzes to 0.0
+			for (Clazz clazz : clazzes) {
+				clazz.setAvgSimilarityWithRefClazzes(0.0);
+			}
+			return;
+		}
+
+		if (refClazzes.size() == 1) {
+			// If only one reference class, set its avgSimilarityWithRefClazzes to 1.0
+			Clazz refClazz = refClazzes.get(0);
+			refClazz.setAvgSimilarityWithRefClazzes(1.0);
+
+			// Calculate avgSimilarityWithRefClazzes for other classes with this unique
+			// reference class
+			for (Clazz clazz : clazzes) {
+				if (!clazz.equals(refClazz)) {
+					double similarity = calculateSimilarity(clazz, refClazz);
+					clazz.setAvgSimilarityWithRefClazzes(similarity);
+				}
+			}
+		}
+		else {
+			// Multiple reference classes
+			for (Clazz clazz : clazzes) {
+				double totalSimilarity = 0.0;
+				int count = 0;
+
+				if (refClazzes.contains(clazz)) {
+					// If this class is a reference class, calculate with other reference
+					// classes
+					for (Clazz refClazz : refClazzes) {
+						if (!clazz.equals(refClazz)) {
+							totalSimilarity += calculateSimilarity(clazz, refClazz);
+							count++;
+						}
+					}
+				}
+				else {
+					// If not a reference class, calculate with all reference classes
+					for (Clazz refClazz : refClazzes) {
+						totalSimilarity += calculateSimilarity(clazz, refClazz);
+						count++;
+					}
+				}
+
+				clazz.setAvgSimilarityWithRefClazzes(count > 0 ? totalSimilarity / count : 0.0);
+			}
+		}
+	}
+
+	public void calculateModuleSimilarity(Module module) {
+		List<Clazz> clazzes = module.getClazzes();
+
+		if (!clazzes.isEmpty()) {
+			double totalSimilarity = 0.0;
+			for (Clazz clazz : clazzes) {
+				totalSimilarity += clazz.getSimilarity();
+			}
+			module.setSimilarity(totalSimilarity / clazzes.size());
+		}
+		else {
+			module.setSimilarity(0.0);
+		}
+
+		// Calculate avgRefClazzesSimilarity
+		List<Clazz> refClazzes = module.getRefClazzes();
+		if (refClazzes != null && !refClazzes.isEmpty()) {
+			double totalRefSimilarity = 0.0;
+			for (Clazz refClazz : refClazzes) {
+				if (refClazz.getAvgSimilarityWithRefClazzes() != null) {
+					totalRefSimilarity += refClazz.getAvgSimilarityWithRefClazzes();
+				}
+			}
+			module.setAvgRefClazzesSimilarity(totalRefSimilarity / refClazzes.size());
+		}
+		else {
+			module.setAvgRefClazzesSimilarity(0.0);
+		}
+	}
+
+	/**
+	 * Calculates the average similarity of a single class with a list of reference
+	 * classes. This method is useful for evaluating how well a class would fit in a
+	 * module based on its similarity with the module's reference classes.
+	 * @param clazz The class to calculate similarity for
+	 * @param refClazzes The reference classes to compare against
+	 * @return The average similarity with reference classes, or 0.0 if no reference
+	 * classes
+	 */
+	public double calculateAvgSimilarityWithRefClazzes(Clazz clazz, List<Clazz> refClazzes) {
+		if (refClazzes == null || refClazzes.isEmpty()) {
+			return 0.0;
+		}
+
+		if (refClazzes.size() == 1) {
+			return calculateSimilarity(clazz, refClazzes.get(0));
+		}
+
+		double totalSimilarity = 0.0;
+		for (Clazz refClazz : refClazzes) {
+			totalSimilarity += calculateSimilarity(clazz, refClazz);
+		}
+
+		return totalSimilarity / refClazzes.size();
+	}
+
+	public double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
+		Set<String> deps1 = clazz1.getDependencies()
+			.stream()
+			.map(Dependency::getPackageName)
+			.collect(Collectors.toSet());
+		Set<String> deps2 = clazz2.getDependencies()
+			.stream()
+			.map(Dependency::getPackageName)
+			.collect(Collectors.toSet());
+
+		int a = (int) deps1.stream().filter(deps2::contains).count();
+		int b = deps1.size() - a;
+		int c = deps2.size() - a;
+		int firstDenominator = (a + b) == 0 ? 1 : (a + b);
+		int secondDenominator = (a + c) == 0 ? 1 : (a + c);
+
+		return 0.5 * (((double) a / firstDenominator) + ((double) a / secondDenominator));
+	}
+
+	/**
+	 * Calculates the number of violations in a module. Violations are dependencies used
+	 * by classes in the module that are NOT in the allowedRules (i.e., dependencies not
+	 * present in refClazzes).
+	 * @param module The module to calculate violations for
+	 */
+	public void calculateModuleViolations(Module module) {
+		if (module == null) {
+			return;
+		}
+
+		// If no refClazzes or no refClazzesDependencies, set violations to 0
+		if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty()
+				|| module.getRefClazzesDependencies() == null || module.getRefClazzesDependencies().isEmpty()) {
+			module.setViolations(0);
+			return;
+		}
+
+		// If no module dependencies, set violations to 0
+		if (module.getModuleDependencies() == null || module.getModuleDependencies().isEmpty()) {
+			module.setViolations(0);
+			return;
+		}
+
+		// Get allowed rules (refClazzes dependencies)
+		Set<String> allowedRules = module.getRefClazzesDependencies()
+			.stream()
+			.map(Dependency::getPackageName)
+			.filter(packageName -> packageName != null && !packageName.isEmpty())
+			.collect(Collectors.toSet());
+
+		// Count violations: module dependencies NOT in allowed rules
+		int violations = (int) module.getModuleDependencies()
+			.stream()
+			.map(Dependency::getPackageName)
+			.filter(packageName -> packageName != null && !packageName.isEmpty())
+			.filter(packageName -> !allowedRules.contains(packageName))
+			.count();
+
+		module.setViolations(violations);
+	}
+
+	public void populateModuleDependencies(Module module) {
+		if (module.getClazzes() == null || module.getClazzes().isEmpty()) {
+			module.setModuleDependencies(new ArrayList<>());
+			return;
+		}
+
+		Map<String, Dependency> uniqueDependencies = new HashMap<>();
+
+		for (Clazz clazz : module.getClazzes()) {
+			if (clazz.getDependencies() != null) {
+				for (Dependency dependency : clazz.getDependencies()) {
+					if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
+						String packageName = dependency.getPackageName();
+
+						if (uniqueDependencies.containsKey(packageName)) {
+							// Merge types into the aggregated dependency with
+							// deduplication
+							Dependency existingDependency = uniqueDependencies.get(packageName);
+							if (dependency.getTypes() != null) {
+								for (var type : dependency.getTypes()) {
+									boolean typeExists = existingDependency.getTypes()
+										.stream()
+										.anyMatch(t -> t.getFullyQualifiedName().equals(type.getFullyQualifiedName()));
+									if (!typeExists) {
+										existingDependency.addType(type);
+									}
+								}
+							}
+						}
+						else {
+							// Create a new Dependency copy so we never mutate the class's
+							// own object
+							Dependency copy = new Dependency(packageName);
+							if (dependency.getTypes() != null) {
+								for (var type : dependency.getTypes()) {
+									copy.addType(type);
+								}
+							}
+							uniqueDependencies.put(packageName, copy);
+						}
+					}
+				}
+			}
+		}
+
+		List<Dependency> allDependencies = new ArrayList<>(uniqueDependencies.values());
+		module.setModuleDependencies(allDependencies);
+	}
+
+	public void populateRefClazzesDependencies(Module module) {
+		if (module.getRefClazzes() == null || module.getRefClazzes().isEmpty()) {
+			module.setRefClazzesDependencies(new ArrayList<>());
+			return;
+		}
+
+		Map<String, Dependency> uniqueDependencies = new HashMap<>();
+
+		for (Clazz clazz : module.getRefClazzes()) {
+			if (clazz.getDependencies() != null) {
+				for (Dependency dependency : clazz.getDependencies()) {
+					if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
+						String packageName = dependency.getPackageName();
+
+						if (uniqueDependencies.containsKey(packageName)) {
+							// Merge types into the aggregated dependency with
+							// deduplication
+							Dependency existingDependency = uniqueDependencies.get(packageName);
+							if (dependency.getTypes() != null) {
+								for (var type : dependency.getTypes()) {
+									boolean typeExists = existingDependency.getTypes()
+										.stream()
+										.anyMatch(t -> t.getFullyQualifiedName().equals(type.getFullyQualifiedName()));
+									if (!typeExists) {
+										existingDependency.addType(type);
+									}
+								}
+							}
+						}
+						else {
+							// Create a new Dependency copy so we never mutate the class's
+							// own object
+							Dependency copy = new Dependency(packageName);
+							if (dependency.getTypes() != null) {
+								for (var type : dependency.getTypes()) {
+									copy.addType(type);
+								}
+							}
+							uniqueDependencies.put(packageName, copy);
+						}
+					}
+				}
+			}
+		}
+
+		List<Dependency> refClazzesDependencies = new ArrayList<>(uniqueDependencies.values());
+		module.setRefClazzesDependencies(refClazzesDependencies);
+	}
+
+	public List<ModuleDTO> splitModule(ModuleDTO originalModule, List<String> classIds) {
+		// Convert to entity for easier manipulation
+		Module originalModuleEntity = moduleMapper.toEntity(originalModule);
+
+		// Partition classes
+		Map<Boolean, List<ClazzResponseDTO>> partitionedClasses = Arrays.stream(originalModule.clazzes())
+			.collect(Collectors.partitioningBy(clazz -> classIds.contains(clazz.id())));
+
+		List<ClazzResponseDTO> retainedClasses = partitionedClasses.get(false);
+		List<ClazzResponseDTO> extractedClasses = partitionedClasses.get(true);
+
+		// Create the retained module (original with fewer classes)
+		Module retainedModuleEntity = new Module();
+		retainedModuleEntity.setId(originalModuleEntity.getId());
+		retainedModuleEntity.setName(originalModuleEntity.getName() + "_Retained");
+		retainedModuleEntity.setClazzes(retainedClasses.stream().map(clazzMapper::toEntity).toList());
+
+		this.calculateClassSimilaritiesAndSelectRefClasses(retainedModuleEntity);
+		this.calculateAvgSimilarityWithRefClazzes(retainedModuleEntity);
+		this.calculateModuleSimilarity(retainedModuleEntity);
+		this.populateRefClazzesDependencies(retainedModuleEntity);
+		this.populateModuleDependencies(retainedModuleEntity);
+		this.calculateModuleViolations(retainedModuleEntity);
+
+		// Create the new module (with extracted classes)
+		Module newModuleEntity = new Module();
+		newModuleEntity.setId(generateNewUUID());
+		newModuleEntity.setName(originalModuleEntity.getName() + "_Splited");
+		newModuleEntity.setClazzes(extractedClasses.stream().map(clazzMapper::toEntity).toList());
+
+		this.calculateClassSimilaritiesAndSelectRefClasses(newModuleEntity);
+		this.calculateAvgSimilarityWithRefClazzes(newModuleEntity);
+		this.calculateModuleSimilarity(newModuleEntity);
+		this.populateRefClazzesDependencies(newModuleEntity);
+		this.populateModuleDependencies(newModuleEntity);
+		this.calculateModuleViolations(newModuleEntity);
+
+		// Convert back to DTOs
+		ModuleDTO retainedDto = moduleMapper.toDto(retainedModuleEntity);
+		ModuleDTO newDto = moduleMapper.toDto(newModuleEntity);
+
+		return Arrays.asList(retainedDto, newDto);
+	}
+
+	private List<Clazz> getClazzes(Path modulePath) throws IOException {
+		List<Clazz> clazzes = new ArrayList<>();
+
+		Files.list(modulePath).filter(Files::isRegularFile).filter(this::isSupportedSourceFile).forEach(filePath -> {
+			try {
+				// Get dependencies using the appropriate parser
+				List<Dependency> dependencies = parserFactory.getParser(filePath).getDependencies(filePath);
+
+				String fileName = filePath.getFileName().toString();
+				String className = removeFileExtension(fileName);
+
+				Clazz clazz = new Clazz(generateNewUUID(), className, dependencies, 0.0, // Similarity
+																							// will
+																							// be
+																							// calculated
+																							// later
+						0.0, // avgSimilarityWithRefClazzes will be calculated later
+						modulePath.getFileName().toString(), // firstModule
+						modulePath.getFileName().toString(), // currentModule
+						"ALLOW" // enforceMode default
+				);
+				clazzes.add(clazz);
+			}
+			catch (UnsupportedOperationException e) {
+				// If the language parser is not yet implemented, log and skip
+				System.out.println("Skipping unsupported file: " + filePath);
+			}
+		});
+
+		return clazzes;
+	}
+
+	private boolean isSupportedSourceFile(Path filePath) {
+		String path = filePath.toString().toLowerCase();
+		return LANGUAGE_EXTENSIONS.values().stream().flatMap(List::stream).anyMatch(path::endsWith);
+	}
+
+	private String removeFileExtension(String fileName) {
+		int lastDotIndex = fileName.lastIndexOf('.');
+		return lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+	}
+
+	/**
+	 * Checks if a directory is a leaf directory that directly contains Java files (not
+	 * just subdirectories)
+	 */
+	private boolean isLeafDirectoryWithJavaFiles(Path directory) {
+		try {
+			// Check if this directory directly contains Java files
+
+			return Files.list(directory)
+				.filter(Files::isRegularFile)
+				.anyMatch(path -> path.toString().toLowerCase().endsWith(".java"));
+		}
+		catch (IOException e) {
+			return false;
+		}
+	}
+
+	public List<Module> getModules(String projectDirectory) throws IOException {
+		Path srcPath = Paths.get(projectDirectory, "src"); // Start from 'src' directory
+		if (!Files.exists(srcPath) || !Files.isDirectory(srcPath)) {
+			return this.modules; // Return empty list if 'src' does not exist or is not a
+									// directory
+		}
+
+		// Clear existing modules
+		this.modules.clear();
+
+		// Find only leaf directories that actually contain Java files (not intermediate
+		// directories)
+		Files.walk(srcPath)
+			.filter(Files::isDirectory)
+			.filter(this::isLeafDirectoryWithJavaFiles) // Only process directories that
+														// directly contain Java files
+			.forEach(modulePath -> {
+				try {
+					List<Clazz> clazzes = getClazzes(modulePath);
+					if (!clazzes.isEmpty()) {
+						// Determine module fullyQualifiedName based on directory
+						// structure
+						String moduleName = modulePath.getParent().getFileName().toString() + '/'
+								+ modulePath.getFileName().toString();
+
+						// Generate deterministic UUID based on module path to prevent
+						// duplicates
+						String moduleId = generateDeterministicUUID(modulePath.toString());
+
+						// Check if module already exists to prevent duplicates
+						boolean moduleExists = this.modules.stream()
+							.anyMatch(existingModule -> existingModule.getId().equals(moduleId));
+
+						if (!moduleExists) {
+							Module module = new Module(moduleId, moduleName, null, // refClazzes
+																					// will
+																					// be
+																					// calculated
+																					// later
+									null, // refClazzesDependencies will be calculated
+											// later
+									null, // moduleDependencies will be calculated later
+									clazzes, 0.0, // Similarity will be calculated later
+									0.0, // avgRefClazzesSimilarity will be calculated
+											// later
+									0 // violations will be calculated later
+							);
+							this.modules.add(module);
+							log.info("Added new module: {} with ID: {}", moduleName, moduleId);
+						}
+						else {
+							log.warn("Module already exists, skipping: {} with ID: {}", moduleName, moduleId);
+						}
+					}
+				}
+				catch (IOException e) {
+					log.error("ModuleService -> getModules: ", e);
+				}
+			});
+
+		return this.modules;
+	}
+
+	public ModuleDTO setRefClazzes(String moduleId, List<String> refClazzIds) {
+		// Load all modules
+		List<ModuleDTO> modules = getModulesFromFile();
+
+		// Find the target module by moduleId
+		Optional<ModuleDTO> targetModuleOptional = modules.stream()
+			.filter(module -> moduleId.equals(module.id()))
+			.findFirst();
+
+		if (targetModuleOptional.isEmpty()) {
+			return null; // Module not found
+		}
+
+		ModuleDTO targetModule = targetModuleOptional.get();
+
+		// Find the requested reference classes from the module's classes
+		List<ClazzResponseDTO> refClazzes = Arrays.stream(targetModule.clazzes())
+			.filter(clazz -> refClazzIds.contains(clazz.id()))
+			.sorted((c1, c2) -> Double.compare(c2.similarity(), c1.similarity())) // Sort
+																					// descending
+																					// by
+																					// similarity
+			.toList();
+
+		// Validate that all requested class IDs were found
+		if (refClazzes.size() != refClazzIds.size()) {
+			throw new IllegalArgumentException("Some requested class IDs were not found in the module");
+		}
+
+		// Calculate dependencies and similarities
+		Module moduleEntity = moduleMapper.toEntity(targetModule);
+		List<Clazz> modulesList = refClazzes.stream().map(clazzMapper::toEntity).toList();
+		moduleEntity.setRefClazzes(modulesList);
+		this.calculateAvgSimilarityWithRefClazzes(moduleEntity);
+		this.calculateModuleSimilarity(moduleEntity);
+		this.populateRefClazzesDependencies(moduleEntity);
+		this.populateModuleDependencies(moduleEntity);
+		this.calculateModuleViolations(moduleEntity);
+
+		// Create updated module with new reference classes
+		ModuleDTO updatedModule = new ModuleDTO(targetModule.id(), targetModule.name(),
+				refClazzes.toArray(new ClazzResponseDTO[0]),
+				moduleEntity.getRefClazzesDependencies()
+					.stream()
+					.map(dependencyMapper::toDto)
+					.toArray(DependencyDTO[]::new),
+				moduleEntity.getModuleDependencies()
+					.stream()
+					.map(dependencyMapper::toDto)
+					.toArray(DependencyDTO[]::new),
+				moduleEntity.getClazzes().stream().map(clazzMapper::toDto).toArray(ClazzResponseDTO[]::new),
+				moduleEntity.getSimilarity(), moduleEntity.getAvgRefClazzesSimilarity());
+
+		// Replace the module in the list
+		List<ModuleDTO> updatedModules = modules.stream()
+			.map(module -> module.id().equals(moduleId) ? updatedModule : module)
+			.collect(Collectors.toList());
+
+		// Save updated modules to file
+		saveModules(updatedModules);
+
+		return updatedModule;
+	}
+
+	public ModuleDTO setRefClazzMode(String moduleId, String classId, String mode) {
+		if (!mode.equals("ALLOW") && !mode.equals("MUST")) {
+			throw new IllegalArgumentException("Invalid enforceMode: " + mode + "; expected ALLOW or MUST");
+		}
+
+		List<ModuleDTO> modules = getModulesFromFile();
+		Optional<ModuleDTO> targetOpt = modules.stream().filter(m -> moduleId.equals(m.id())).findFirst();
+		if (targetOpt.isEmpty()) {
+			return null;
+		}
+
+		Module entity = moduleMapper.toEntity(targetOpt.get());
+
+		entity.getRefClazzes()
+			.stream()
+			.filter(c -> classId.equals(c.getId()))
+			.findFirst()
+			.ifPresent(c -> c.setEnforceMode(mode));
+
+		entity.getClazzes()
+			.stream()
+			.filter(c -> classId.equals(c.getId()))
+			.findFirst()
+			.ifPresent(c -> c.setEnforceMode(mode));
+
+		ModuleDTO updated = moduleMapper.toDto(entity);
+		List<ModuleDTO> updatedModules = modules.stream()
+			.map(m -> m.id().equals(moduleId) ? updated : m)
+			.collect(Collectors.toList());
+		saveModules(updatedModules);
+		return updated;
+	}
+
+}

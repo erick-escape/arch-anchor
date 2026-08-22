@@ -8,23 +8,29 @@
         <version>3.3.5</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>tcc.com</groupId>
-    <artifactId>viewer</artifactId>
+    <groupId>com.archanchor</groupId>
+    <artifactId>arch-anchor-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>viewer</name>
-    <description>This is a project to analyze and visualize your programming projects.</description>
-    <url/>
+    <name>arch-anchor-api</name>
+    <description>Extracts architectural constraints from Java source code using the reference class concept.</description>
+    <url>https://github.com/erick-escape/arch-anchor</url>
     <licenses>
-        <license/>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/erick-escape/arch-anchor/blob/main/LICENSE</url>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Erick de Castro Silva</name>
+            <organization>Universidade Federal de Lavras (UFLA)</organization>
+        </developer>
     </developers>
     <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
+        <connection>scm:git:https://github.com/erick-escape/arch-anchor.git</connection>
+        <developerConnection>scm:git:git@github.com:erick-escape/arch-anchor.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/erick-escape/arch-anchor</url>
     </scm>
     <properties>
         <java.version>17</java.version>

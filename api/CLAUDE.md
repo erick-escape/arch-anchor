@@ -29,7 +29,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 
 ### Core Components
 
-**Controllers** (`src/main/java/tcc/com/viewer/controllers/`)
+**Controllers** (`src/main/java/com/archanchor/controllers/`)
 
 - `ProjectController` - Handles project upload, listing, deletion, and analysis
 - `ModuleController` - Manages module operations (merge, split, delete, rename, move class, set ref classes)
@@ -38,7 +38,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 - `MethodController` - Placeholder for method-level analysis (currently empty)
 - `AttributeController` - Placeholder for attribute analysis (currently empty)
 
-**Services** (`src/main/java/tcc/com/viewer/services/`)
+**Services** (`src/main/java/com/archanchor/services/`)
 
 - `JavaParserService` - Core service using JavaParser for Java parsing and dependency analysis
 - `ProjectService` - High-level project analysis orchestration
@@ -47,7 +47,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 - `ClazzService` - Placeholder for class-level operations (currently empty)
 - `DependencyService` - Placeholder for dependency relationship management (currently empty)
 
-**Architectural Analyses** (`src/main/java/tcc/com/viewer/services/architecturalAnalyses/`)
+**Architectural Analyses** (`src/main/java/com/archanchor/services/architecturalAnalyses/`)
 
 - `ArchitecturalAnalysesRunner` - Executes all registered analyses
 - `SplitModule` - Logic for splitting modules based on architectural patterns
@@ -55,7 +55,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 - `MoveClass` - Class relocation analysis
 - `ArchitectureViolation` - Analyzes architectural rule violations and generates move suggestions
 
-**Parsers** (`src/main/java/tcc/com/viewer/services/parsers/`)
+**Parsers** (`src/main/java/com/archanchor/services/parsers/`)
 
 - `JavaParser` - Java-specific parsing implementation
 - `JavaScriptParser` - JavaScript parsing capabilities
@@ -64,7 +64,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 
 ### Domain Models
 
-**Core Entities** (`src/main/java/tcc/com/viewer/domains/`)
+**Core Entities** (`src/main/java/com/archanchor/domains/`)
 
 - `Module` - Represents a logical module with fields: `id`, `name`, `refClazzes` (List<Clazz>), `refClazzesDependencies` (List<Dependency>),
   `moduleDependencies` (List<Dependency>), `clazzes` (List<Clazz>), `similarity` (Double), `avgRefClazzesSimilarity` (Double),
@@ -77,7 +77,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 ### Architectural Analysis Framework
 
 The system includes a sophisticated architectural analysis framework located in
-`src/main/java/tcc/com/viewer/services/architecturalAnalyses/` that processes the parsed modules to provide architectural insights and
+`src/main/java/com/archanchor/services/architecturalAnalyses/` that processes the parsed modules to provide architectural insights and
 recommendations.
 
 #### Rating Mechanism
@@ -339,7 +339,7 @@ The architectural analysis framework relies on three core metrics:
 ### Testing
 
 - Uses Spring Boot Test framework
-- Test files in `src/test/java/tcc/com/viewer/`
+- Test files in `src/test/java/com/archanchor/`
 - Key test classes:
     - `JavaParserTypeResolutionTest` - Tests JavaParser parsing functionality
     - `PackagePathConverterTest` - Tests package name extraction utilities
