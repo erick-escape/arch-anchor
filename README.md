@@ -97,8 +97,8 @@ Use the bundled example to see what the tool reports before you point it at your
    | Merge `auth` + `security` | Both revolve around the same four dependencies |
    | Move `database.UIRenderer` → `presentation` | Its dependencies match presentation, not database |
 
-`examples/sample-architecture-project/README.md` documents the expected metrics, so it also works
-as a smoke test after you change the analysis code.
+The tool reports other, lower-rated suggestions alongside these three;
+`examples/sample-architecture-project/README.md` describes each scenario in full.
 
 ## Running it on your own project
 

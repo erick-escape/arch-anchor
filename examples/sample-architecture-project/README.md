@@ -2,6 +2,14 @@
 
 ## Purpose
 
+> **Note on the numbers below.** The expected similarity, violation, and rate values in this
+> file were written against an earlier version of the metrics and no longer match what the tool
+> reports. What *does* reproduce is the shape of the findings: analyzing this project surfaces a
+> split of `service`, a merge of `auth` and `security`, and a move of `database.UIRenderer` into
+> `presentation` — alongside other lower-rated suggestions. Treat the scenarios as the
+> specification and the numbers as historical.
+
+
 This is a sample Java project designed to demonstrate architectural analysis scenarios for Arch Anchor. The project intentionally contains architectural issues that should be detected by the analysis tool.
 
 ## Project Structure
