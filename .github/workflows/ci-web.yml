@@ -39,5 +39,5 @@ jobs:
         run: npm test
 
       # `npm run build` is deliberately absent: `tsc -b` still fails on
-      # pre-existing type errors in the UI components. Add the step here as
-      # soon as those are cleared.
+      # pre-existing type errors in the UI components (issue #1). Add the step
+      # back here as soon as those are cleared.

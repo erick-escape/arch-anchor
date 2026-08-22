@@ -33,7 +33,8 @@ cd web && npm run lint && npm test
 `./mvnw spring-javaformat:apply` fixes it. On the frontend, `npm run format` runs Prettier.
 
 Do not run `npm run build` as a gate yet — `tsc -b` fails on type errors that predate the
-monorepo. Clearing those is a welcome contribution in its own right.
+monorepo. Clearing those is a welcome contribution in its own right; see
+[issue #1](https://github.com/erick-escape/arch-anchor/issues/1) for the breakdown.
 
 ## Code style
 

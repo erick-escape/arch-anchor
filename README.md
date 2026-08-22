@@ -195,8 +195,9 @@ will fail to load, and deleting it is the fix.
   in the repo yet.
 - **`npm run build` currently fails.** `tsc -b` reports pre-existing type errors in the UI
   components — untyped props and `useState([])` widening to `never[]`. This does not affect
-  `npm run dev`, which is how the tool is meant to be run today, and it is tracked as an open
-  issue. `npm run lint` and `npm test` do pass.
+  `npm run dev`, which is how the tool is meant to be run today, and it is tracked in
+  [issue #1](https://github.com/erick-escape/arch-anchor/issues/1). `npm run lint` and
+  `npm test` do pass.
 - **No database.** State lives in memory and in the two `.bin` files described above. Restarting
   the backend without those files means re-uploading.
 - **Java only**, and modules are inferred from package structure — the tool has no notion of
