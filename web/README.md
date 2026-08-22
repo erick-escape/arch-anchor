@@ -1,27 +1,20 @@
-# Arch Rationale — Frontend
+# Arch Anchor — Web
 
-### Think about your project in a different way.
+React 18 + TypeScript + Vite frontend. Renders the module dependency graph with ReactFlow,
+drives all module operations, and exports the recovered architectural constraints as a PDF.
 
-## Setup
+See the [root README](../README.md) for setup, the analysis workflow, and known limitations.
 
-### Prerequisites
+## Commands
 
-- Node.js 18+
-- npm
+| Command | Description |
+|---|---|
+| `npm install` | Install dependencies |
+| `npm run dev` | Dev server on `http://localhost:5173` |
+| `npm test` | Run the vitest suite |
+| `npm run lint` | Run ESLint |
+| `npm run format` | Format with Prettier |
+| `npm run build` | Type-check and build — currently fails on pre-existing type errors |
 
-### Running the project
-
-```bash
-npm install
-npm run dev
-```
-
-The app will start on `http://localhost:5173`.
-
-### Other commands
-
-| Command             | Description                  |
-|---------------------|------------------------------|
-| `npm run build`     | Build for production         |
-| `npm run lint`      | Run ESLint                   |
-| `npm run preview`   | Preview the production build |
+The backend must be running on port 8080: `vite.config.ts` proxies `/api` to it, and most
+components call the API through relative paths that depend on that proxy.
