@@ -3,18 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { Button, message, Popconfirm, Spin, Table } from 'antd';
 import UploadModal from '../../components/UploadModal';
 import axios from 'axios';
+import { ProjectSummary, ProjectsListResponse } from '../../interface/Project';
 
 const ProjectsPage = () => {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/projects');
-      setProjects(response.data.projects); // Updated to handle new structure
+      const response = await axios.get<ProjectsListResponse>('/api/projects');
+      setProjects(response.data.projects);
     } catch {
       message.error('Failed to fetch projects');
     } finally {

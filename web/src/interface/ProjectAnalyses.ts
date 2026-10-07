@@ -1,13 +1,12 @@
+import { EnforceMode } from './ClazzData';
+import { Dependency } from './Dependency';
 import { ModuleData } from './ModuleData';
 
 export interface RefClassConstraint {
   refClassId: string;
   refClassName: string;
-  enforceMode: 'ALLOW' | 'MUST';
-  dependencies: {
-    packageName: string;
-    types: { fullyQualifiedName: string; className: string }[];
-  }[];
+  enforceMode: EnforceMode;
+  dependencies: Dependency[];
 }
 
 export interface ArchitecturalConstraint {
