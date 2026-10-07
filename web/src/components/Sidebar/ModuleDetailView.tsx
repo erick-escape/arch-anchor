@@ -3,7 +3,36 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { ModuleDetailViewProps } from './sidebarTypes';
 import { ClazzData } from '../../interface/ClazzData.tsx';
+import { Dependency } from '../../interface/Dependency.tsx';
 import styles from './Sidebar.module.css';
+
+interface DependencyListProps {
+  dependencies: Dependency[] | null;
+}
+
+// Null is what /api/analyze sends until #8 is fixed, so it renders like an empty list.
+const DependencyList = ({ dependencies }: DependencyListProps) => {
+  if (!dependencies || dependencies.length === 0) {
+    return <div style={{ padding: '8px 10px', color: '#888' }}>No dependencies</div>;
+  }
+  return (
+    <div>
+      {dependencies.map((dependency) => (
+        <div
+          key={dependency.packageName}
+          style={{
+            padding: '8px 10px',
+            borderRadius: '4px',
+            marginBottom: '2px',
+            backgroundColor: 'black',
+          }}
+        >
+          {dependency.packageName}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 type DetailSection = 'refClazzes' | 'clazzes' | 'dependencies';
 
@@ -280,21 +309,7 @@ const ModuleDetailView = ({
           </div>
 
           {expandedSections.dependencies && (
-            <div>
-              {module.allDependencies.map((dependency) => (
-                <div
-                  key={dependency.packageName}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '4px',
-                    marginBottom: '2px',
-                    backgroundColor: 'black',
-                  }}
-                >
-                  {dependency.packageName}
-                </div>
-              ))}
-            </div>
+            <DependencyList dependencies={module.allDependencies} />
           )}
         </div>
 
