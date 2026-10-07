@@ -22,5 +22,6 @@ Java 17+ is the only prerequisite — the Maven wrapper is bundled.
 ## Local state
 
 `uploads/`, `modules.bin`, and `project-analyses.bin` are runtime state, all gitignored. Delete
-them to reset. The `.bin` files are Java-serialized and therefore tied to the current class
+them to reset. Imports in progress live in `uploads/.staging/`, which is never listed as a project
+and is safe to delete while the API is stopped. The `.bin` files are Java-serialized and therefore tied to the current class
 names; a stale one will fail to load, and deleting it is the fix.
