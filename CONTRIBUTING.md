@@ -26,15 +26,11 @@ environment is sound.
 
 ```bash
 cd api && ./mvnw test          # 99 tests; 21 are skipped without the local uploads/ fixture
-cd web && npm run lint && npm test
+cd web && npm run lint && npm test && npm run build
 ```
 
 `./mvnw test` also runs `spring-javaformat:validate`, so a formatting slip fails the build.
 `./mvnw spring-javaformat:apply` fixes it. On the frontend, `npm run format` runs Prettier.
-
-Do not run `npm run build` as a gate yet — `tsc -b` fails on type errors that predate the
-monorepo. Clearing those is a welcome contribution in its own right; see
-[issue #1](https://github.com/erick-escape/arch-anchor/issues/1) for the breakdown.
 
 ## Code style
 

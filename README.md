@@ -173,7 +173,7 @@ All endpoints are under `http://localhost:8080`.
 | `npm test` | Run the vitest suite |
 | `npm run lint` | Run ESLint |
 | `npm run format` | Format with Prettier |
-| `npm run build` | Type-check and build for production — see [Limitations](#limitations) |
+| `npm run build` | Type-check and build for production |
 
 **Local state.** The backend keeps everything on disk next to itself, all gitignored:
 
@@ -193,11 +193,6 @@ will fail to load, and deleting it is the fix.
   which depend on the Vite dev-server proxy in `web/vite.config.ts`. A static `npm run build`
   deployment needs a reverse proxy in front of both halves; there is no production configuration
   in the repo yet.
-- **`npm run build` currently fails.** `tsc -b` reports pre-existing type errors in the UI
-  components — untyped props and `useState([])` widening to `never[]`. This does not affect
-  `npm run dev`, which is how the tool is meant to be run today, and it is tracked in
-  [issue #1](https://github.com/erick-escape/arch-anchor/issues/1). `npm run lint` and
-  `npm test` do pass.
 - **No database.** State lives in memory and in the two `.bin` files described above. Restarting
   the backend without those files means re-uploading.
 - **Java only**, and modules are inferred from package structure — the tool has no notion of
