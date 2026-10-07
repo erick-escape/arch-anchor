@@ -14,7 +14,7 @@ on:
 
 jobs:
   test:
-    name: Lint and test (Node 20)
+    name: Lint, test and build (Node 20)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,6 +38,5 @@ jobs:
       - name: Test
         run: npm test
 
-      # `npm run build` is deliberately absent: `tsc -b` still fails on
-      # pre-existing type errors in the UI components (issue #1). Add the step
-      # back here as soon as those are cleared.
+      - name: Build
+        run: npm run build

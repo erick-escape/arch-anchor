@@ -14,7 +14,7 @@ See the [root README](../README.md) for setup, the analysis workflow, and known 
 | `npm test` | Run the vitest suite |
 | `npm run lint` | Run ESLint |
 | `npm run format` | Format with Prettier |
-| `npm run build` | Type-check and build — currently fails on pre-existing type errors |
+| `npm run build` | Type-check and build for production |
 
 The backend must be running on port 8080: `vite.config.ts` proxies `/api` to it, and most
 components call the API through relative paths that depend on that proxy.

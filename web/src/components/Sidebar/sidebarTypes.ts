@@ -1,3 +1,4 @@
+import { EnforceMode } from '../../interface/ClazzData';
 import { ModuleData } from '../../interface/ModuleData';
 
 export interface SidebarProps {
@@ -12,14 +13,16 @@ export interface SidebarProps {
 export interface ModuleListViewProps {
   modules: ModuleData[];
   onModuleClick: (module: ModuleData) => void;
-  onModuleRename: (moduleId: number, newName: string) => Promise<void>;
-  onModuleDelete: (moduleId: number) => Promise<void>;
+  onModuleRename: (moduleId: string, newName: string) => Promise<void>;
+  onModuleDelete: (moduleId: string) => Promise<void>;
 }
 
 export interface ModuleDetailViewProps {
   module: ModuleData;
   onBack: () => void;
   onSplit: (moduleId: string, classIds: string[]) => Promise<void>;
+  onSetRefClazzes: (moduleId: string, classIds: string[]) => Promise<void>;
+  onSetRefClazzMode: (moduleId: string, classId: string, mode: EnforceMode) => Promise<void>;
 }
 
 export interface ModuleCardProps {
