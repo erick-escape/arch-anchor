@@ -113,8 +113,8 @@ cd api
 ### Architecture Overview
 
 **Controllers** (`src/main/java/com/archanchor/controllers/`)
-- REST endpoints for project upload, analysis, and module/class operations
-- Key endpoints: `/api/upload`, `/api/analyze`, `/api/projects`, `/api/module/*`, `/api/recommendations/*`
+- REST endpoints for project upload or GitHub import, analysis, and module/class operations
+- Key endpoints: `/api/upload`, `/api/projects/import`, `/api/analyze`, `/api/projects`, `/api/module/*`, `/api/recommendations/*`
 
 **Services** (`src/main/java/com/archanchor/services/`)
 - `JavaParserService` - Core parsing and dependency resolution using JavaParser
@@ -195,7 +195,7 @@ npm run preview                     # Preview production build
 **Components** (`src/components/`)
 - `Header/` - Application header with navigation
 - `Sidebar/` - Module/class details and operations panel
-- `UploadModal/` - File upload for new projects
+- `AddProjectModal/` - Add a project: import from a GitHub URL (default tab) or upload a local directory
 - `Popup/` - Merge confirmation dialog
 
 **Services & Hooks**
@@ -233,7 +233,7 @@ npm run preview                     # Preview production build
 1. **Start Backend**: `cd api && ./mvnw spring-boot:run`
 2. **Start Frontend**: `cd web && npm run dev`
 3. **Access Application**: http://localhost:5173
-4. **Upload Project**: Click "Add Project" and upload Java source files - `examples/sample-architecture-project` is the fixture that exercises all three analyses
+4. **Add Project**: Click "Add Project" and import a GitHub repository or upload a local directory - `examples/sample-architecture-project` is the fixture that exercises all three analyses (import `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/sample-architecture-project`)
 5. **Analyze**: Click "Analyze" on a project - backend parses, runs analyses, frontend visualizes
 
 ## API Proxy Configuration
