@@ -1,0 +1,56 @@
+/* Background colours live here, not in inline styles: an inline value would beat :hover. */
+
+.moduleCard {
+  width: 100%;
+  background-color: black;
+  color: white;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+  box-sizing: border-box;
+}
+
+.moduleCard:hover {
+  background-color: #333;
+}
+
+.cardMenuItem {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.cardMenuItem:hover,
+.contextMenuItem:hover {
+  background-color: #333;
+}
+
+.clazzRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background-color: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+.clazzRow:hover {
+  background-color: #222;
+}
+
+/* A selected row keeps its highlight under the pointer. */
+.clazzRowSelected,
+.clazzRowSelected:hover {
+  background-color: #333;
+}
+
+.contextMenuItem {
+  padding: 8px 12px;
+  cursor: pointer;
+}
