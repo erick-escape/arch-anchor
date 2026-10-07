@@ -12,6 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import { ClazzData } from '../../interface/ClazzData.tsx';
+import styles from './Sidebar.module.css';
 
 // Confirmation Modal Component
 const ConfirmationModal = ({
@@ -135,23 +136,8 @@ const ModuleCard = ({ module, onClick, onRename, onDelete }: ModuleCardProps) =>
 
   return (
     <div
-      style={{
-        width: '100%',
-        backgroundColor: 'black',
-        color: 'white',
-        padding: '12px',
-        borderRadius: '6px',
-        marginBottom: '10px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        cursor: isRenaming ? 'default' : 'pointer',
-        transition: 'background-color 0.2s',
-        ':hover': {
-          backgroundColor: '#333',
-        },
-        boxSizing: 'border-box',
-      }}
+      className={styles.moduleCard}
+      style={{ cursor: isRenaming ? 'default' : 'pointer' }}
       onClick={isRenaming ? undefined : () => onClick(module)}
     >
       <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -238,15 +224,7 @@ const ModuleCard = ({ module, onClick, onRename, onDelete }: ModuleCardProps) =>
                 setIsMenuOpen(false);
                 setIsRenaming(true);
               }}
-              style={{
-                padding: '8px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'pointer',
-                ':hover': {
-                  backgroundColor: '#333',
-                },
-              }}
+              className={styles.cardMenuItem}
             >
               <FontAwesomeIcon icon={faPencil} style={{ marginRight: '8px', color: 'white' }} />
               <span>Rename</span>
@@ -257,15 +235,7 @@ const ModuleCard = ({ module, onClick, onRename, onDelete }: ModuleCardProps) =>
                 setIsMenuOpen(false);
                 onDelete(module.id);
               }}
-              style={{
-                padding: '8px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'pointer',
-                ':hover': {
-                  backgroundColor: '#333',
-                },
-              }}
+              className={styles.cardMenuItem}
             >
               <FontAwesomeIcon icon={faTrash} style={{ marginRight: '8px', color: '#ff4d4d' }} />
               <span>Delete</span>
@@ -514,20 +484,11 @@ const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes, onSetRefCl
               {module.clazzes.map((classItem: ClazzData) => (
                 <div
                   key={classItem.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    backgroundColor: selectedClazzes.includes(classItem.id)
-                      ? '#333'
-                      : 'transparent',
-                    cursor: 'pointer',
-                    ':hover': {
-                      backgroundColor: '#222',
-                    },
-                    borderRadius: '4px',
-                    marginBottom: '2px',
-                  }}
+                  className={
+                    selectedClazzes.includes(classItem.id)
+                      ? `${styles.clazzRow} ${styles.clazzRowSelected}`
+                      : styles.clazzRow
+                  }
                   onClick={() => handleClassClick(classItem.id)}
                   onContextMenu={(e) => handleRightClick(e, classItem.id)}
                 >
@@ -548,28 +509,10 @@ const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes, onSetRefCl
                     zIndex: 1000,
                   }}
                 >
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      ':hover': {
-                        backgroundColor: '#333',
-                      },
-                    }}
-                    onClick={handleSetRefClazzes}
-                  >
+                  <div className={styles.contextMenuItem} onClick={handleSetRefClazzes}>
                     Set as Ref Classes
                   </div>
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      ':hover': {
-                        backgroundColor: '#333',
-                      },
-                    }}
-                    onClick={handleSplit}
-                  >
+                  <div className={styles.contextMenuItem} onClick={handleSplit}>
                     Split
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
 import { HeaderProps, HeaderMenuOption } from './headerTypes';
+import styles from './Header.module.css';
 
 const Header = ({ projectName, isSidebarOpen, onToggleSidebar, onExportACs }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -91,15 +92,7 @@ const Header = ({ projectName, isSidebarOpen, onToggleSidebar, onExportACs }: He
                   option.onClick();
                   setIsMenuOpen(false);
                 }}
-                style={{
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  color: 'white',
-                  transition: 'background 0.2s',
-                  ':hover': {
-                    background: '#333',
-                  },
-                }}
+                className={styles.menuItem}
               >
                 {option.label}
               </div>
