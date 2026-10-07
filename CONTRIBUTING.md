@@ -79,13 +79,22 @@ libraries or frameworks. The tool is meant to parse any Java project — Spring 
 JavaEE, no framework at all — and a hardcoded shortcut for one ecosystem is a bug even when it
 makes a specific project work better.
 
+## Workflow
+
+1. Every change starts from an issue. If there is none for what you want to do, open one.
+2. Branch from an up-to-date `main`: `<type>/<issue>-<slug>`, e.g. `fix/1-typed-state`.
+3. Write the failing test first, then the change that makes it pass.
+4. Open a pull request into `main` and link the issue with `Closes #N` (or `Refs #N` when the
+   pull request is one of several on the same issue).
+5. It is merged once CI is green.
+
 ## Commits
 
-The history uses a `type: subject` prefix, some of it with gitmoji. New commits should keep the
-prefix and drop the emoji:
+Commit messages are written in English. The history uses a `type: subject` prefix, some of it
+with gitmoji. New commits should keep the prefix and drop the emoji:
 
 ```
-feature: add enforcement modes per reference class
+feat: add enforcement modes per reference class
 refactor: separate ref class election from similarity computation
 fix: correct violation count after a module merge
 docs: explain the rating mechanism
