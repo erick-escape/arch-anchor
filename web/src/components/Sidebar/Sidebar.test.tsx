@@ -121,6 +121,27 @@ describe('Sidebar module detail', () => {
     expect(screen.getByText('org.springframework.stereotype')).toBeInTheDocument();
   });
 
+  it('keeps the detail view usable when the API sends no module dependencies', async () => {
+    // ModuleMapper does not map Module.moduleDependencies to ModuleDTO.allDependencies, so
+    // /api/analyze sends null here (#8).
+    render(
+      <Sidebar
+        isOpen
+        modules={[moduleFixture({ id: 'm3', name: 'shipping', allDependencies: null })]}
+        onDeleteRefresh={() => {}}
+        onRenameRefresh={() => {}}
+        onSplitRefresh={() => {}}
+        onRefClazzModeRefresh={() => {}}
+      />
+    );
+
+    await userEvent.click(screen.getByText('shipping'));
+    await userEvent.click(screen.getByText('Dependencies'));
+
+    expect(screen.getByRole('heading', { name: 'shipping' })).toBeInTheDocument();
+    expect(screen.getByText('No dependencies')).toBeInTheDocument();
+  });
+
   it('switches a reference class from ALLOW to MUST', async () => {
     const mustRefClazz = clazzFixture({ enforceMode: 'MUST' });
     fakeApi.respondTo('POST', '/api/module/ref-clazz-mode', {
