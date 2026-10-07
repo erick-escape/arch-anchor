@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { ChangeEvent, useState } from 'react';
 import { Button, message, Modal } from 'antd';
 
-const UploadModal = ({ open, onClose, onSuccess }) => {
-  const [files, setFiles] = useState([]);
+interface UploadModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const UploadModal = ({ open, onClose, onSuccess }: UploadModalProps) => {
+  const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = (event) => {
-    const selectedFiles = Array.from(event.target.files);
-    setFiles(selectedFiles);
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setFiles(Array.from(event.target.files ?? []));
   };
 
   const uploadFiles = async () => {
