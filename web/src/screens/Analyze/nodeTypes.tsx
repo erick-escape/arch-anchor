@@ -1,4 +1,5 @@
-import { Handle, NodeResizeControl, Position } from '@xyflow/react';
+import { Handle, NodeProps, NodeResizeControl, Position } from '@xyflow/react';
+import { ModuleNode } from './moduleNodes';
 import '@xyflow/react/dist/style.css';
 
 const controlStyle = {
@@ -29,7 +30,7 @@ function ResizeIcon() {
   );
 }
 
-function CustomNode({ data }) {
+function CustomNode({ data }: NodeProps<ModuleNode>) {
   const { module } = data; // 'module' is what we'll pass from setNodes
 
   return (
@@ -43,7 +44,7 @@ function CustomNode({ data }) {
       <div style={{ textAlign: 'center', fontWeight: 'bold' }}>{module.name}</div>
       <div>
         {/*Shows the reference class with the highest similarity.*/}
-        <strong>Ref Class:</strong> {module.refClazzes[0].name || 'N/A'}
+        <strong>Ref Class:</strong> {module.refClazzes[0]?.name ?? 'N/A'}
       </div>
       <div>
         <strong>Similarity:</strong> {(module.similarity * 100).toFixed(2)}%
