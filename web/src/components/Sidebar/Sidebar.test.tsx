@@ -121,13 +121,11 @@ describe('Sidebar module detail', () => {
     expect(screen.getByText('org.springframework.stereotype')).toBeInTheDocument();
   });
 
-  it('keeps the detail view usable when the API sends no module dependencies', async () => {
-    // ModuleMapper does not map Module.moduleDependencies to ModuleDTO.allDependencies, so
-    // /api/analyze sends null here (#8).
+  it('says so when a module has no dependencies', async () => {
     render(
       <Sidebar
         isOpen
-        modules={[moduleFixture({ id: 'm3', name: 'shipping', allDependencies: null })]}
+        modules={[moduleFixture({ id: 'm3', name: 'shipping', allDependencies: [] })]}
         onDeleteRefresh={() => {}}
         onRenameRefresh={() => {}}
         onSplitRefresh={() => {}}

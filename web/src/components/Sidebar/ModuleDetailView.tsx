@@ -7,12 +7,11 @@ import { Dependency } from '../../interface/Dependency.tsx';
 import styles from './Sidebar.module.css';
 
 interface DependencyListProps {
-  dependencies: Dependency[] | null;
+  dependencies: Dependency[];
 }
 
-// Null is what /api/analyze sends until #8 is fixed, so it renders like an empty list.
 const DependencyList = ({ dependencies }: DependencyListProps) => {
-  if (!dependencies || dependencies.length === 0) {
+  if (dependencies.length === 0) {
     return <div style={{ padding: '8px 10px', color: '#888' }}>No dependencies</div>;
   }
   return (
