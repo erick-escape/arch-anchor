@@ -1,4 +1,6 @@
-export const nodeStyle = {
+import { CSSProperties } from 'react';
+
+export const nodeStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
@@ -15,7 +17,7 @@ export const nodeStyle = {
   // overflow: 'visible',     // allow content to expand
 };
 
-export const containerStyle = {
+export const containerStyle: CSSProperties = {
   width: '100%',
   height: '100%',
   display: 'flex',
@@ -24,7 +26,7 @@ export const containerStyle = {
   // overflow: 'hidden' // Ensure no unwanted scroll bars
 };
 
-export const reactFlowStyle = {
+export const reactFlowStyle: CSSProperties = {
   // background: '#f0f0f0',
   width: '100%',
   height: '100%',

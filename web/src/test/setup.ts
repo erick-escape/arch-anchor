@@ -13,3 +13,18 @@ if (typeof window !== 'undefined') {
   const computeStyle = window.getComputedStyle.bind(window);
   window.getComputedStyle = (element: Element) => computeStyle(element);
 }
+
+// antd's Table and Grid subscribe to breakpoints through matchMedia, which jsdom lacks. Report
+// "no media query matches", i.e. the narrowest layout, and ignore listeners.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  });
+}

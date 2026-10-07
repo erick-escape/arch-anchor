@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ConfirmationModalProps, ModuleCardProps, SidebarProps } from './sidebarTypes';
-import { ModuleData } from '../../interface/ModuleData';
+import { ModuleData, SplitModuleResponse } from '../../interface/ModuleData';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCheck,
@@ -272,12 +272,14 @@ const ModuleListView = ({ modules, onModuleClick, onModuleRename, onModuleDelete
   );
 };
 
+type DetailSection = 'refClazzes' | 'clazzes' | 'dependencies';
+
 // Module Detail View
 const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes, onSetRefClazzMode }) => {
   const [selectedClazzes, setSelectedClazzes] = useState<string[]>([]);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [expandedSections, setExpandedSections] = useState({
+  const [expandedSections, setExpandedSections] = useState<Record<DetailSection, boolean>>({
     refClazzes: true,
     clazzes: true,
     dependencies: false,
@@ -339,7 +341,7 @@ const ModuleDetailView = ({ module, onBack, onSplit, onSetRefClazzes, onSetRefCl
     };
   }, []);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: DetailSection) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -577,7 +579,10 @@ const Sidebar = ({
 }: SidebarProps) => {
   const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
   const [selectedModule, setSelectedModule] = useState<ModuleData | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState({
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    moduleId: string | null;
+  }>({
     isOpen: false,
     moduleId: null,
   });
@@ -647,23 +652,13 @@ const Sidebar = ({
 
   const handleSplitModule = async (moduleId: string, classIds: string[]) => {
     try {
-      const response = await axios.post('/api/module/split', {
+      const response = await axios.post<SplitModuleResponse>('/api/module/split', {
         moduleId,
         classIds,
       });
 
-      // Map response to ModuleData interface
-      const newModules: ModuleData[] = response.data.newModules.map((moduleDto: ModuleData) => ({
-        id: moduleDto.id,
-        name: moduleDto.name,
-        refClass: moduleDto.refClass,
-        clazzes: moduleDto.clazzes,
-        dependencies: moduleDto.dependencies,
-        similarity: moduleDto.similarity,
-      }));
-
-      // Call refresh helper
-      onSplitRefresh(moduleId, newModules);
+      // Pass the modules on whole: the graph nodes read their reference classes.
+      onSplitRefresh(moduleId, response.data.newModules);
       handleBackToList();
     } catch (error) {
       console.error('Failed to split module', error);
