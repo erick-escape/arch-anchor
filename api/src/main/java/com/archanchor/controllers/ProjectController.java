@@ -7,40 +7,34 @@ import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.projects.ProjectDetailDTO;
 import com.archanchor.dto.projects.ProjectsListResponseDTO;
 import com.archanchor.services.ProjectService;
+import com.archanchor.services.ProjectsDirectory;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Slf4j
 @RestController
 @RequestMapping("/api")
 public class ProjectController {
 
-	private static final String UPLOAD_DIR = "uploads";
-
 	private final ProjectService projectService;
 
-	public ProjectController(ProjectService projectService) {
+	private final ProjectsDirectory projectsDirectory;
+
+	public ProjectController(ProjectService projectService, ProjectsDirectory projectsDirectory) {
 		this.projectService = projectService;
+		this.projectsDirectory = projectsDirectory;
 	}
 
 	@GetMapping("/projects")
-	public ProjectsListResponseDTO listProjects() {
-		File projectsDir = new File(UPLOAD_DIR);
-		if (!projectsDir.exists() || !projectsDir.isDirectory()) {
-			return new ProjectsListResponseDTO(Collections.emptyList());
-		}
-
-		List<ProjectDetailDTO> projects = Arrays.stream(Objects.requireNonNull(projectsDir.listFiles()))
-			.filter(File::isDirectory)
-			.map(directory -> new ProjectDetailDTO(directory.getName()))
-			.collect(Collectors.toList());
-
+	public ProjectsListResponseDTO listProjects() throws IOException {
+		List<ProjectDetailDTO> projects = projectsDirectory.listProjectNames()
+			.stream()
+			.map(ProjectDetailDTO::new)
+			.toList();
 		return new ProjectsListResponseDTO(projects);
 	}
 
@@ -54,7 +48,7 @@ public class ProjectController {
 					continue;
 				}
 
-				Path uploadPath = Paths.get(UPLOAD_DIR);
+				Path uploadPath = projectsDirectory.root();
 				if (!Files.exists(uploadPath)) {
 					Files.createDirectories(uploadPath);
 				}
@@ -83,11 +77,8 @@ public class ProjectController {
 
 	@DeleteMapping("/projects/{projectName}")
 	public String deleteProject(@PathVariable String projectName) {
-		Path projectDir = Paths.get(UPLOAD_DIR, projectName);
-
 		try {
-			if (Files.exists(projectDir) && Files.isDirectory(projectDir)) {
-				Files.walk(projectDir).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+			if (projectsDirectory.deleteProject(projectName)) {
 				return "Project " + projectName + " deleted successfully!";
 			}
 			else {
@@ -102,7 +93,7 @@ public class ProjectController {
 	@PostMapping("/analyze")
 	public ProjectAnalysesDTO analyzeProject(@RequestParam String projectName) {
 		try {
-			Path projectPath = Paths.get(UPLOAD_DIR, projectName);
+			Path projectPath = projectsDirectory.resolveProject(projectName);
 			if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
 				throw new RuntimeException("Project not found!");
 			}

@@ -32,6 +32,7 @@ JavaParser library and provides architectural analysis capabilities through REST
 **Controllers** (`src/main/java/com/archanchor/controllers/`)
 
 - `ProjectController` - Handles project upload, listing, deletion, and analysis
+- `RepositoryImportController` - Creates a project from a GitHub repository URL (`POST /api/projects/import`)
 - `ModuleController` - Manages module operations (merge, split, delete, rename, move class, set ref classes)
 - `RecommendationsController` - Returns and applies architectural recommendations (split, merge, move)
 - `ClazzController` - Placeholder for class-level operations (currently empty)
@@ -258,7 +259,10 @@ The analyses can utilize `ModuleService` methods for:
 
 ### Data Flow
 
-1. **Project Upload**: Files uploaded via `/api/upload` endpoint, stored in `uploads/` directory
+1. **Project Upload or Import**: Files uploaded via `/api/upload`, or a GitHub repository shallow-cloned via
+   `/api/projects/import` (`services/repositoryImport/`), end up in the same place: `uploads/<project>/`, laid out by
+   `ProjectsDirectory`. An import stages in `uploads/.staging/`, strips `.git/` and symbolic links, and requires `src/`
+   directly under the chosen root, because `ModuleService.getModules` starts there
 2. **Analysis**: `/api/analyze` triggers `ProjectService.analyzeProject()` which:
     - Uses `JavaParserService` to parse Java files and resolve dependencies
     - Organizes code into modules based on package structure
@@ -332,7 +336,8 @@ The architectural analysis framework relies on three core metrics:
 ### Key Configuration
 
 - **File Upload**: Configured for large projects (max 200MB per file, 500MB request)
-- **Upload Directory**: `uploads/` (configurable via UPLOAD_DIR constant)
+- **Projects Directory**: `uploads/` (configurable via `archanchor.projects-dir`; owned by `ProjectsDirectory`)
+- **Repository Import**: JGit shallow clone of `github.com` only; per-operation timeout `archanchor.import.timeout-seconds`
 - **Java Parser**: Latest versions (3.27.0) for Java 17+ support and binding resolution
 - **Maven Integration**: Uses Maven Resolver API for dependency resolution
 
