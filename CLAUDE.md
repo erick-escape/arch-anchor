@@ -53,6 +53,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Structured JSON when logging for debugging / observability.
 - Plain text only for user-facing CLI output.
 
+## Git workflow
+
+- Every change starts from a GitHub issue. If none exists, open one first (`gh issue create`).
+- Branch from an up-to-date `main`: `<type>/<issue>-<slug>`, e.g. `fix/1-typed-state`.
+- Implement test-first (TDD): failing test, make it pass, then refactor. For type-only fixes
+  the failing check is `npm run build` / `tsc -b` in `web/`.
+- Open a PR into `main` using `.github/PULL_REQUEST_TEMPLATE.md` and link the issue:
+  `Closes #N`, or `Refs #N` when the PR is one of several passes on the same issue.
+- Merge once CI is green, then delete the branch.
+- Commit messages are always in English: `type: subject` (`feat`, `fix`, `refactor`, `docs`,
+  `test`, `ci`, `chore`), with a body that explains why.
+
 ## Project Overview
 
 Arch Anchor is a full-stack tool that extracts architectural constraints from Java source code, centered on the reference class concept: the class whose dependency set best represents a module's architectural intent. The system parses Java codebases, computes similarity and violation metrics, recommends structural refactorings, and provides interactive visualization of modules, classes, and dependencies.
