@@ -54,3 +54,26 @@
   padding: 8px 12px;
   cursor: pointer;
 }
+
+/* A button, so every property index.css gives buttons is set back to what the header needs. */
+.sectionHeader {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border: none;
+  border-bottom: 1px solid #333;
+  border-radius: 0;
+  background-color: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: bold;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* index.css recolours a hovered button's border; the header keeps its rule. */
+.sectionHeader:hover {
+  border-color: #333;
+}
