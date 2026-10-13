@@ -253,7 +253,8 @@ public class MoveClass extends ArchitecturalAnalysis {
 					}
 
 					// Evaluate if moving this class would be beneficial
-					MoveEvaluationResult evaluation = evaluateMoveClassBenefit(classToMove, sourceModule, targetModule);
+					MoveEvaluationResult evaluation = simulateOn(List.of(sourceModule, targetModule),
+							() -> evaluateMoveClassBenefit(classToMove, sourceModule, targetModule));
 
 					// Only consider moves with positive rate (considering both similarity
 					// and violations)
