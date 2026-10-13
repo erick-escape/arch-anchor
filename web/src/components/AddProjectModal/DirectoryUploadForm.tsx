@@ -1,13 +1,11 @@
 import { ChangeEvent, useState } from 'react';
-import { Button, message, Modal } from 'antd';
+import { Button, Flex, message } from 'antd';
 
-interface UploadModalProps {
-  open: boolean;
-  onClose: () => void;
+interface DirectoryUploadFormProps {
   onSuccess: () => void;
 }
 
-const UploadModal = ({ open, onClose, onSuccess }: UploadModalProps) => {
+const DirectoryUploadForm = ({ onSuccess }: DirectoryUploadFormProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -48,23 +46,14 @@ const UploadModal = ({ open, onClose, onSuccess }: UploadModalProps) => {
   };
 
   return (
-    <Modal
-      open={open}
-      title="Upload Project"
-      onCancel={onClose}
-      footer={[
-        <Button key="cancel" onClick={onClose}>
-          Cancel
-        </Button>,
-        <Button key="upload" type="primary" loading={uploading} onClick={uploadFiles}>
-          Upload
-        </Button>,
-      ]}
-    >
+    <Flex vertical gap="middle" align="flex-start">
       {/* eslint-disable-next-line react/no-unknown-property */}
       <input type="file" webkitdirectory="" directory="" multiple onChange={handleFileChange} />
-    </Modal>
+      <Button type="primary" loading={uploading} onClick={uploadFiles}>
+        Upload
+      </Button>
+    </Flex>
   );
 };
 
-export default UploadModal;
+export default DirectoryUploadForm;

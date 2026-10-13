@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, message, Popconfirm, Spin, Table } from 'antd';
-import UploadModal from '../../components/UploadModal';
+import AddProjectModal from '../../components/AddProjectModal';
 import axios from 'axios';
 import { ProjectSummary, ProjectsListResponse } from '../../interface/Project';
 
@@ -9,7 +9,7 @@ const ProjectsPage = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(false);
-  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [addProjectModalOpen, setAddProjectModalOpen] = useState(false);
 
   const fetchProjects = async () => {
     setLoading(true);
@@ -40,11 +40,11 @@ const ProjectsPage = () => {
     }
   };
 
-  const openUploadModal = () => setUploadModalVisible(true);
-  const closeUploadModal = () => setUploadModalVisible(false);
+  const openAddProjectModal = () => setAddProjectModalOpen(true);
+  const closeAddProjectModal = () => setAddProjectModalOpen(false);
 
-  const handleUploadSuccess = () => {
-    closeUploadModal();
+  const handleProjectAdded = () => {
+    closeAddProjectModal();
     fetchProjects();
   };
 
@@ -72,7 +72,7 @@ const ProjectsPage = () => {
         }}
       >
         <h1>Projects</h1>
-        <Button type="primary" onClick={openUploadModal}>
+        <Button type="primary" onClick={openAddProjectModal}>
           Add Project
         </Button>
       </div>
@@ -115,10 +115,10 @@ const ProjectsPage = () => {
         />
       )}
 
-      <UploadModal
-        open={uploadModalVisible}
-        onClose={closeUploadModal}
-        onSuccess={handleUploadSuccess}
+      <AddProjectModal
+        open={addProjectModalOpen}
+        onClose={closeAddProjectModal}
+        onSuccess={handleProjectAdded}
       />
     </div>
   );

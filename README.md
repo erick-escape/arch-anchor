@@ -87,7 +87,10 @@ other. (The frontend reaches the backend through the Vite dev-server proxy — s
 
 Use the bundled example to see what the tool reports before you point it at your own code:
 
-1. Click **Add Project**, select the directory `examples/sample-architecture-project`, and upload.
+1. Click **Add Project**. On the **GitHub repository** tab, paste
+   `https://github.com/erick-escape/arch-anchor`, open **Options**, set **Subdirectory** to
+   `examples/sample-architecture-project`, and click **Import**. (From a clone, the **Local
+   directory** tab uploads the same directory instead.)
 2. Click **Analyze**. The graph fills with modules and each one gets a reference class.
 3. Open the recommendations panel. This project is built to trigger one of each analysis:
 
@@ -102,10 +105,17 @@ The tool reports other, lower-rated suggestions alongside these three;
 
 ## Running it on your own project
 
-1. **Upload it.** Click **Add Project** and select your project's root directory (or just its
-   `src/main/java`). The browser uploads the whole directory tree; only `.java` files are parsed,
-   so extra resources and configuration files are harmless. It does not need to compile, and
-   dependencies do not need to be installed.
+1. **Add it.** Click **Add Project**. The project needs a `src/` directory directly under its
+   root; it does not need to compile, and dependencies do not need to be installed.
+   - *From GitHub:* paste the repository URL and click **Import**. The backend clones the latest
+     commit of the default branch, or of the branch or tag you name under **Options**, and reports
+     which commit it took. If the repository keeps its code deeper, for example one Maven module
+     per directory, set **Subdirectory** to the module to analyze; when it is missing, the error
+     lists the directories that would work. A private repository needs a personal access token
+     that can read its contents. The token is used for that one clone and is never stored.
+   - *From disk:* on the **Local directory** tab, select your project's root directory. The
+     browser uploads the whole tree; only `.java` files are parsed, so extra resources and
+     configuration files are harmless.
 2. **Analyze it.** Modules are derived from your package structure — one module per package that
    holds classes. Expect the module names to mirror your package names.
 3. **Check the reference classes.** Open the sidebar and review the class the tool elected for
@@ -139,6 +149,7 @@ All endpoints are under `http://localhost:8080`.
 |---|---|---|
 | `GET` | `/api/projects` | List uploaded projects |
 | `POST` | `/api/upload` | Upload a project (multipart `files`) |
+| `POST` | `/api/projects/import` | Import a project from GitHub (JSON body: `repositoryUrl`; optional `ref`, `subdirectory`, `projectName`, `accessToken`) |
 | `DELETE` | `/api/projects/{projectName}` | Delete an uploaded project |
 | `POST` | `/api/analyze?projectName=` | Run the full pipeline: parse, group, elect reference classes, measure, analyze |
 | `POST` | `/api/module/merge?sourceId=&targetId=` | Merge two modules |
@@ -179,7 +190,7 @@ All endpoints are under `http://localhost:8080`.
 
 | Path | Contents |
 |---|---|
-| `api/uploads/` | Uploaded project sources, one directory per project |
+| `api/uploads/` | Uploaded or imported project sources, one directory per project; imports in progress are staged in `.staging/` |
 | `api/modules.bin` | The current module graph |
 | `api/project-analyses.bin` | Cached analysis results |
 
@@ -194,7 +205,10 @@ will fail to load, and deleting it is the fix.
   deployment needs a reverse proxy in front of both halves; there is no production configuration
   in the repo yet.
 - **No database.** State lives in memory and in the two `.bin` files described above. Restarting
-  the backend without those files means re-uploading.
+  the backend without those files means adding the project again.
+- **GitHub only for imports.** The importer clones from `github.com` and nowhere else; code on
+  other hosts goes through the directory upload. An import runs inside the request, so a very
+  large repository keeps it open until the clone finishes.
 - **Java only**, and modules are inferred from package structure — the tool has no notion of
   Maven modules, Gradle subprojects, or JPMS.
 - `JavaParserTypeResolutionTest` is skipped unless `api/uploads/pass-in` is present. It asserts

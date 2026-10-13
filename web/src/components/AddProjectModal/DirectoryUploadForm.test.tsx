@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import UploadModal from './index';
+import DirectoryUploadForm from './DirectoryUploadForm';
 import { FakeFetch } from '../../test/fakes/FakeFetch';
 
 function fileInDirectory(relativePath: string, fileName: string): File {
@@ -14,11 +14,12 @@ function fileInDirectory(relativePath: string, fileName: string): File {
 
 function directoryInput(): HTMLInputElement {
   const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-  if (!input) throw new Error('Expected UploadModal to render an <input type="file">, found none');
+  if (!input)
+    throw new Error('Expected DirectoryUploadForm to render an <input type="file">, found none');
   return input;
 }
 
-describe('UploadModal', () => {
+describe('DirectoryUploadForm', () => {
   let fakeFetch: FakeFetch;
 
   beforeEach(() => {
@@ -31,7 +32,7 @@ describe('UploadModal', () => {
   });
 
   it('renders a directory picker', () => {
-    render(<UploadModal open onClose={() => {}} onSuccess={() => {}} />);
+    render(<DirectoryUploadForm onSuccess={() => {}} />);
 
     expect(directoryInput()).toHaveAttribute('webkitdirectory');
     expect(directoryInput()).toHaveAttribute('multiple');
@@ -39,7 +40,7 @@ describe('UploadModal', () => {
 
   it('uploads each file under its path relative to the chosen directory', async () => {
     const onSuccess = vi.fn();
-    render(<UploadModal open onClose={() => {}} onSuccess={onSuccess} />);
+    render(<DirectoryUploadForm onSuccess={onSuccess} />);
 
     await userEvent.upload(directoryInput(), [
       fileInDirectory('shop/src/Order.java', 'Order.java'),
@@ -58,7 +59,7 @@ describe('UploadModal', () => {
   });
 
   it('does not call the API when no directory was chosen', async () => {
-    render(<UploadModal open onClose={() => {}} onSuccess={() => {}} />);
+    render(<DirectoryUploadForm onSuccess={() => {}} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Upload' }));
 
