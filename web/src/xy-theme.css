@@ -41,7 +41,9 @@
     font-size: 12px;
     flex-direction: column;
     border: var(--xy-node-border-default);
-    color: var(--xy-node-color, var(--xy-node-color-default));
+    /* Fixed together with the background above. The themed value inherits the page's text
+       colour, which is dark in a light colour scheme: dark text on a black node (#23). */
+    color: white;
 }
 
 .react-flow__node.selectable:focus {
