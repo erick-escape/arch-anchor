@@ -116,10 +116,10 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   const renderMoveDetails = (data: MoveClassRecommendation) => (
     <div style={{ fontSize: '12px', color: '#999' }}>
       <p>
-        <strong>From Module:</strong> {data.sourceModuleId}
+        <strong>From Module:</strong> {data.sourceModuleName}
       </p>
       <p>
-        <strong>To Module:</strong> {data.targetModuleId}
+        <strong>To Module:</strong> {data.targetModuleName}
       </p>
       <p>
         <strong>Similarity Improvement:</strong> +

@@ -16,20 +16,21 @@ import java.util.List;
  *
  * <pre>
  * List&lt;Module&gt; modules = AnalysedShopFixture.webAndPersistence(new ModuleService(null));
+ * String salesReportId = AnalysedShopFixture.idOf(AnalysedShopFixture.MISPLACED_CLASS);
  * </pre>
  */
-final class AnalysedShopFixture {
+public final class AnalysedShopFixture {
 
-	static final String WEB = "shop/web";
+	public static final String WEB = "shop/web";
 
-	static final String PERSISTENCE = "shop/persistence";
+	public static final String PERSISTENCE = "shop/persistence";
 
-	static final String MISPLACED_CLASS = "SalesReport";
+	public static final String MISPLACED_CLASS = "SalesReport";
 
 	private AnalysedShopFixture() {
 	}
 
-	static List<Module> webAndPersistence(ModuleService moduleService) {
+	public static List<Module> webAndPersistence(ModuleService moduleService) {
 		Module web = moduleOf(WEB, controller("CatalogController"), controller("CustomerController"),
 				controller("OrderController"), usesDatabase(MISPLACED_CLASS, WEB));
 		Module persistence = moduleOf(PERSISTENCE, usesDatabase("BookRepository", PERSISTENCE),
@@ -47,13 +48,21 @@ final class AnalysedShopFixture {
 		return clazzOf(name, moduleName, "java.sql.Connection", "shop.model.Book");
 	}
 
-	// The class name doubles as its id, so two fixtures are comparable field by field.
+	/**
+	 * The id the fixture gives the class or module of that name. Ids are derived from
+	 * names, so two fixtures are comparable field by field, but never equal to them, so a
+	 * name passed where an id belongs is caught.
+	 */
+	public static String idOf(String name) {
+		return "id-of-" + name;
+	}
+
 	private static Clazz clazzOf(String name, String moduleName, String... usedTypes) {
 		List<Dependency> dependencies = new ArrayList<>();
 		for (String usedType : usedTypes) {
 			dependencies.add(dependencyOn(usedType));
 		}
-		return new Clazz(name, name, dependencies, 0.0, 0.0, moduleName, moduleName, "ALLOW");
+		return new Clazz(idOf(name), name, dependencies, 0.0, 0.0, moduleName, moduleName, "ALLOW");
 	}
 
 	// ArchitectureViolation only reports a class when the offending dependency names a
@@ -66,7 +75,7 @@ final class AnalysedShopFixture {
 	}
 
 	private static Module moduleOf(String name, Clazz... clazzes) {
-		return new Module(name, name, null, null, null, new ArrayList<>(List.of(clazzes)), 0.0, 0.0, 0);
+		return new Module(idOf(name), name, null, null, null, new ArrayList<>(List.of(clazzes)), 0.0, 0.0, 0);
 	}
 
 	private static void analyse(Module module, ModuleService moduleService) {

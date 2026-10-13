@@ -84,6 +84,11 @@ public class MoveClass extends ArchitecturalAnalysis {
 
 		public String sourceModuleId;
 
+		// Shown on the recommendation card; an id means nothing to a reader (#19).
+		public String sourceModuleName = "";
+
+		public String targetModuleName = "";
+
 		public String targetModuleId;
 
 		public String classId;
@@ -259,11 +264,14 @@ public class MoveClass extends ArchitecturalAnalysis {
 					// Only consider moves with positive rate (considering both similarity
 					// and violations)
 					if (evaluation.rate > 0) {
-						potentialMoves.add(new MoveClassResult(sourceModule.getId(), targetModule.getId(),
+						MoveClassResult move = new MoveClassResult(sourceModule.getId(), targetModule.getId(),
 								classToMove.getId(), classToMove.getName(), evaluation.sourceViolationsBefore,
 								evaluation.sourceViolationsAfter, evaluation.targetViolationsBefore,
 								evaluation.targetViolationsAfter, evaluation.similarityImprovement,
-								evaluation.violationsImprovement, evaluation.rate));
+								evaluation.violationsImprovement, evaluation.rate);
+						move.sourceModuleName = sourceModule.getName();
+						move.targetModuleName = targetModule.getName();
+						potentialMoves.add(move);
 
 						log.debug(
 								"Potential move: '{}' from '{}' to '{}' - Rate: {}, Similarity improvement: {}, Violations improvement: {}",

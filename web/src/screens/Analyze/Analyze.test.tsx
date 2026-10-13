@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -9,6 +10,10 @@ import { api } from '../../services/api';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
 import { installReactFlowJsdomShims } from '../../test/reactFlowJsdom';
 import { moduleFixture } from '../../test/fixtures/moduleFixtures';
+import {
+  moveRecommendationFixture,
+  recommendationsFixture,
+} from '../../test/fixtures/recommendationFixtures';
 import { ProjectAnalyses } from '../../interface/ProjectAnalyses';
 
 const analyses: ProjectAnalyses = {
@@ -77,5 +82,26 @@ describe('AnalyzePage', () => {
 
     expect(screen.getAllByText('orders')).toHaveLength(2);
     expect(screen.getAllByText('billing')).toHaveLength(2);
+  });
+
+  // Re-analysing reads the sources again and discards the module operation (#19).
+  it('shows the saved modules after a recommendation is applied, without analyzing again', async () => {
+    fakeApi
+      .respondTo(
+        'GET',
+        '/api/recommendations',
+        recommendationsFixture({ moves: [moveRecommendationFixture()] })
+      )
+      .respondTo('POST', '/api/recommendations/apply/move', {})
+      .respondTo('GET', '/api/module', [
+        moduleFixture({ id: 'm1', name: 'orders', similarity: 1 }),
+        moduleFixture({ id: 'm2', name: 'billing' }),
+      ]);
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Apply Recommendation' }));
+
+    expect(await screen.findByText(/100\.00%/)).toBeInTheDocument();
+    expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(1);
   });
 });

@@ -1,5 +1,28 @@
 import jsPDF from 'jspdf';
+import { ModuleData } from '../interface/ModuleData';
 import { ArchitecturalConstraint } from '../interface/ProjectAnalyses';
+
+/**
+ * Derives the exportable constraints from the modules as they are now: one per module, taken
+ * from its reference classes and their enforce modes. The constraints that come with the
+ * analysis describe the modules as first analysed, and go stale with the first split, merge or
+ * move (#19).
+ *
+ * @example
+ * generateAcsPdf(projectName, architecturalConstraintsOf(modules));
+ */
+export function architecturalConstraintsOf(modules: ModuleData[]): ArchitecturalConstraint[] {
+  return modules.map((module) => ({
+    moduleId: module.id,
+    moduleName: module.name,
+    refClassConstraints: module.refClazzes.map((refClazz) => ({
+      refClassId: refClazz.id,
+      refClassName: refClazz.name,
+      enforceMode: refClazz.enforceMode ?? 'ALLOW',
+      dependencies: refClazz.dependencies,
+    })),
+  }));
+}
 
 export function generateAcsPdf(projectName: string, constraints: ArchitecturalConstraint[]): jsPDF {
   const doc = new jsPDF();

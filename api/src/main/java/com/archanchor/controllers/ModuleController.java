@@ -36,6 +36,16 @@ public class ModuleController {
 
 	private ModuleMapper moduleMapper;
 
+	/**
+	 * The modules as last saved, including every merge, split and move since the
+	 * analysis. Re-analysing cannot return these: module operations are never written
+	 * back to the sources (#19).
+	 */
+	@GetMapping
+	public List<ModuleDTO> savedModules() {
+		return moduleService.getModulesFromFile();
+	}
+
 	@PostMapping("/merge")
 	public ResponseEntity<ModuleDTO> mergeModules(@RequestParam String sourceId, @RequestParam String targetId) {
 		try {
