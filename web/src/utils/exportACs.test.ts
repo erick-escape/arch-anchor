@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateAcsPdf } from './exportACs';
+import { architecturalConstraintsOf, generateAcsPdf } from './exportACs';
 import { ArchitecturalConstraint } from '../interface/ProjectAnalyses';
+import { clazzFixture, moduleFixture } from '../test/fixtures/moduleFixtures';
 
 describe('generateAcsPdf', () => {
   it('generates a non-empty PDF with CAN-DEPEND for ALLOW mode ref classes', () => {
@@ -76,5 +77,47 @@ describe('generateAcsPdf', () => {
     const output = doc.output('datauristring');
 
     expect(output.length).toBeGreaterThan(0);
+  });
+});
+
+describe('architecturalConstraintsOf', () => {
+  const javaSql = { packageName: 'java.sql', types: [] };
+
+  it('builds one constraint per module from its reference classes and their enforce modes', () => {
+    const repository = clazzFixture({
+      id: 'c7',
+      name: 'BookRepository',
+      enforceMode: 'MUST',
+      dependencies: [javaSql],
+    });
+    const persistence = moduleFixture({
+      id: 'm2',
+      name: 'shop/persistence',
+      refClazzes: [repository],
+    });
+
+    expect(architecturalConstraintsOf([persistence])).toEqual([
+      {
+        moduleId: 'm2',
+        moduleName: 'shop/persistence',
+        refClassConstraints: [
+          {
+            refClassId: 'c7',
+            refClassName: 'BookRepository',
+            enforceMode: 'MUST',
+            dependencies: [javaSql],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('treats a reference class that never had its mode set as ALLOW', () => {
+    const neverSet = clazzFixture({ enforceMode: null, dependencies: [javaSql] });
+    const persistence = moduleFixture({ refClazzes: [neverSet] });
+
+    const [constraint] = architecturalConstraintsOf([persistence]);
+
+    expect(constraint.refClassConstraints[0].enforceMode).toBe('ALLOW');
   });
 });

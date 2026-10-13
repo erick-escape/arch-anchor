@@ -1,0 +1,92 @@
+import {
+  MoveClassRecommendation,
+  RecommendationsResponse,
+  SplitModuleRecommendation,
+} from '../../interface/Recommendations';
+
+type RecommendationLists = Omit<RecommendationsResponse, 'summary'>;
+
+/**
+ * Builds the body of `GET /api/recommendations` from the given lists, with a matching summary.
+ *
+ * @example
+ * fakeApi.respondTo('GET', '/api/recommendations', recommendationsFixture({ moves: [move] }));
+ */
+export function recommendationsFixture(
+  overrides: Partial<RecommendationLists> = {}
+): RecommendationsResponse {
+  const lists: RecommendationLists = {
+    splits: [],
+    merges: [],
+    moves: [],
+    violations: [],
+    ...overrides,
+  };
+  const total =
+    lists.splits.length + lists.merges.length + lists.moves.length + lists.violations.length;
+  return {
+    ...lists,
+    summary: { totalRecommendations: total, highPriority: total, mediumPriority: 0, lowPriority: 0 },
+  };
+}
+
+/**
+ * Builds a move recommendation as the backend serialises it (`MoveClassRecommendationDTO`).
+ *
+ * @example
+ * const move = moveRecommendationFixture({ className: 'SalesReport' });
+ */
+export function moveRecommendationFixture(
+  overrides: Partial<MoveClassRecommendation> = {}
+): MoveClassRecommendation {
+  return {
+    classId: 'c9',
+    className: 'SalesReport',
+    sourceModuleId: 'm1',
+    sourceModuleName: 'shop/web',
+    targetModuleId: 'm2',
+    targetModuleName: 'shop/persistence',
+    metrics: {
+      classCurrentSimilarity: 0,
+      classTargetSimilarity: 0,
+      sourceViolationsBefore: 1,
+      sourceViolationsAfter: 0,
+      targetViolationsBefore: 0,
+      targetViolationsAfter: 0,
+      similarityImprovement: 0.125,
+      violationsImprovement: 1,
+      rate: 0.5625,
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a split recommendation as the backend serialises it (`SplitModuleRecommendationDTO`):
+ * module 1 keeps the reference class, module 2 holds the classes to split off.
+ *
+ * @example
+ * const split = splitRecommendationFixture({ module2ClassIds: ['c9'] });
+ */
+export function splitRecommendationFixture(
+  overrides: Partial<SplitModuleRecommendation> = {}
+): SplitModuleRecommendation {
+  return {
+    originalModuleId: 'm1',
+    originalModuleName: 'shop/web',
+    superRefClassName: 'CatalogController',
+    deRefClassName: 'SalesReport',
+    module1ClassIds: ['c1', 'c2', 'c3'],
+    module2ClassIds: ['c9'],
+    metrics: {
+      originalSimilarity: 0.75,
+      avgSplitSimilarity: 1,
+      originalViolations: 1,
+      totalSplitViolations: 0,
+      similarityImprovement: 0.25,
+      violationsImprovement: 1,
+      rate: 0.625,
+    },
+    ...overrides,
+  };
+}
