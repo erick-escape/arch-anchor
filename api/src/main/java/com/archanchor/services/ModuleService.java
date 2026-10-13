@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -223,7 +224,9 @@ public class ModuleService {
 			maxSimilarity = 1.0;
 		}
 
-		// Select refClazz based on weighted rate
+		// Select refClazz based on weighted rate. Stream.max keeps the first of equally
+		// rated classes, and getClazzes lists classes by file name, so in a module read
+		// from disk a tie goes to the alphabetically first class (#15).
 		Clazz refClazz;
 		if (maxViolations == 0) {
 			// If no violations exist, select based on similarity only
@@ -593,7 +596,7 @@ public class ModuleService {
 	private List<Clazz> getClazzes(Path modulePath) throws IOException {
 		List<Clazz> clazzes = new ArrayList<>();
 
-		Files.list(modulePath).filter(Files::isRegularFile).filter(this::isSupportedSourceFile).forEach(filePath -> {
+		sourceFilesByName(modulePath).forEach(filePath -> {
 			try {
 				// Get dependencies using the appropriate parser
 				List<Dependency> dependencies = parserFactory.getParser(filePath).getDependencies(filePath);
@@ -622,6 +625,19 @@ public class ModuleService {
 		return clazzes;
 	}
 
+	// Sorted, so that class order depends on the sources and not on the order the
+	// filesystem lists them in: a tie between equally rated classes goes to the first
+	// one (#15). Names are compared as plain strings, because Path's own ordering
+	// ignores case on some platforms.
+	private List<Path> sourceFilesByName(Path modulePath) throws IOException {
+		try (Stream<Path> entries = Files.list(modulePath)) {
+			return entries.filter(Files::isRegularFile)
+				.filter(this::isSupportedSourceFile)
+				.sorted(Comparator.comparing(file -> file.getFileName().toString()))
+				.toList();
+		}
+	}
+
 	private boolean isSupportedSourceFile(Path filePath) {
 		String path = filePath.toString().toLowerCase();
 		return LANGUAGE_EXTENSIONS.values().stream().flatMap(List::stream).anyMatch(path::endsWith);
@@ -639,14 +655,29 @@ public class ModuleService {
 	private boolean isLeafDirectoryWithJavaFiles(Path directory) {
 		try {
 			// Check if this directory directly contains Java files
-
-			return Files.list(directory)
-				.filter(Files::isRegularFile)
-				.anyMatch(path -> path.toString().toLowerCase().endsWith(".java"));
+			try (Stream<Path> entries = Files.list(directory)) {
+				return entries.filter(Files::isRegularFile)
+					.anyMatch(path -> path.toString().toLowerCase().endsWith(".java"));
+			}
 		}
 		catch (IOException e) {
 			return false;
 		}
+	}
+
+	// Sorted for the same reason as sourceFilesByName (#15). The separator is normalised
+	// so that a directory sorts the same way next to its siblings on every platform.
+	private List<Path> moduleDirectoriesByPath(Path srcPath) throws IOException {
+		try (Stream<Path> entries = Files.walk(srcPath)) {
+			return entries.filter(Files::isDirectory)
+				.filter(this::isLeafDirectoryWithJavaFiles)
+				.sorted(Comparator.comparing(directory -> portablePath(srcPath.relativize(directory))))
+				.toList();
+		}
+	}
+
+	private static String portablePath(Path relativePath) {
+		return relativePath.toString().replace(File.separatorChar, '/');
 	}
 
 	public List<Module> getModules(String projectDirectory) throws IOException {
@@ -661,53 +692,49 @@ public class ModuleService {
 
 		// Find only leaf directories that actually contain Java files (not intermediate
 		// directories)
-		Files.walk(srcPath)
-			.filter(Files::isDirectory)
-			.filter(this::isLeafDirectoryWithJavaFiles) // Only process directories that
-														// directly contain Java files
-			.forEach(modulePath -> {
-				try {
-					List<Clazz> clazzes = getClazzes(modulePath);
-					if (!clazzes.isEmpty()) {
-						// Determine module fullyQualifiedName based on directory
-						// structure
-						String moduleName = modulePath.getParent().getFileName().toString() + '/'
-								+ modulePath.getFileName().toString();
+		moduleDirectoriesByPath(srcPath).forEach(modulePath -> {
+			try {
+				List<Clazz> clazzes = getClazzes(modulePath);
+				if (!clazzes.isEmpty()) {
+					// Determine module fullyQualifiedName based on directory
+					// structure
+					String moduleName = modulePath.getParent().getFileName().toString() + '/'
+							+ modulePath.getFileName().toString();
 
-						// Generate deterministic UUID based on module path to prevent
-						// duplicates
-						String moduleId = generateDeterministicUUID(modulePath.toString());
+					// Generate deterministic UUID based on module path to prevent
+					// duplicates
+					String moduleId = generateDeterministicUUID(modulePath.toString());
 
-						// Check if module already exists to prevent duplicates
-						boolean moduleExists = this.modules.stream()
-							.anyMatch(existingModule -> existingModule.getId().equals(moduleId));
+					// Check if module already exists to prevent duplicates
+					boolean moduleExists = this.modules.stream()
+						.anyMatch(existingModule -> existingModule.getId().equals(moduleId));
 
-						if (!moduleExists) {
-							Module module = new Module(moduleId, moduleName, null, // refClazzes
-																					// will
-																					// be
-																					// calculated
-																					// later
-									null, // refClazzesDependencies will be calculated
-											// later
-									null, // moduleDependencies will be calculated later
-									clazzes, 0.0, // Similarity will be calculated later
-									0.0, // avgRefClazzesSimilarity will be calculated
-											// later
-									0 // violations will be calculated later
-							);
-							this.modules.add(module);
-							log.info("Added new module: {} with ID: {}", moduleName, moduleId);
-						}
-						else {
-							log.warn("Module already exists, skipping: {} with ID: {}", moduleName, moduleId);
-						}
+					if (!moduleExists) {
+						Module module = new Module(moduleId, moduleName, null, // refClazzes
+																				// will
+																				// be
+																				// calculated
+																				// later
+								null, // refClazzesDependencies will be calculated
+										// later
+								null, // moduleDependencies will be calculated later
+								clazzes, 0.0, // Similarity will be calculated later
+								0.0, // avgRefClazzesSimilarity will be calculated
+										// later
+								0 // violations will be calculated later
+						);
+						this.modules.add(module);
+						log.info("Added new module: {} with ID: {}", moduleName, moduleId);
+					}
+					else {
+						log.warn("Module already exists, skipping: {} with ID: {}", moduleName, moduleId);
 					}
 				}
-				catch (IOException e) {
-					log.error("ModuleService -> getModules: ", e);
-				}
-			});
+			}
+			catch (IOException e) {
+				log.error("ModuleService -> getModules: ", e);
+			}
+		});
 
 		return this.modules;
 	}
