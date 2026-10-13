@@ -507,7 +507,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
 			if (allowsViolation) {
 				// Calculate similarity improvement and new violations
-				SimilarityCalculation calculation = calculateMoveImpact(clazz, sourceModule, targetModule);
+				SimilarityCalculation calculation = simulateOn(List.of(sourceModule, targetModule),
+						() -> calculateMoveImpact(clazz, sourceModule, targetModule));
 				if (calculation.newViolationsCreated > calculation.currentViolations
 						|| calculation.sourceImprovement < 0 || calculation.targetImprovement < 0) {
 					continue;

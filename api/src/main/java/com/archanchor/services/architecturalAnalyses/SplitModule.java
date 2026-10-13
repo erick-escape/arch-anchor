@@ -304,7 +304,8 @@ public class SplitModule extends ArchitecturalAnalysis {
 			Module module2 = createSplitModule(module, module2Classes, deRefClass, "low-cohesion");
 
 			// Calculate split rate
-			SplitRateResult rateResult = calculateSplitRate(module, module1, module2);
+			SplitRateResult rateResult = simulateOn(List.of(module),
+					() -> calculateSplitRate(module, module1, module2));
 
 			// Only recommend split if rate is positive (considering both similarity and
 			// violations)

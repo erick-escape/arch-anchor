@@ -199,9 +199,12 @@ To create a new architectural analysis:
 2. **Add @Component**: Annotate with `@Component` for Spring auto-discovery
 3. **Implement execute()**: Process the modules list and generate analysis results
 4. **Use Rating Mechanism**: For structural changes, calculate rate using similarity + violations
-5. **Create Result Class**: Define private inner class to hold analysis results
-6. **Expose Results**: Add a `getResults()` method and wire into `RecommendationsService` if results should be accessible via API
-7. **Generate Logging**: Use slf4j to log user-friendly results and recommendations
+5. **Simulate inside `simulateOn`**: Hypothetical modules share their `Clazz` instances with the real ones, and `ModuleService`
+   writes similarity metrics into them. Wrap every what-if computation in `simulateOn(realModules, () -> ...)` so those metrics are
+   put back afterwards; otherwise the next analysis and the API response read the simulation's leftovers (#16)
+6. **Create Result Class**: Define private inner class to hold analysis results
+7. **Expose Results**: Add a `getResults()` method and wire into `RecommendationsService` if results should be accessible via API
+8. **Generate Logging**: Use slf4j to log user-friendly results and recommendations
 
 **Example Structure:**
 

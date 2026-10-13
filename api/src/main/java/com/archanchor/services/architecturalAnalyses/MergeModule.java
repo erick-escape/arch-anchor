@@ -206,7 +206,8 @@ public class MergeModule extends ArchitecturalAnalysis {
 					continue;
 				}
 
-				MergeRateResult rateResult = calculateModuleMergeRate(module1, module2, mergedModule);
+				MergeRateResult rateResult = simulateOn(List.of(module1, module2),
+						() -> calculateModuleMergeRate(module1, module2, mergedModule));
 
 				// Only recommend merge if rate is positive (considering both similarity
 				// and violations)
