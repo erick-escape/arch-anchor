@@ -31,10 +31,13 @@ Point it at a Java project and it will:
 6. **Export** the recovered constraints as a PDF:
 
 ```
-AC1 - database CAN-DEPEND java.sql
-AC2 - database CAN-DEPEND javax.persistence
-AC3 - service   MUST-DEPEND com.example.database
+AC4 - bookstore/web CAN-DEPEND bookstore.model
+AC5 - bookstore/web CAN-DEPEND bookstore.service
+AC6 - bookstore/persistence MUST-DEPEND bookstore.model
+AC7 - bookstore/persistence MUST-DEPEND java.sql
 ```
+
+(The last four of the seven constraints the tool exports for the bundled example.)
 
 `CAN-DEPEND` is a permission: the module is allowed to reach that package. `MUST-DEPEND` is an
 obligation: switch a reference class to `MUST` mode when the dependency is not merely tolerated
@@ -46,7 +49,7 @@ but required.
 arch-anchor/
 ├── api/       Spring Boot 3.3 backend — parsing, metrics, analyses (Java 17)
 ├── web/       React 18 + TypeScript + Vite frontend — graph UI, AC export
-└── examples/  A sample Java project to analyze on your first run
+└── examples/  The bookstore, a small Java project to analyze on your first run
 ```
 
 Both halves live in one repository on purpose. They are developed as a single tool, released
@@ -85,23 +88,31 @@ other. (The frontend reaches the backend through the Vite dev-server proxy — s
 
 ## Your first analysis
 
-Use the bundled example to see what the tool reports before you point it at your own code:
+Use the bundled example to see what the tool reports before you point it at your own code. It
+is a small bookstore in four layers, `web`, `service`, `persistence` and `model`, with one
+mistake: `SalesReport` sits in the web layer and queries the database itself.
 
 1. Click **Add Project**. On the **GitHub repository** tab, paste
    `https://github.com/erick-escape/arch-anchor`, open **Options**, set **Subdirectory** to
-   `examples/sample-architecture-project`, and click **Import**. (From a clone, the **Local
-   directory** tab uploads the same directory instead.)
-2. Click **Analyze**. The graph fills with modules and each one gets a reference class.
-3. Open the recommendations panel. This project is built to trigger one of each analysis:
+   `examples/bookstore` and **Project name** to `bookstore`, and click **Import**. (From a
+   clone, the **Local directory** tab uploads the same directory instead.)
+2. Click **Analyze**. Four modules appear, each with its reference class. `bookstore/web`
+   elects `CatalogController` and stands at 75.00 % similarity; the other three are at 100 %.
+3. Open the recommendations panel. The controllers depend on the service layer and the model,
+   so `java.sql` in `SalesReport` is a violation, and the tool ranks three ways to remove it:
 
-   | Recommendation | Why |
-   |---|---|
-   | Split `service` | It holds two unrelated dependency domains — request handling and batch processing |
-   | Merge `auth` + `security` | Both revolve around the same four dependencies |
-   | Move `database.UIRenderer` → `presentation` | Its dependencies match presentation, not database |
+   | Recommendation | Rate | Why |
+   |---|---|---|
+   | Split `bookstore/web` | 0.63 | `SalesReport` on its own, apart from the three controllers |
+   | Move `SalesReport` → `bookstore/persistence` | 0.56 | Its dependencies are exactly a repository's |
+   | Merge `bookstore/persistence` + `bookstore/web` | 0.42 | `persistence` may use `java.sql`; rated last because it costs cohesion |
+   | Fix violation in `SalesReport` | | Names the forbidden package and suggests `bookstore/persistence` |
 
-The tool reports other, lower-rated suggestions alongside these three;
-`examples/sample-architecture-project/README.md` describes each scenario in full.
+4. Click **Apply Recommendation** on the move. Every module is now at 100 %, with no
+   violations and nothing left to recommend.
+
+[`examples/bookstore/README.md`](examples/bookstore/README.md) has the full output, including
+how the reference class of `web` is elected and the constraints the tool exports.
 
 ## Running it on your own project
 

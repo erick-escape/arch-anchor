@@ -32,7 +32,7 @@ public class AnalysisRootLocator {
 	 * to hold {@code src/}.
 	 *
 	 * <pre>
-	 * locator.locate(checkout, "examples/sample-architecture-project");
+	 * locator.locate(checkout, "examples/bookstore");
 	 * </pre>
 	 */
 	public Path locate(Path checkout, String subdirectory) throws IOException {

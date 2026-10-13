@@ -8,7 +8,7 @@
 
 - [ ] `cd api && ./mvnw test`
 - [ ] `cd web && npm run lint && npm test && npm run build`
-- [ ] Ran the tool end to end against `examples/sample-architecture-project`
+- [ ] Ran the tool end to end against `examples/bookstore`
 - [ ] Ran it against another Java project (which one?)
 
 ## Notes for the reviewer

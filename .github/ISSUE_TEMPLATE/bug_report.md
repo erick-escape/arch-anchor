@@ -15,7 +15,7 @@ labels: bug
 **The project you analyzed**
 
 <!-- Java version, build tool, roughly how many classes and packages. A link to the project, or
-a small synthetic reproduction in the shape of examples/sample-architecture-project, is the most
+a small synthetic reproduction in the shape of examples/bookstore, is the most
 useful thing you can attach. -->
 
 **If it is an analysis result you disagree with**
