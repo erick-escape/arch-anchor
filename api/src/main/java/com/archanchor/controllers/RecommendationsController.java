@@ -7,6 +7,7 @@ import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.module.SplitModuleRequest;
 import com.archanchor.dto.module.SplitModuleResponse;
 import com.archanchor.dto.recommendations.RecommendationsResponseDTO;
+import com.archanchor.services.ProjectService;
 import com.archanchor.services.RecommendationsService;
 
 import java.util.List;
@@ -22,9 +23,13 @@ public class RecommendationsController {
 
 	private final ModuleController moduleController;
 
-	public RecommendationsController(RecommendationsService recommendationsService, ModuleController moduleController) {
+	private final ProjectService projectService;
+
+	public RecommendationsController(RecommendationsService recommendationsService, ModuleController moduleController,
+			ProjectService projectService) {
 		this.recommendationsService = recommendationsService;
 		this.moduleController = moduleController;
+		this.projectService = projectService;
 	}
 
 	@GetMapping
@@ -46,13 +51,13 @@ public class RecommendationsController {
 	public ResponseEntity<SplitModuleResponse> applySplit(@RequestBody SplitModuleRequest request) {
 		log.info("POST /api/recommendations/apply/split - Applying split recommendation for module {}",
 				request.moduleId());
-		return moduleController.splitModule(request);
+		return refreshingRecommendations(moduleController.splitModule(request));
 	}
 
 	@PostMapping("/apply/merge")
 	public ResponseEntity<ModuleDTO> applyMerge(@RequestParam String sourceId, @RequestParam String targetId) {
 		log.info("POST /api/recommendations/apply/merge - Applying merge recommendation: {} -> {}", sourceId, targetId);
-		return moduleController.mergeModules(sourceId, targetId);
+		return refreshingRecommendations(moduleController.mergeModules(sourceId, targetId));
 	}
 
 	@PostMapping("/apply/move")
@@ -60,7 +65,17 @@ public class RecommendationsController {
 			@RequestParam String sourceModuleId, @RequestParam String targetModuleId) {
 		log.info("POST /api/recommendations/apply/move - Applying move recommendation: class {} from {} to {}", classId,
 				sourceModuleId, targetModuleId);
-		return moduleController.moveClass(classId, sourceModuleId, targetModuleId);
+		return refreshingRecommendations(moduleController.moveClass(classId, sourceModuleId, targetModuleId));
+	}
+
+	// The analyses keep the results of their last run. After a successful apply those
+	// describe modules that no longer exist, and the applied recommendation would be
+	// offered again (#19). A rejected apply changed nothing, so it refreshes nothing.
+	private <T> ResponseEntity<T> refreshingRecommendations(ResponseEntity<T> applied) {
+		if (applied.getStatusCode().is2xxSuccessful()) {
+			projectService.refreshRecommendations();
+		}
+		return applied;
 	}
 
 }

@@ -84,6 +84,39 @@ public class ModuleService {
 		}
 	}
 
+	/**
+	 * Returns the saved modules in the shape the analyses need. Reference classes are the
+	 * same instances as in the class list, because the analyses tell classes apart by
+	 * identity; violations are recomputed, because ModuleDTO does not carry them (#19).
+	 *
+	 * <pre>
+	 * analysesRunner.executeAll(moduleService.savedModulesForAnalysis());
+	 * </pre>
+	 */
+	public List<Module> savedModulesForAnalysis() {
+		List<Module> savedModules = getModulesFromFile().stream()
+			.map(moduleMapper::toEntity)
+			.collect(Collectors.toList());
+		savedModules.forEach(this::relinkReferenceClasses);
+		savedModules.forEach(this::calculateModuleViolations);
+		return savedModules;
+	}
+
+	// Mapping from the DTO builds refClazzes and clazzes separately, so a reference class
+	// comes back as two objects. A reference class missing from the class list is left as
+	// it is: nothing in this class produces one.
+	private void relinkReferenceClasses(Module module) {
+		if (module.getRefClazzes() == null || module.getClazzes() == null) {
+			return;
+		}
+		Map<String, Clazz> clazzesById = new HashMap<>();
+		module.getClazzes().forEach(clazz -> clazzesById.putIfAbsent(clazz.getId(), clazz));
+		module.setRefClazzes(module.getRefClazzes()
+			.stream()
+			.map(refClazz -> clazzesById.getOrDefault(refClazz.getId(), refClazz))
+			.collect(Collectors.toList()));
+	}
+
 	public void saveProjectAnalyses(ProjectAnalysesDTO projectAnalyses) {
 		File file = new File("project-analyses.bin");
 		try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {

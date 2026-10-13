@@ -6,6 +6,7 @@ import com.archanchor.mapstruct.DependencyMapperImpl;
 import com.archanchor.mapstruct.ModuleMapper;
 import com.archanchor.mapstruct.ModuleMapperImpl;
 import com.archanchor.services.InMemoryModuleService;
+import com.archanchor.services.ProjectService;
 import com.archanchor.services.RecommendationsService;
 import com.archanchor.services.architecturalAnalyses.AnalysedShopFixture;
 import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
@@ -13,6 +14,7 @@ import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
 import com.archanchor.services.architecturalAnalyses.MergeModule;
 import com.archanchor.services.architecturalAnalyses.MoveClass;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
+import com.archanchor.services.parsers.ParserFactory;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -53,8 +55,9 @@ final class ShopBackend {
 				new DependencyMapperImpl(), moduleMapper);
 		RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule, moveClass,
 				architectureViolation);
+		ProjectService projectService = new ProjectService(moduleService, new ParserFactory(null), analysesRunner);
 		RecommendationsController recommendationsController = new RecommendationsController(recommendationsService,
-				moduleController);
+				moduleController, projectService);
 		mockMvc = MockMvcBuilders.standaloneSetup(moduleController, recommendationsController).build();
 	}
 

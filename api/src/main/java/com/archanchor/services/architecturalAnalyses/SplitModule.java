@@ -52,6 +52,11 @@ public class SplitModule extends ArchitecturalAnalysis {
 
 		public List<String> module2ClassNames;
 
+		// What apply/split needs: a class is identified by its id, not by its name (#19).
+		public List<String> module1ClassIds = new ArrayList<>();
+
+		public List<String> module2ClassIds = new ArrayList<>();
+
 		public double originalSimilarity;
 
 		public double module1Similarity;
@@ -318,12 +323,15 @@ public class SplitModule extends ArchitecturalAnalysis {
 					.map(Clazz::getName)
 					.collect(Collectors.toList());
 
-				results.add(new SplitModuleResult(module.getId(), module.getName(), module1.getId(), module1.getName(),
-						module2.getId(), module2.getName(), superRefClass.getName(), deRefClass.getName(),
-						module1ClassNames, module2ClassNames, module.getSimilarity(), module1.getSimilarity(),
-						module2.getSimilarity(), rateResult.originalViolations, rateResult.module1Violations,
-						rateResult.module2Violations, rateResult.similarityImprovement,
-						rateResult.violationsImprovement, rateResult.rate));
+				SplitModuleResult split = new SplitModuleResult(module.getId(), module.getName(), module1.getId(),
+						module1.getName(), module2.getId(), module2.getName(), superRefClass.getName(),
+						deRefClass.getName(), module1ClassNames, module2ClassNames, module.getSimilarity(),
+						module1.getSimilarity(), module2.getSimilarity(), rateResult.originalViolations,
+						rateResult.module1Violations, rateResult.module2Violations, rateResult.similarityImprovement,
+						rateResult.violationsImprovement, rateResult.rate);
+				split.module1ClassIds = module1Classes.stream().map(Clazz::getId).collect(Collectors.toList());
+				split.module2ClassIds = module2Classes.stream().map(Clazz::getId).collect(Collectors.toList());
+				results.add(split);
 
 				log.debug(
 						"Beneficial split found for '{}': Rate: {}, Similarity improvement: {}, Violations improvement: {}",

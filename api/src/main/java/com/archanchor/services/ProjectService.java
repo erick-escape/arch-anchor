@@ -38,6 +38,20 @@ public class ProjectService {
 		this.analysesRunner = analysesRunner;
 	}
 
+	/**
+	 * Re-runs the analyses on the modules as saved, so that the recommendations describe
+	 * the structure after a module operation instead of the project as first analysed.
+	 * Without it, a recommendation that was just applied is offered again (#19).
+	 *
+	 * <pre>
+	 * moduleController.moveClass(classId, sourceModuleId, targetModuleId);
+	 * projectService.refreshRecommendations();
+	 * </pre>
+	 */
+	public void refreshRecommendations() {
+		analysesRunner.executeAll(moduleService.savedModulesForAnalysis());
+	}
+
 	public ProjectAnalysesDTO analyzeProject(String projectName, String directoryPath) throws IOException {
 		// Clear parser cache for fresh analysis to prevent duplicate processing
 		parserFactory.clearProcessingCache();

@@ -56,7 +56,7 @@ public class RecommendationsService {
 		return splitModule.getResults()
 			.stream()
 			.map(result -> new SplitModuleRecommendationDTO(result.originalModuleId, result.originalModuleName,
-					result.superRefClassName, result.deRefClassName, result.module1ClassNames, result.module2ClassNames,
+					result.superRefClassName, result.deRefClassName, result.module1ClassIds, result.module2ClassIds,
 					new SplitMetricsDTO(result.originalSimilarity,
 							(result.module1Similarity + result.module2Similarity) / 2.0, result.originalViolations,
 							result.module1Violations + result.module2Violations, result.similarityImprovement,
@@ -78,13 +78,10 @@ public class RecommendationsService {
 	private List<MoveClassRecommendationDTO> convertMoveResults() {
 		return moveClass.getResults()
 			.stream()
-			.map(result -> new MoveClassRecommendationDTO(result.classId, result.className, result.sourceModuleId, "", // sourceModuleName
+			.map(result -> new MoveClassRecommendationDTO(result.classId, result.className, result.sourceModuleId,
+					result.sourceModuleName, result.targetModuleId, result.targetModuleName, new MoveMetricsDTO(0.0, // classCurrentSimilarity
 																														// not
 																														// available
-																														// in
-																														// result
-					result.targetModuleId, "", // targetModuleName not available in result
-					new MoveMetricsDTO(0.0, // classCurrentSimilarity not available
 							0.0, // classTargetSimilarity not available
 							result.sourceViolationsBefore, result.sourceViolationsAfter, result.targetViolationsBefore,
 							result.targetViolationsAfter, result.similarityImprovement, result.violationsImprovement,
