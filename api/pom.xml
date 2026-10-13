@@ -117,6 +117,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Shallow-clones GitHub repositories for import, without a git binary on the server -->
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit</artifactId>
+            <version>7.8.0.202609011348-r</version>
+        </dependency>
+
         <!-- JavaParser dependencies -->
         <dependency>
             <groupId>com.github.javaparser</groupId>
