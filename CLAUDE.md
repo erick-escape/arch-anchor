@@ -90,7 +90,7 @@ Arch Anchor is a full-stack tool that extracts architectural constraints from Ja
 arch-anchor/
 ├── api/       # Spring Boot backend (Java 17, Maven wrapper bundled)
 ├── web/       # React frontend (Vite dev server, proxies /api to :8080)
-└── examples/  # Sample Java project used to exercise the analyses
+└── examples/  # The bookstore: the sample Java project that exercises the analyses
 ```
 
 ---
@@ -233,7 +233,7 @@ npm run preview                     # Preview production build
 1. **Start Backend**: `cd api && ./mvnw spring-boot:run`
 2. **Start Frontend**: `cd web && npm run dev`
 3. **Access Application**: http://localhost:5173
-4. **Add Project**: Click "Add Project" and import a GitHub repository or upload a local directory - `examples/sample-architecture-project` is the fixture that exercises all three analyses (import `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/sample-architecture-project`)
+4. **Add Project**: Click "Add Project" and import a GitHub repository or upload a local directory - `examples/bookstore` is the fixture: one misplaced class (`web.SalesReport`, which uses `java.sql`) triggers a violation and all three analyses, and its README records the tool's actual output (import `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/bookstore` and project name `bookstore`)
 5. **Analyze**: Click "Analyze" on a project - backend parses, runs analyses, frontend visualizes
 
 ## API Proxy Configuration

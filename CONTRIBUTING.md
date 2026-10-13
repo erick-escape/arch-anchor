@@ -18,14 +18,14 @@ cd api && ./mvnw spring-boot:run
 cd web && npm install && npm run dev
 ```
 
-Then open http://localhost:5173 and analyze `examples/sample-architecture-project` — its README
-lists the metrics and recommendations you should see, so it doubles as a check that your
-environment is sound.
+Then open http://localhost:5173 and analyze `examples/bookstore` — its README lists the
+reference classes, metrics and recommendations you should see, so it doubles as a check that
+your environment is sound.
 
 ## Before you open a pull request
 
 ```bash
-cd api && ./mvnw test          # 99 tests; 21 are skipped without the local uploads/ fixture
+cd api && ./mvnw test          # 232 tests; 21 are skipped without the local uploads/ fixture
 cd web && npm run lint && npm test && npm run build
 ```
 
@@ -105,4 +105,4 @@ Write the body to explain *why* the change is needed, not what the diff shows.
 Open an issue with the Java project that triggered it (or a minimal reproduction), what you
 expected, and what happened. Analysis bugs are much easier to act on with the module and
 reference class names included — and a small synthetic project in the shape of
-`examples/sample-architecture-project` is the most useful reproduction of all.
+`examples/bookstore` is the most useful reproduction of all.
