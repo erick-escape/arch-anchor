@@ -126,8 +126,11 @@ The tool reports other, lower-rated suggestions alongside these three;
    to `MUST` for dependencies the module is required to have, which exports as `MUST-DEPEND`.
 5. **Reshape modules if you want.** Rename, delete, split, merge (drag one module node onto
    another), or move individual classes between modules. Metrics recompute after each operation.
+   **Apply Recommendation** on a card in the recommendations panel performs that split, merge or
+   move for you, and the panel then lists the recommendations for the new structure. None of
+   this touches your source files: analyzing the project again starts over from them.
 6. **Export.** The three-dot menu in the top-right corner → **Export ACs** downloads a PDF of
-   every constraint the tool recovered.
+   every constraint the tool recovered, for the modules as they are on screen.
 
 ## Concepts
 
@@ -152,6 +155,7 @@ All endpoints are under `http://localhost:8080`.
 | `POST` | `/api/projects/import` | Import a project from GitHub (JSON body: `repositoryUrl`; optional `ref`, `subdirectory`, `projectName`, `accessToken`) |
 | `DELETE` | `/api/projects/{projectName}` | Delete an uploaded project |
 | `POST` | `/api/analyze?projectName=` | Run the full pipeline: parse, group, elect reference classes, measure, analyze |
+| `GET` | `/api/module` | The modules as last saved, after every split, merge and move since the analysis |
 | `POST` | `/api/module/merge?sourceId=&targetId=` | Merge two modules |
 | `POST` | `/api/module/split` | Split a module (JSON body) |
 | `POST` | `/api/module/rename?moduleId=&newName=` | Rename a module |
@@ -159,7 +163,7 @@ All endpoints are under `http://localhost:8080`.
 | `POST` | `/api/module/ref-clazzes` | Set a module's reference classes (JSON body) |
 | `POST` | `/api/module/ref-clazz-mode` | Set a reference class's enforcement mode: `ALLOW` or `MUST` |
 | `POST` | `/api/module/move-class?classId=&sourceModuleId=&targetModuleId=` | Move a class between modules |
-| `GET` | `/api/recommendations` | All recommendations from the last analysis |
+| `GET` | `/api/recommendations` | The recommendations for the current modules: computed by the last analysis, and again after each applied recommendation |
 | `POST` | `/api/recommendations/apply/split` | Apply a split recommendation |
 | `POST` | `/api/recommendations/apply/merge?sourceId=&targetId=` | Apply a merge recommendation |
 | `POST` | `/api/recommendations/apply/move?classId=&sourceModuleId=&targetModuleId=` | Apply a move recommendation |

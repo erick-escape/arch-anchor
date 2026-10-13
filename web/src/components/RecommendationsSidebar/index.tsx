@@ -95,9 +95,11 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
       switch (recommendation.type) {
         case 'split': {
           const data = recommendation.data as SplitModuleRecommendation;
+          // Module 2 holds the classes to split off; module 1 keeps the reference class, and
+          // with it the original module's id and its place in the graph.
           await applySplit.mutateAsync({
             moduleId: data.originalModuleId,
-            classIds: data.module1ClassIds,
+            classIds: data.module2ClassIds,
           });
           break;
         }
@@ -135,6 +137,8 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
       if (onRecommendationApplied) {
         onRecommendationApplied();
       }
+    } catch {
+      // The mutation's onError has already told the user, and nothing changed to refresh.
     } finally {
       setApplyingId(null);
     }

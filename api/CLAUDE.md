@@ -273,7 +273,10 @@ The analyses can utilize `ModuleService` methods for:
     - Runs architectural analyses via `ArchitecturalAnalysesRunner`
     - Returns `ProjectAnalysesDTO` with modules and architectural constraints
 3. **Recommendations API**: `GET /api/recommendations` aggregates results from all analyses into `RecommendationsResponseDTO`
-4. **Apply Recommendations**: `POST /api/recommendations/apply/{split|merge|move}` applies a selected recommendation
+4. **Apply Recommendations**: `POST /api/recommendations/apply/{split|merge|move}` applies a selected recommendation to the saved
+   modules, then re-runs the analyses on them (`ProjectService.refreshRecommendations`), so `GET /api/recommendations` describes the
+   new structure. The page reloads the modules with `GET /api/module`; re-analysing would discard the change, because module
+   operations are never written back to the sources
 5. **Module Operations**: `/api/module/*` endpoints allow manual module manipulation
 
 ### Key Metrics and Formulas

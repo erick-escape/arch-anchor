@@ -16,8 +16,8 @@ import {
 } from '@xyflow/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ModuleData } from '../../interface/ModuleData';
-import { ProjectAnalyses, RefClassConstraint } from '../../interface/ProjectAnalyses';
-import { generateAcsPdf } from '../../utils/exportACs';
+import { ProjectAnalyses } from '../../interface/ProjectAnalyses';
+import { architecturalConstraintsOf, generateAcsPdf } from '../../utils/exportACs';
 import '@xyflow/react/dist/style.css';
 import axios from 'axios';
 
@@ -54,21 +54,13 @@ function viewportCenter(): XYPosition {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
 
-// The constraints exported to PDF follow the module's reference classes and their enforce modes.
-function refClassConstraintsOf(module: ModuleData): RefClassConstraint[] {
-  return module.refClazzes.map((rc) => ({
-    refClassId: rc.id,
-    refClassName: rc.name,
-    enforceMode: rc.enforceMode ?? 'ALLOW',
-    dependencies: rc.dependencies,
-  }));
-}
-
 const AnalyzePage = () => {
   const { projectName } = useParams();
   const [loading, setLoading] = useState(false);
   const [modules, setModules] = useState<ModuleData[]>([]);
-  const [projectAnalyses, setProjectAnalyses] = useState<ProjectAnalyses>();
+  // Counts applied recommendations; as the sidebar's key, it makes the sidebar start over
+  // instead of showing a module it copied before the apply.
+  const [appliedRecommendations, setAppliedRecommendations] = useState(0);
   const [nodes, setNodes, onNodesChange] = useNodesState<ModuleNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { getIntersectingNodes } = useReactFlow<ModuleNode, Edge>();
@@ -110,9 +102,7 @@ const AnalyzePage = () => {
       const response = await axios.post<ProjectAnalyses>('/api/analyze', null, {
         params: { projectName },
       });
-      const projectData = response.data;
-      const data = projectData.modulesList;
-      setProjectAnalyses(projectData);
+      const data = response.data.modulesList;
       setModules(data);
       setNodes(layoutModulesConcentric(data, viewportCenter()));
       console.log('🟢 [FRONTEND] fetchModules() completed, received', data.length, 'modules');
@@ -221,16 +211,6 @@ const AnalyzePage = () => {
 
   const onRefClazzModeRefresh = (moduleId: string, updatedModule: ModuleData) => {
     setModules((prev) => prev.map((m) => (m.id === moduleId ? updatedModule : m)));
-
-    setProjectAnalyses((prev) => {
-      if (!prev) return prev;
-      const updatedConstraints = prev.architecturalConstraints.map((constraint) =>
-        constraint.moduleId === moduleId
-          ? { ...constraint, refClassConstraints: refClassConstraintsOf(updatedModule) }
-          : constraint
-      );
-      return { ...prev, architecturalConstraints: updatedConstraints };
-    });
   };
 
   const onSplitRefresh = (oldModuleId: string, newModules: ModuleData[]) => {
@@ -238,32 +218,26 @@ const AnalyzePage = () => {
     setNodes((prev) => withSplitModuleNodes(prev, oldModuleId, newModules));
   };
 
+  // Exported from the modules on screen, so the PDF follows every split, merge and move.
   const handleExportACs = () => {
-    if (!projectAnalyses) return;
-    const doc = generateAcsPdf(
-      projectAnalyses.projectName,
-      projectAnalyses.architecturalConstraints
-    );
-    doc.save(`architectural-constraints-${projectAnalyses.projectName}.pdf`);
+    if (!projectName || modules.length === 0) return;
+    const doc = generateAcsPdf(projectName, architecturalConstraintsOf(modules));
+    doc.save(`architectural-constraints-${projectName}.pdf`);
   };
 
-  // Refresh all modules by refetching from backend
+  // Load the modules as the backend saved them. Analyzing again would read the sources, which
+  // no module operation changes, and discard what was just applied (#19).
   const onRecommendationApplied = async () => {
     try {
       console.log('🔄 [FRONTEND] Refreshing modules after recommendation applied');
 
-      // Re-analyze to get updated modules
-      const response = await axios.post<ProjectAnalyses>('/api/analyze', null, {
-        params: { projectName },
-      });
-      const projectData = response.data;
-      const data = projectData.modulesList;
+      const response = await axios.get<ModuleData[]>('/api/module');
+      const data = response.data;
 
       console.log('✅ [FRONTEND] Received', data.length, 'modules from backend');
 
-      // Update project and modules state
-      setProjectAnalyses(projectData);
       setModules(data);
+      setAppliedRecommendations((count) => count + 1);
 
       // Keep the positions of modules that survived, so the graph does not jump
       setNodes((current) => rebuildNodesPreservingPositions(current, data, viewportCenter()));
@@ -351,6 +325,7 @@ const AnalyzePage = () => {
       </div>
 
       <Sidebar
+        key={appliedRecommendations}
         isOpen={isSidebarOpen}
         modules={modules}
         onDeleteRefresh={onDeleteRefresh}

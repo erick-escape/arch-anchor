@@ -26,7 +26,12 @@ export function recommendationsFixture(
     lists.splits.length + lists.merges.length + lists.moves.length + lists.violations.length;
   return {
     ...lists,
-    summary: { totalRecommendations: total, highPriority: total, mediumPriority: 0, lowPriority: 0 },
+    summary: {
+      totalRecommendations: total,
+      highPriority: total,
+      mediumPriority: 0,
+      lowPriority: 0,
+    },
   };
 }
 
