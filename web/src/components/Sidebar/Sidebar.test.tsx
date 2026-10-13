@@ -121,6 +121,23 @@ describe('Sidebar module detail', () => {
     expect(screen.getByText('org.springframework.stereotype')).toBeInTheDocument();
   });
 
+  // Regression for #11: the expanded indicator was an unprintable character, and the headers
+  // were plain divs that a keyboard could not reach.
+  it('gives every section a header that says whether it is open', async () => {
+    renderSidebar();
+
+    await userEvent.click(screen.getByText('orders'));
+
+    const header = (name: string) => screen.getByRole('button', { name });
+    expect(header('Reference Classes')).toHaveAttribute('aria-expanded', 'true');
+    expect(header('Clazzes')).toHaveAttribute('aria-expanded', 'true');
+    expect(header('Dependencies')).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(header('Dependencies'));
+
+    expect(header('Dependencies')).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('says so when a module has no dependencies', async () => {
     render(
       <Sidebar
