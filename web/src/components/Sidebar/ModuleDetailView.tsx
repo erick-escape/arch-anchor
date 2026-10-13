@@ -5,6 +5,7 @@ import { ModuleDetailViewProps } from './sidebarTypes';
 import { ClazzData } from '../../interface/ClazzData.tsx';
 import { Dependency } from '../../interface/Dependency.tsx';
 import styles from './Sidebar.module.css';
+import SectionHeader from './SectionHeader';
 
 interface DependencyListProps {
   dependencies: Dependency[];
@@ -154,21 +155,11 @@ const ModuleDetailView = ({
         {/* Reference Classes Section */}
         {module.refClazzes && module.refClazzes.length > 0 && (
           <div style={{ marginBottom: '20px' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer',
-                padding: '5px 0',
-                borderBottom: '1px solid #333',
-                marginBottom: expandedSections.refClazzes ? '10px' : '0',
-              }}
-              onClick={() => toggleSection('refClazzes')}
-            >
-              <div style={{ fontWeight: 'bold' }}>Reference Classes</div>
-              <div>{expandedSections.refClazzes ? '' : '+'}</div>
-            </div>
+            <SectionHeader
+              title="Reference Classes"
+              expanded={expandedSections.refClazzes}
+              onToggle={() => toggleSection('refClazzes')}
+            />
 
             {expandedSections.refClazzes && (
               <div
@@ -227,21 +218,11 @@ const ModuleDetailView = ({
         )}
 
         <div style={{ marginBottom: '20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              cursor: 'pointer',
-              padding: '5px 0',
-              borderBottom: '1px solid #333',
-              marginBottom: expandedSections.clazzes ? '10px' : '0',
-            }}
-            onClick={() => toggleSection('clazzes')}
-          >
-            <div style={{ fontWeight: 'bold' }}>Clazzes</div>
-            <div>{expandedSections.clazzes ? '' : '+'}</div>
-          </div>
+          <SectionHeader
+            title="Clazzes"
+            expanded={expandedSections.clazzes}
+            onToggle={() => toggleSection('clazzes')}
+          />
 
           {expandedSections.clazzes && (
             <div
@@ -291,21 +272,11 @@ const ModuleDetailView = ({
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              cursor: 'pointer',
-              padding: '5px 0',
-              borderBottom: '1px solid #333',
-              marginBottom: expandedSections.dependencies ? '10px' : '0',
-            }}
-            onClick={() => toggleSection('dependencies')}
-          >
-            <div style={{ fontWeight: 'bold' }}>Dependencies</div>
-            <div>{expandedSections.dependencies ? '' : '+'}</div>
-          </div>
+          <SectionHeader
+            title="Dependencies"
+            expanded={expandedSections.dependencies}
+            onToggle={() => toggleSection('dependencies')}
+          />
 
           {expandedSections.dependencies && (
             <DependencyList dependencies={module.allDependencies} />
