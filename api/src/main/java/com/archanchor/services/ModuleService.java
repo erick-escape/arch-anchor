@@ -11,6 +11,7 @@ import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.mapstruct.*;
 import com.archanchor.services.parsers.ParserFactory;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -35,21 +36,16 @@ public class ModuleService {
 
 	private final DependencyMapper dependencyMapper = new DependencyMapperImpl();
 
-	public ModuleService(ParserFactory parserFactory) {
+	private final ActiveRatingWeights activeWeights;
+
+	public ModuleService(ParserFactory parserFactory, ActiveRatingWeights activeWeights) {
 		this.parserFactory = parserFactory;
+		this.activeWeights = activeWeights;
 	}
 
 	// Define file extensions to consider for each language
 	private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of("java", List.of(".java"), "python",
 			List.of(".py"), "javascript", List.of(".js", ".ts"), "php", List.of(".php"));
-
-	// Weights for refClass selection and architectural analyses: equal weights (0.5 each)
-	// mean both factors are equally important
-	// These can be adjusted in the future to give more importance to similarity or
-	// violations
-	public static final double SIMILARITY_WEIGHT = 0.5;
-
-	public static final double VIOLATION_WEIGHT = 0.5;
 
 	public void saveModules(List<ModuleDTO> modulesList) {
 		if (modulesList == null) {
@@ -282,8 +278,8 @@ public class ModuleService {
 				// Normalize violations to [0, 1] where 1 is best (no violations)
 				double normalizedViolations = 1.0 - ((double) violations / finalMaxViolations);
 
-				// Calculate combined rate: higher is better
-				double rate = (SIMILARITY_WEIGHT * normalizedSimilarity) + (VIOLATION_WEIGHT * normalizedViolations);
+				// Combined with the project's election weights (#27): higher is better
+				double rate = activeWeights.current().election().rate(normalizedSimilarity, normalizedViolations);
 
 				log.debug(
 						"Class: {}, Similarity: {}, Normalized Similarity: {}, Violations: {}, Normalized Violations: {}, Rate: {}",
@@ -299,6 +295,7 @@ public class ModuleService {
 
 		List<Clazz> refClazzes = List.of(refClazz);
 		module.setRefClazzes(refClazzes);
+		module.setRefClazzesChosenByHand(false);
 	}
 
 	/**
@@ -823,7 +820,7 @@ public class ModuleService {
 					.map(dependencyMapper::toDto)
 					.toArray(DependencyDTO[]::new),
 				moduleEntity.getClazzes().stream().map(clazzMapper::toDto).toArray(ClazzResponseDTO[]::new),
-				moduleEntity.getSimilarity(), moduleEntity.getAvgRefClazzesSimilarity());
+				moduleEntity.getSimilarity(), moduleEntity.getAvgRefClazzesSimilarity(), true);
 
 		// Replace the module in the list
 		List<ModuleDTO> updatedModules = modules.stream()

@@ -3,6 +3,7 @@ package com.archanchor.services.architecturalAnalyses;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -67,7 +68,7 @@ class ArchitecturalAnalysisTest {
 	private static final class SimulationProbe extends ArchitecturalAnalysis {
 
 		SimulationProbe() {
-			super(new ModuleService(null));
+			super(new ModuleService(null, new ActiveRatingWeights()), new ActiveRatingWeights());
 		}
 
 		@Override

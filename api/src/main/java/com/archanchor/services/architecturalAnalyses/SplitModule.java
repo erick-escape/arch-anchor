@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +17,8 @@ public class SplitModule extends ArchitecturalAnalysis {
 
 	private List<SplitModuleResult> results;
 
-	public SplitModule(ModuleService moduleService) {
-		super(moduleService);
+	public SplitModule(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+		super(moduleService, activeWeights);
 	}
 
 	@Override
@@ -223,9 +224,8 @@ public class SplitModule extends ArchitecturalAnalysis {
 		double violationsReduction = originalViolations - totalSplitViolations;
 		double normalizedViolationsImprovement = violationsReduction / Math.max(originalViolations, 1.0);
 
-		// Calculate rate using weighted combination
-		double rate = (ModuleService.SIMILARITY_WEIGHT * similarityImprovement)
-				+ (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
+		// Weighted by the project's recommendation weights (#27)
+		double rate = recommendationRate(similarityImprovement, normalizedViolationsImprovement);
 
 		return new SplitRateResult(originalViolations, module1Violations, module2Violations, similarityImprovement,
 				normalizedViolationsImprovement, rate);

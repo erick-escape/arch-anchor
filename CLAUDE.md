@@ -114,7 +114,7 @@ cd api
 
 **Controllers** (`src/main/java/com/archanchor/controllers/`)
 - REST endpoints for project upload or GitHub import, analysis, and module/class operations
-- Key endpoints: `/api/upload`, `/api/projects/import`, `/api/analyze`, `/api/projects`, `/api/module/*`, `/api/recommendations/*`
+- Key endpoints: `/api/upload`, `/api/projects/import`, `/api/analyze`, `/api/projects`, `/api/projects/{projectName}/rating-weights`, `/api/module/*`, `/api/recommendations/*`
 
 **Services** (`src/main/java/com/archanchor/services/`)
 - `JavaParserService` - Core parsing and dependency resolution using JavaParser
@@ -127,12 +127,12 @@ cd api
 - Extensible framework for analyzing module structure and generating recommendations
 - `ArchitecturalAnalysesRunner` - Discovers and executes all analyses post-parsing
 - Current analyses: `SplitModule`, `MergeModule`, `MoveClass`, `ArchitectureViolation`
-- All structural analyses use balanced rating: `rate = 0.5 × Δ_sim + 0.5 × Δ_vio_norm`
+- All structural analyses use the project's recommendation weights: `rate = w_sim × Δ_sim + w_vio × Δ_vio_norm` (0.5 each by default), through `ArchitecturalAnalysis.recommendationRate`
 - Only recommendations with positive rate (net architectural benefit) are suggested
 - Results exposed via `RecommendationsService` and `RecommendationsController`
 
 **Domain Models** (`src/main/java/com/archanchor/domains/`)
-- `Module` - Logical module with: `refClazzes`, `refClazzesDependencies`, `moduleDependencies`, `clazzes`, `similarity`, `avgRefClazzesSimilarity`, `violations`
+- `Module` - Logical module with: `refClazzes`, `refClazzesDependencies`, `moduleDependencies`, `clazzes`, `similarity`, `avgRefClazzesSimilarity`, `violations`, `refClazzesChosenByHand`
 - `Clazz` - Class with: `dependencies`, `similarity`, `avgSimilarityWithRefClazzes`, `firstModule`, `currentModule`
 - `Dependency` - Dependency on an external package: `packageName`, `types` (List<Type>)
 - `Type` - Specific type within a dependency: `fullyQualifiedName`, `className`
@@ -141,7 +141,7 @@ cd api
 
 **Reference Classes:**
 - Every module MUST have at least one reference class defining architectural intent
-- Selected automatically via rating (similarity + violations) or manually by architect
+- Selected automatically via rating (similarity + violations, weighted by the project's election weights) or manually by architect; a module whose reference classes were chosen by hand (`refClazzesChosenByHand`) keeps them when the election weights change
 - Reference class dependencies stored in `module.getRefClazzesDependencies()` define architectural constraints
 
 **Metrics:**
@@ -150,9 +150,11 @@ cd api
 - **Avg Similarity with RefClazzes**: Evaluates how well a class fits module's pattern
 
 **Rating Mechanism:**
-- `rate = 0.5 × Δ_sim + 0.5 × Δ_vio_norm`
-- Used by Split, Merge, and Move analyses
-- Weights configurable via `ModuleService.SIMILARITY_WEIGHT` and `VIOLATION_WEIGHT`
+- Election: `w_sim × sim_norm + w_vio × vio_norm` per class; recommendation rate: `w_sim × Δ_sim + w_vio × Δ_vio_norm`, used by Split, Merge, and Move
+- Two weight pairs per project (`RatingWeights`: `election`, `recommendation`), each a `WeightPair` that is non-negative and sums to 1, default 0.5 / 0.5
+- Set by the architect from the analysis page (**Settings**) or `PUT /api/projects/{projectName}/rating-weights`, stored per project in `rating-weights.json` (`JsonFileRatingWeightsStore`)
+- `ModuleService` and the analyses read the weights in force from the injected `ActiveRatingWeights`, which `ProjectService.analyzeProject` sets to the analysed project's
+- `examples/bookstore` at the defaults is pinned by `BookstoreRunningExampleTest`: its numbers are quoted in the README and the ICSE 2027 paper
 
 ### Important Implementation Constraints
 

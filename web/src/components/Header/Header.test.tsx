@@ -5,9 +5,15 @@ import userEvent from '@testing-library/user-event';
 import Header from './index';
 import { fontAwesomeIcon } from '../../test/fontAwesomeIcon';
 
-function renderHeader(onExportACs: () => void = () => {}) {
+function renderHeader(onExportACs: () => void = () => {}, onOpenSettings: () => void = () => {}) {
   return render(
-    <Header projectName="shop" isSidebarOpen onToggleSidebar={() => {}} onExportACs={onExportACs} />
+    <Header
+      projectName="shop"
+      isSidebarOpen
+      onToggleSidebar={() => {}}
+      onExportACs={onExportACs}
+      onOpenSettings={onOpenSettings}
+    />
   );
 }
 
@@ -27,5 +33,16 @@ describe('Header', () => {
 
     expect(onExportACs).toHaveBeenCalledOnce();
     expect(screen.queryByText('Export ACs')).not.toBeInTheDocument();
+  });
+
+  // It used to log to the console and do nothing (#27).
+  it('opens the settings from the menu', async () => {
+    const onOpenSettings = vi.fn();
+    const { container } = renderHeader(() => {}, onOpenSettings);
+
+    await userEvent.click(fontAwesomeIcon(container, 'ellipsis-vertical'));
+    await userEvent.click(screen.getByText('Settings'));
+
+    expect(onOpenSettings).toHaveBeenCalledOnce();
   });
 });

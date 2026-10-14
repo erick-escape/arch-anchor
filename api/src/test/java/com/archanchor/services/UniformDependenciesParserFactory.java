@@ -13,7 +13,7 @@ import java.util.List;
  * without reading it, so module discovery can be tested on empty source files.
  *
  * <pre>
- * ModuleService moduleService = new ModuleService(new UniformDependenciesParserFactory("java.sql"));
+ * ModuleService moduleService = new ModuleService(new UniformDependenciesParserFactory("java.sql"), new ActiveRatingWeights());
  * </pre>
  */
 final class UniformDependenciesParserFactory extends ParserFactory {

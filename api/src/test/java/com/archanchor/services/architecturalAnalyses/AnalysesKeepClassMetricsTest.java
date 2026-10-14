@@ -3,6 +3,7 @@ package com.archanchor.services.architecturalAnalyses;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,7 +13,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,25 +26,28 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class AnalysesKeepClassMetricsTest {
 
-	private final ModuleService moduleService = new ModuleService(null);
+	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 
-	static Stream<Named<Function<ModuleService, ArchitecturalAnalysis>>> analyses() {
+	private final ModuleService moduleService = new ModuleService(null, activeWeights);
+
+	static Stream<Named<BiFunction<ModuleService, ActiveRatingWeights, ArchitecturalAnalysis>>> analyses() {
 		return Stream.of(analysis("SplitModule", SplitModule::new), analysis("MergeModule", MergeModule::new),
 				analysis("MoveClass", MoveClass::new), analysis("ArchitectureViolation", ArchitectureViolation::new));
 	}
 
-	private static Named<Function<ModuleService, ArchitecturalAnalysis>> analysis(String name,
-			Function<ModuleService, ArchitecturalAnalysis> constructor) {
+	private static Named<BiFunction<ModuleService, ActiveRatingWeights, ArchitecturalAnalysis>> analysis(String name,
+			BiFunction<ModuleService, ActiveRatingWeights, ArchitecturalAnalysis> constructor) {
 		return Named.of(name, constructor);
 	}
 
 	@ParameterizedTest
 	@MethodSource("analyses")
-	void classMetricsAreTheSameBeforeAndAfterTheAnalysis(Function<ModuleService, ArchitecturalAnalysis> newAnalysis) {
+	void classMetricsAreTheSameBeforeAndAfterTheAnalysis(
+			BiFunction<ModuleService, ActiveRatingWeights, ArchitecturalAnalysis> newAnalysis) {
 		List<Module> modules = AnalysedShopFixture.webAndPersistence(moduleService);
 		Map<String, List<Double>> asAnalysed = metricsByClassName(modules);
 
-		newAnalysis.apply(moduleService).execute(modules);
+		newAnalysis.apply(moduleService, activeWeights).execute(modules);
 
 		assertThat(metricsByClassName(modules)).isEqualTo(asAnalysed);
 	}
@@ -52,8 +56,8 @@ class AnalysesKeepClassMetricsTest {
 	void moveClassFindsTheSameMovesAfterSplitAndViolationAnalysisRan() {
 		List<MoveClass.MoveClassResult> movesAlone = movesAfter();
 
-		List<MoveClass.MoveClassResult> movesAfterEarlierAnalyses = movesAfter(new SplitModule(moduleService),
-				new ArchitectureViolation(moduleService));
+		List<MoveClass.MoveClassResult> movesAfterEarlierAnalyses = movesAfter(
+				new SplitModule(moduleService, activeWeights), new ArchitectureViolation(moduleService, activeWeights));
 
 		assertThat(movesAlone).extracting(move -> move.className).containsExactly(AnalysedShopFixture.MISPLACED_CLASS);
 		assertThat(movesAfterEarlierAnalyses).usingRecursiveComparison().isEqualTo(movesAlone);
@@ -62,9 +66,9 @@ class AnalysesKeepClassMetricsTest {
 	@Test
 	void splitStillIsolatesTheMisplacedClassAfterMoveClassRan() {
 		List<Module> modules = AnalysedShopFixture.webAndPersistence(moduleService);
-		SplitModule splitModule = new SplitModule(moduleService);
+		SplitModule splitModule = new SplitModule(moduleService, activeWeights);
 
-		new MoveClass(moduleService).execute(modules);
+		new MoveClass(moduleService, activeWeights).execute(modules);
 		splitModule.execute(modules);
 
 		assertThat(splitModule.getResults()).singleElement().satisfies(split -> {
@@ -76,7 +80,7 @@ class AnalysesKeepClassMetricsTest {
 	private List<MoveClass.MoveClassResult> movesAfter(ArchitecturalAnalysis... earlierAnalyses) {
 		List<Module> modules = AnalysedShopFixture.webAndPersistence(moduleService);
 		Arrays.stream(earlierAnalyses).forEach(analysis -> analysis.execute(modules));
-		MoveClass moveClass = new MoveClass(moduleService);
+		MoveClass moveClass = new MoveClass(moduleService, activeWeights);
 		moveClass.execute(modules);
 		return moveClass.getResults();
 	}

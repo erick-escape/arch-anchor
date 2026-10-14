@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +17,8 @@ public class MoveClass extends ArchitecturalAnalysis {
 
 	private List<MoveClassResult> results;
 
-	public MoveClass(ModuleService moduleService) {
-		super(moduleService);
+	public MoveClass(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+		super(moduleService, activeWeights);
 	}
 
 	@Override
@@ -215,9 +216,8 @@ public class MoveClass extends ArchitecturalAnalysis {
 		double violationsReduction = totalOriginalViolations - totalAfterViolations;
 		double normalizedViolationsImprovement = violationsReduction / Math.max(totalOriginalViolations, 1.0);
 
-		// Calculate rate using weighted combination
-		double rate = (ModuleService.SIMILARITY_WEIGHT * similarityImprovement)
-				+ (ModuleService.VIOLATION_WEIGHT * normalizedViolationsImprovement);
+		// Weighted by the project's recommendation weights (#27)
+		double rate = recommendationRate(similarityImprovement, normalizedViolationsImprovement);
 
 		return new MoveEvaluationResult(sourceModuleSimilarityBefore, sourceModuleSimilarityAfter,
 				targetModuleSimilarityBefore, targetModuleSimilarityAfter, sourceViolationsBefore,

@@ -11,6 +11,8 @@ export interface ModuleData {
   clazzes: ClazzData[];
   similarity: number;
   avgRefClazzesSimilarity: number;
+  // The architect chose the reference classes; a change of election weights keeps them.
+  refClazzesChosenByHand: boolean;
 }
 
 // Mirrors SplitModuleResponse in api/.

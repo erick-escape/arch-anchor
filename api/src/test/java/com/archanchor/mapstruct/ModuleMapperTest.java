@@ -59,6 +59,24 @@ class ModuleMapperTest {
 		assertThat(dto.allDependencies()).isEmpty();
 	}
 
+	@Test
+	void roundTripKeepsWhetherTheReferenceClassesWereChosenByHand() {
+		// A change of election weights re-elects every module but those (#27), so losing
+		// the mark on the way to modules.bin would discard the architect's choice.
+		Module chosenByHand = moduleWithDependencies(List.of());
+		chosenByHand.setRefClazzesChosenByHand(true);
+
+		ModuleDTO dto = moduleMapper.toDto(chosenByHand);
+
+		assertThat(dto.refClazzesChosenByHand()).isTrue();
+		assertThat(moduleMapper.toEntity(dto).isRefClazzesChosenByHand()).isTrue();
+	}
+
+	@Test
+	void aModuleBuiltFromItsFieldsHasElectedReferenceClasses() {
+		assertThat(moduleWithDependencies(List.of()).isRefClazzesChosenByHand()).isFalse();
+	}
+
 	private static List<Dependency> springAndJavaUtil() {
 		return List.of(
 				new Dependency("org.springframework.stereotype",

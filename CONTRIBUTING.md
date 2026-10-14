@@ -62,13 +62,18 @@ version:
 Every structural analysis — split, merge, move — is scored the same way:
 
 ```
-rate = 0.5 × Δ_similarity + 0.5 × Δ_violations_normalized
+rate = w_sim × Δ_similarity + w_viol × Δ_violations_normalized
 ```
 
-Only a positive rate is ever recommended, meaning a refactoring must improve cohesion without
-costing more violations than it saves. If you change how similarity or violations are counted,
-you change the output of all three analyses at once, and `SplitModuleTest`, `MergeModuleTest`,
-and `MoveClassTest` are what tell you whether that was intentional.
+The weights are the project's recommendation pair, 0.5 each unless the architect changes them;
+the reference-class election weighs similarity against violations with a pair of its own. An
+analysis gets the rate from `ArchitecturalAnalysis.recommendationRate` and never reads the
+weights itself. Only a positive rate is ever recommended, meaning a refactoring must improve
+cohesion without costing more violations than it saves. If you change how similarity or
+violations are counted, you change the output of all three analyses at once, and
+`SplitModuleTest`, `MergeModuleTest`, and `MoveClassTest` are what tell you whether that was
+intentional; `BookstoreRunningExampleTest` tells you whether the numbers the README quotes still
+hold.
 
 Also: **`JavaParserService` must stay generic.** It cannot contain special cases for particular
 libraries or frameworks. The tool is meant to parse any Java project — Spring Boot, plain Maven,

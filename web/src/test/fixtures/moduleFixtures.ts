@@ -38,6 +38,7 @@ export function moduleFixture(overrides: Partial<ModuleData> = {}): ModuleData {
     clazzes: [refClazz, clazzFixture({ id: 'c2', name: 'OrderRepository', similarity: 0.5 })],
     similarity: 0.6,
     avgRefClazzesSimilarity: 0.75,
+    refClazzesChosenByHand: false,
     ...overrides,
   };
 }
