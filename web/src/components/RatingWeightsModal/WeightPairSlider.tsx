@@ -13,6 +13,10 @@ interface WeightPairSliderProps {
 // One slider per pair: the handle sets the similarity weight, violations get the rest.
 const SLIDER_MARKS = { 0: 'Violations', 0.5: 'Equal', 1: 'Similarity' };
 
+// The end marks are centred on the ends of the rail, so half of each label would stick out of
+// the dialog's content without this inset.
+const SLIDER_STYLE = { marginInline: 36 };
+
 const WeightPairSlider = ({ name, explanation, pair, onChange }: WeightPairSliderProps) => (
   <section aria-label={name} style={{ marginBottom: 24 }}>
     <Typography.Title level={5}>{name}</Typography.Title>
@@ -22,6 +26,7 @@ const WeightPairSlider = ({ name, explanation, pair, onChange }: WeightPairSlide
       max={1}
       step={0.05}
       marks={SLIDER_MARKS}
+      style={SLIDER_STYLE}
       value={pair.similarity}
       onChange={(similarity: number) => onChange(pairFromSimilarityWeight(similarity))}
       ariaLabelForHandle={`${name}: similarity weight`}
