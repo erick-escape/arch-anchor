@@ -202,7 +202,10 @@ describe('Sidebar reference classes', () => {
     await userEvent.click(screen.getByText('Set as Ref Classes'));
 
     await vi.waitFor(() => expect(onRefClazzesRefresh).toHaveBeenCalledWith('m1', changed));
-    expect(sentBody('POST', '/api/module/ref-clazzes')).toEqual({ moduleId: 'm1', classIds: ['c2'] });
+    expect(sentBody('POST', '/api/module/ref-clazzes')).toEqual({
+      moduleId: 'm1',
+      classIds: ['c2'],
+    });
   });
 });
 

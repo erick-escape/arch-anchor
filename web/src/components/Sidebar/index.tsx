@@ -15,6 +15,7 @@ const Sidebar = ({
   onRenameRefresh,
   onSplitRefresh,
   onRefClazzModeRefresh,
+  onRefClazzesRefresh,
 }: SidebarProps) => {
   const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
   const [selectedModule, setSelectedModule] = useState<ModuleData | null>(null);
@@ -112,14 +113,12 @@ const Sidebar = ({
         classIds,
       });
 
-      // Update the selected module with the new reference classes
+      // The back end recomputed the module around its new reference classes; the page needs
+      // it too, or the graph keeps showing the old ones (#28).
       if (selectedModule && selectedModule.id === moduleId) {
-        const updatedModule = {
-          ...selectedModule,
-          refClazzes: response.data.refClazzes,
-        };
-        setSelectedModule(updatedModule);
+        setSelectedModule(response.data);
       }
+      onRefClazzesRefresh(moduleId, response.data);
     } catch (error) {
       console.error('Failed to set reference classes', error);
       throw error;
@@ -150,7 +149,8 @@ const Sidebar = ({
 
   return (
     <>
-      <div
+      <aside
+        aria-label="Modules"
         style={{
           position: 'fixed',
           top: '60px', // Height of header
@@ -183,7 +183,7 @@ const Sidebar = ({
             />
           )
         )}
-      </div>
+      </aside>
 
       <ConfirmationModal
         isOpen={deleteConfirmation.isOpen}

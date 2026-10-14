@@ -7,6 +7,7 @@ import {
   withoutIds,
   withRenamedModule,
   withRenamedModuleNode,
+  withReplacedModuleNode,
   withSplitModuleNodes,
 } from './moduleNodes';
 import { moduleFixture } from '../../test/fixtures/moduleFixtures';
@@ -80,6 +81,19 @@ describe('renaming', () => {
     expect(renamed[0].data.module.name).toBe('billing');
     expect(nodes[0].data.module.name).toBe('module0');
     expect(renamed[1]).toBe(nodes[1]);
+  });
+});
+
+describe('withReplacedModuleNode', () => {
+  it('puts the changed module in its node, where the node was, without mutating the previous state', () => {
+    const nodes = layoutModulesConcentric(modulesNamed(2), center);
+    const changed = moduleFixture({ id: 'm1', name: 'module1', similarity: 1 });
+
+    const replaced = withReplacedModuleNode(nodes, changed);
+
+    expect(replaced[1]).toEqual({ ...nodes[1], data: { module: changed } });
+    expect(replaced[0]).toBe(nodes[0]);
+    expect(nodes[1].data.module.similarity).toBe(0.6);
   });
 });
 
