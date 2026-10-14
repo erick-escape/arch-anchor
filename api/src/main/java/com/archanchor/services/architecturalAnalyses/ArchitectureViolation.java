@@ -6,6 +6,7 @@ import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -19,8 +20,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
 	private ArchitectureViolationResult result;
 
-	public ArchitectureViolation(ModuleService moduleService) {
-		super(moduleService);
+	public ArchitectureViolation(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+		super(moduleService, activeWeights);
 	}
 
 	@Override
