@@ -78,7 +78,10 @@ public final class AnalysedShopFixture {
 		return new Module(idOf(name), name, null, null, null, new ArrayList<>(List.of(clazzes)), 0.0, 0.0, 0);
 	}
 
-	private static void analyse(Module module, ModuleService moduleService) {
+	/**
+	 * The per-module steps of {@code ProjectService.analyzeProject}, election included.
+	 */
+	public static void analyse(Module module, ModuleService moduleService) {
 		moduleService.populateModuleDependencies(module);
 		moduleService.calculateClassSimilaritiesAndSelectRefClasses(module);
 		moduleService.calculateAvgSimilarityWithRefClazzes(module);
