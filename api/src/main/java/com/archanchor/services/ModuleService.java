@@ -47,6 +47,10 @@ public class ModuleService {
 	private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of("java", List.of(".java"), "python",
 			List.of(".py"), "javascript", List.of(".js", ".ts"), "php", List.of(".php"));
 
+	// They declare a package and a Java module, not a class; as classes without
+	// dependencies they lowered every module's similarity and anchored a split (#31).
+	private static final Set<String> DESCRIPTOR_FILE_NAMES = Set.of("package-info.java", "module-info.java");
+
 	public void saveModules(List<ModuleDTO> modulesList) {
 		if (modulesList == null) {
 			throw new IllegalArgumentException("Modules list cannot be null");
@@ -669,6 +673,9 @@ public class ModuleService {
 	}
 
 	private boolean isSupportedSourceFile(Path filePath) {
+		if (DESCRIPTOR_FILE_NAMES.contains(filePath.getFileName().toString())) {
+			return false;
+		}
 		String path = filePath.toString().toLowerCase();
 		return LANGUAGE_EXTENSIONS.values().stream().flatMap(List::stream).anyMatch(path::endsWith);
 	}
