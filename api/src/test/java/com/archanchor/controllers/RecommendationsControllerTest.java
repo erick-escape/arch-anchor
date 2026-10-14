@@ -14,6 +14,7 @@ import static com.archanchor.services.architecturalAnalyses.AnalysedShopFixture.
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -73,6 +74,19 @@ class RecommendationsControllerTest {
 			.andExpect(status().isOk());
 
 		recommendations().andExpect(jsonPath("$.merges", empty()));
+	}
+
+	// The module operation an apply delegates to refreshes too; running twice would only
+	// cost time (#28).
+	@Test
+	void applyingACardRunsTheAnalysesOnce() throws Exception {
+		backend.mockMvc
+			.perform(post("/api/recommendations/apply/move").param("classId", idOf(MISPLACED_CLASS))
+				.param("sourceModuleId", idOf(WEB))
+				.param("targetModuleId", idOf(PERSISTENCE)))
+			.andExpect(status().isOk());
+
+		assertEquals(1, backend.analysisRunsSinceSetUp());
 	}
 
 	@Test

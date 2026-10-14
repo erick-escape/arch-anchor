@@ -42,6 +42,7 @@ function renderSidebar(callbacks: Partial<SidebarCallbacks> = {}) {
       onRenameRefresh={() => {}}
       onSplitRefresh={() => {}}
       onRefClazzModeRefresh={() => {}}
+      onRefClazzesRefresh={() => {}}
       {...callbacks}
     />
   );
@@ -147,6 +148,7 @@ describe('Sidebar module detail', () => {
         onRenameRefresh={() => {}}
         onSplitRefresh={() => {}}
         onRefClazzModeRefresh={() => {}}
+        onRefClazzesRefresh={() => {}}
       />
     );
 
@@ -179,6 +181,31 @@ describe('Sidebar module detail', () => {
       'm1',
       expect.objectContaining({ refClazzes: [mustRefClazz] })
     );
+  });
+});
+
+describe('Sidebar reference classes', () => {
+  // The page kept the module from before the change, so the graph showed the old
+  // reference class (#28).
+  it('hands the module on exactly as the API returns it', async () => {
+    const changed = moduleFixture({
+      id: 'm1',
+      name: 'orders',
+      refClazzes: [clazzFixture({ id: 'c2', name: 'OrderRepository' })],
+    });
+    fakeApi.respondTo('POST', '/api/module/ref-clazzes', changed);
+    const onRefClazzesRefresh = vi.fn();
+    renderSidebar({ onRefClazzesRefresh });
+
+    await userEvent.click(screen.getByText('orders'));
+    fireEvent.contextMenu(screen.getByText('OrderRepository'));
+    await userEvent.click(screen.getByText('Set as Ref Classes'));
+
+    await vi.waitFor(() => expect(onRefClazzesRefresh).toHaveBeenCalledWith('m1', changed));
+    expect(sentBody('POST', '/api/module/ref-clazzes')).toEqual({
+      moduleId: 'm1',
+      classIds: ['c2'],
+    });
   });
 });
 

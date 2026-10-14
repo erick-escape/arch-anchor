@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,7 +9,8 @@ import AnalyzePageWithProvider from './index';
 import { api } from '../../services/api';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
 import { installReactFlowJsdomShims } from '../../test/reactFlowJsdom';
-import { moduleFixture } from '../../test/fixtures/moduleFixtures';
+import { fontAwesomeIcon } from '../../test/fontAwesomeIcon';
+import { clazzFixture, moduleFixture } from '../../test/fixtures/moduleFixtures';
 import {
   moveRecommendationFixture,
   recommendationsFixture,
@@ -103,5 +104,92 @@ describe('AnalyzePage', () => {
 
     expect(await screen.findByText(/100\.00%/)).toBeInTheDocument();
     expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(1);
+  });
+
+  // A change made by hand left the recommendations of the previous structure on screen,
+  // ready to be applied to modules that no longer exist (#28). Each test shows a card,
+  // makes the change, and expects the page to ask for the recommendations again.
+  describe('after a change made by hand in the sidebar', () => {
+    beforeEach(() => {
+      fakeApi.respondTo(
+        'GET',
+        '/api/recommendations',
+        recommendationsFixture({ moves: [moveRecommendationFixture()] })
+      );
+    });
+
+    async function renderPageWithACard() {
+      renderPage();
+      await screen.findByRole('button', { name: 'Apply Recommendation' });
+      fakeApi.respondTo('GET', '/api/recommendations', noRecommendations);
+    }
+
+    async function expectTheCardGone() {
+      await vi.waitFor(() =>
+        expect(screen.queryByRole('button', { name: 'Apply Recommendation' })).toBeNull()
+      );
+    }
+
+    function sidebar(): HTMLElement {
+      return screen.getByRole('complementary', { name: 'Modules' });
+    }
+
+    it('asks for the recommendations again after a rename', async () => {
+      fakeApi.respondTo('POST', '/api/module/rename', null);
+      await renderPageWithACard();
+
+      await userEvent.click(fontAwesomeIcon(sidebar(), 'ellipsis-vertical', 0));
+      await userEvent.click(screen.getByText('Rename'));
+      await userEvent.clear(within(sidebar()).getByDisplayValue('orders'));
+      await userEvent.type(within(sidebar()).getByRole('textbox'), 'checkout{Enter}');
+
+      await expectTheCardGone();
+    });
+
+    it('asks for the recommendations again after a delete', async () => {
+      fakeApi.respondTo('DELETE', '/api/module/delete', null);
+      await renderPageWithACard();
+
+      await userEvent.click(fontAwesomeIcon(sidebar(), 'ellipsis-vertical', 1));
+      await userEvent.click(screen.getByText('Delete'));
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      await expectTheCardGone();
+    });
+
+    it('asks for the recommendations again after a split', async () => {
+      fakeApi.respondTo('POST', '/api/module/split', {
+        newModules: [
+          moduleFixture({ id: 'a', name: 'orders-a' }),
+          moduleFixture({ id: 'b', name: 'orders-b' }),
+        ],
+      });
+      await renderPageWithACard();
+
+      await userEvent.click(within(sidebar()).getByText('orders'));
+      fireEvent.contextMenu(within(sidebar()).getByText('OrderRepository'));
+      await userEvent.click(screen.getByText('Split'));
+
+      await expectTheCardGone();
+    });
+
+    it('shows the new reference class and asks for the recommendations again', async () => {
+      const repository = clazzFixture({ id: 'c2', name: 'OrderRepository' });
+      fakeApi.respondTo(
+        'POST',
+        '/api/module/ref-clazzes',
+        moduleFixture({ id: 'm1', name: 'orders', refClazzes: [repository] })
+      );
+      await renderPageWithACard();
+
+      await userEvent.click(within(sidebar()).getByText('orders'));
+      fireEvent.contextMenu(within(sidebar()).getByText('OrderRepository'));
+      await userEvent.click(screen.getByText('Set as Ref Classes'));
+
+      await expectTheCardGone();
+      expect(
+        screen.getByText((_, element) => element?.textContent === 'Ref Class: OrderRepository')
+      ).toBeInTheDocument();
+    });
   });
 });

@@ -16,6 +16,7 @@ import com.archanchor.mapstruct.ClazzMapper;
 import com.archanchor.mapstruct.DependencyMapper;
 import com.archanchor.mapstruct.ModuleMapper;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.ProjectService;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,6 +37,8 @@ public class ModuleController {
 
 	private ModuleMapper moduleMapper;
 
+	private final ProjectService projectService;
+
 	/**
 	 * The modules as last saved, including every merge, split and move since the
 	 * analysis. Re-analysing cannot return these: module operations are never written
@@ -48,6 +51,10 @@ public class ModuleController {
 
 	@PostMapping("/merge")
 	public ResponseEntity<ModuleDTO> mergeModules(@RequestParam String sourceId, @RequestParam String targetId) {
+		return refreshingRecommendations(mergeSavedModules(sourceId, targetId));
+	}
+
+	private ResponseEntity<ModuleDTO> mergeSavedModules(String sourceId, String targetId) {
 		try {
 			// Load existing modules
 			List<ModuleDTO> modules = moduleService.getModulesFromFile();
@@ -122,6 +129,10 @@ public class ModuleController {
 
 	@PostMapping("/split")
 	public ResponseEntity<SplitModuleResponse> splitModule(@RequestBody SplitModuleRequest request) {
+		return refreshingRecommendations(splitSavedModule(request));
+	}
+
+	private ResponseEntity<SplitModuleResponse> splitSavedModule(SplitModuleRequest request) {
 		try {
 			// Validate input
 			if (request.moduleId() == null || request.moduleId().trim().isEmpty()) {
@@ -180,6 +191,10 @@ public class ModuleController {
 
 	@DeleteMapping("/delete")
 	public ResponseEntity<Object> deleteModule(@RequestParam String moduleId) {
+		return refreshingRecommendations(deleteSavedModule(moduleId));
+	}
+
+	private ResponseEntity<Object> deleteSavedModule(String moduleId) {
 		// Load existing modules
 		List<ModuleDTO> modules = moduleService.getModulesFromFile();
 		// Check if module exists
@@ -201,6 +216,10 @@ public class ModuleController {
 
 	@PostMapping("/rename")
 	public ResponseEntity<Object> renameModule(@RequestParam String moduleId, @RequestParam String newName) {
+		return refreshingRecommendations(renameSavedModule(moduleId, newName));
+	}
+
+	private ResponseEntity<Object> renameSavedModule(String moduleId, String newName) {
 		// Load existing modules
 		List<ModuleDTO> modules = moduleService.getModulesFromFile();
 
@@ -231,6 +250,10 @@ public class ModuleController {
 
 	@PostMapping("/ref-clazzes")
 	public ResponseEntity<ModuleDTO> setRefClazzes(@RequestBody SetRefClazzesRequest request) {
+		return refreshingRecommendations(setSavedRefClazzes(request));
+	}
+
+	private ResponseEntity<ModuleDTO> setSavedRefClazzes(SetRefClazzesRequest request) {
 		try {
 			// Validate input
 			if (request.moduleId() == null || request.moduleId().trim().isEmpty()) {
@@ -256,6 +279,7 @@ public class ModuleController {
 		}
 	}
 
+	// No analysis reads the enforcement mode, so the recommendations stay valid (#28).
 	@PostMapping("/ref-clazz-mode")
 	public ResponseEntity<ModuleDTO> setRefClazzMode(@RequestBody SetRefClazzModeRequest request) {
 		if (request.moduleId() == null || request.classId() == null || request.mode() == null) {
@@ -273,6 +297,11 @@ public class ModuleController {
 	@PostMapping("/move-class")
 	public ResponseEntity<Map<String, ModuleDTO>> moveClass(@RequestParam String classId,
 			@RequestParam String sourceModuleId, @RequestParam String targetModuleId) {
+		return refreshingRecommendations(moveSavedClass(classId, sourceModuleId, targetModuleId));
+	}
+
+	private ResponseEntity<Map<String, ModuleDTO>> moveSavedClass(String classId, String sourceModuleId,
+			String targetModuleId) {
 		try {
 			log.info("Moving class {} from module {} to module {}", classId, sourceModuleId, targetModuleId);
 
@@ -370,6 +399,18 @@ public class ModuleController {
 			log.error("Error moving class", e);
 			return ResponseEntity.internalServerError().build();
 		}
+	}
+
+	// The analyses keep the results of their last run. After a change to the saved
+	// modules
+	// those describe modules that no longer exist, and the panel would offer them again,
+	// whether the change was made by hand (#28) or by applying a recommendation (#19). A
+	// rejected request changed nothing, so it refreshes nothing.
+	private <T> ResponseEntity<T> refreshingRecommendations(ResponseEntity<T> changed) {
+		if (changed.getStatusCode().is2xxSuccessful()) {
+			projectService.refreshRecommendations();
+		}
+		return changed;
 	}
 
 }

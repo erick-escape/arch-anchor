@@ -96,6 +96,19 @@ export function withRenamedModuleNode(
 }
 
 /**
+ * Returns the nodes with one module replaced by the version the API returned after a change,
+ * keeping its node where it was and leaving the previous nodes untouched.
+ *
+ * @example
+ * setNodes((nodes) => withReplacedModuleNode(nodes, response.data));
+ */
+export function withReplacedModuleNode(nodes: ModuleNode[], changed: ModuleData): ModuleNode[] {
+  return nodes.map((node) =>
+    node.id === changed.id ? { ...node, data: { module: changed } } : node
+  );
+}
+
+/**
  * Replaces a split module's node with its new modules, placed either side of it.
  *
  * @example

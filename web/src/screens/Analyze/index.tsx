@@ -31,6 +31,7 @@ import {
   withHighlightedNodes,
   withoutIds,
   withRenamedModule,
+  withReplacedModuleNode,
   withRenamedModuleNode,
   withSplitModuleNodes,
 } from './moduleNodes.ts';
@@ -139,6 +140,12 @@ const AnalyzePage = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  // The back end re-runs the analyses after every change to the modules, so the panel must
+  // ask again, or it offers changes to modules that no longer exist (#28).
+  const refreshRecommendations = () => {
+    queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+  };
+
   // Handle confirmation from popup
   const handleMergeConfirm = async () => {
     if (!mergeCandidate) return;
@@ -161,6 +168,7 @@ const AnalyzePage = () => {
         toModuleNode(mergedModule, { ...targetNode.position }),
       ]);
       setModules((prevModules) => [...withoutIds(prevModules, mergedIds), mergedModule]);
+      refreshRecommendations();
     } catch (error) {
       console.error('Failed to merge modules', error);
     }
@@ -202,20 +210,30 @@ const AnalyzePage = () => {
   const onDeleteRefresh = (deletedModuleId: string) => {
     setModules((prev) => withoutIds(prev, [deletedModuleId]));
     setNodes((prev) => withoutIds(prev, [deletedModuleId]));
+    refreshRecommendations();
   };
 
   const onRenameRefresh = (moduleId: string, newName: string) => {
     setModules((prev) => withRenamedModule(prev, moduleId, newName));
     setNodes((prev) => withRenamedModuleNode(prev, moduleId, newName));
+    refreshRecommendations();
   };
 
+  // No analysis reads the enforcement mode, so the recommendations stay as they are.
   const onRefClazzModeRefresh = (moduleId: string, updatedModule: ModuleData) => {
     setModules((prev) => prev.map((m) => (m.id === moduleId ? updatedModule : m)));
+  };
+
+  const onRefClazzesRefresh = (moduleId: string, updatedModule: ModuleData) => {
+    setModules((prev) => prev.map((m) => (m.id === moduleId ? updatedModule : m)));
+    setNodes((prev) => withReplacedModuleNode(prev, updatedModule));
+    refreshRecommendations();
   };
 
   const onSplitRefresh = (oldModuleId: string, newModules: ModuleData[]) => {
     setModules((prev) => [...withoutIds(prev, [oldModuleId]), ...newModules]);
     setNodes((prev) => withSplitModuleNodes(prev, oldModuleId, newModules));
+    refreshRecommendations();
   };
 
   // Exported from the modules on screen, so the PDF follows every split, merge and move.
@@ -332,6 +350,7 @@ const AnalyzePage = () => {
         onRenameRefresh={onRenameRefresh}
         onSplitRefresh={onSplitRefresh}
         onRefClazzModeRefresh={onRefClazzModeRefresh}
+        onRefClazzesRefresh={onRefClazzesRefresh}
       />
 
       <RecommendationsSidebar onRecommendationApplied={onRecommendationApplied} />
