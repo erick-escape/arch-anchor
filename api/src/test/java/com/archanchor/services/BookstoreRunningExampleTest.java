@@ -14,6 +14,7 @@ import com.archanchor.services.architecturalAnalyses.SplitModule;
 import com.archanchor.services.parsers.JavaParser;
 import com.archanchor.services.parsers.ParserFactory;
 import com.archanchor.services.rating.ActiveRatingWeights;
+import com.archanchor.services.rating.InMemoryRatingWeightsStore;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -35,9 +36,14 @@ class BookstoreRunningExampleTest {
 
 	private static final double QUOTED_PRECISION = 1e-4;
 
+	private static final RatingWeights SIMILARITY_FIRST_RECOMMENDATIONS = new RatingWeights(WeightPair.EQUAL,
+			new WeightPair(0.9, 0.1));
+
 	private final ParserFactory parserFactory = javaParserFactory();
 
 	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
+
+	private final InMemoryRatingWeightsStore ratingWeightsStore = new InMemoryRatingWeightsStore();
 
 	private final InMemoryModuleService moduleService = new InMemoryModuleService(parserFactory, activeWeights);
 
@@ -51,7 +57,8 @@ class BookstoreRunningExampleTest {
 
 	// Same order as the running application: Spring registers the analyses by class name.
 	private final ProjectService projectService = new ProjectService(moduleService, parserFactory,
-			new ArchitecturalAnalysesRunner(List.of(architectureViolation, mergeModule, moveClass, splitModule)));
+			new ArchitecturalAnalysesRunner(List.of(architectureViolation, mergeModule, moveClass, splitModule)),
+			ratingWeightsStore, activeWeights);
 
 	private final RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule,
 			moveClass, architectureViolation);
@@ -91,9 +98,23 @@ class BookstoreRunningExampleTest {
 	// whether the merge, which costs similarity, is worth making at all.
 	@Test
 	void similarityFirstRecommendationWeightsRerateTheRefactoringsAndDropTheMerge() throws IOException {
-		activeWeights.adopt("bookstore", new RatingWeights(WeightPair.EQUAL, new WeightPair(0.9, 0.1)));
+		ratingWeightsStore.save("bookstore", SIMILARITY_FIRST_RECOMMENDATIONS);
+
 		projectService.analyzeProject("bookstore", BOOKSTORE);
 
+		assertSimilarityFirstRecommendations();
+	}
+
+	@Test
+	void changingTheWeightsOfTheAnalysedBookstoreReratesItsRefactorings() throws IOException {
+		projectService.analyzeProject("bookstore", BOOKSTORE);
+
+		projectService.updateRatingWeights("bookstore", SIMILARITY_FIRST_RECOMMENDATIONS);
+
+		assertSimilarityFirstRecommendations();
+	}
+
+	private void assertSimilarityFirstRecommendations() {
 		RecommendationsResponseDTO recommendations = recommendationsService.getRecommendations();
 
 		assertThat(recommendations.splits()).singleElement()
