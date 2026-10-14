@@ -70,7 +70,8 @@ Project similarity is 93.75 %.
 The classes of `model`, `persistence` and `service` have identical dependency sets, so within
 each of those modules every class rates the same and the first one by file name is elected.
 
-In `web` the election has something to decide:
+In `web` the election has something to decide. At the default election weights each class is
+rated `0.5 × similarity + 0.5 × violations`, both normalized within the module:
 
 | Class | Similarity | Violations it would leave as reference class | Rate |
 |---|---|---|---|
@@ -82,7 +83,8 @@ In `web` the election has something to decide:
 Each candidate would leave one of the module's dependencies uncovered (`java.sql` for a
 controller, `bookstore.service` for `SalesReport`), so similarity settles it: the three
 controllers resemble each other and `SalesReport` resembles none of them. `CatalogController`
-is the first of the three equals.
+is the first of the three equals. Because the violation term is the same for every candidate,
+no choice of election weights changes this result.
 
 ### Constraints
 
@@ -114,9 +116,9 @@ AC7 - bookstore/web CAN-DEPEND bookstore.service
 
 ### Recommendations
 
-Three structural changes would remove the violation. The tool rates each as
-`0.5 × Δ similarity + 0.5 × Δ violations` and lists them in that order, followed by the
-violation itself:
+Three structural changes would remove the violation. At the default recommendation weights the
+tool rates each as `0.5 × Δ similarity + 0.5 × Δ violations` and lists them in that order,
+followed by the violation itself:
 
 | Recommendation | Rate | Priority | Similarity | Violations |
 |---|---|---|---|---|

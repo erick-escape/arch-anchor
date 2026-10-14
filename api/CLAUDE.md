@@ -83,7 +83,8 @@ recommendations.
 
 #### Rating Mechanism
 
-All structural analyses (Split, Merge, Move) use a balanced rating mechanism that combines two key factors:
+All structural analyses (Split, Merge, Move) use a rating mechanism that combines two key factors, weighted as the
+architect sets for the project:
 
 **Rating Formula:**
 
@@ -91,8 +92,7 @@ All structural analyses (Split, Merge, Move) use a balanced rating mechanism tha
 rate(Δ) = ω_sim × Δ_sim + ω_vio × Δ_vio_norm
 
 Where:
-- ω_sim = SIMILARITY_WEIGHT (default 0.5)
-- ω_vio = VIOLATION_WEIGHT (default 0.5)
+- (ω_sim, ω_vio) = the project's recommendation weights (default 0.5 / 0.5)
 - Δ_sim = similarity improvement (normalized [0,1])
 - Δ_vio_norm = (violations_before - violations_after) / max(violations_before, 1)
 ```
@@ -101,7 +101,7 @@ Where:
 
 - Positive rate indicates net architectural benefit (required for recommendations)
 - Allows trade-offs between similarity and violations
-- Both factors equally weighted by default (configurable in ModuleService)
+- Both factors equally weighted by default; the architect changes the balance per project (see Rating Weights below)
 - Violations normalized by initial violation count for proportional improvement
 - Violations can increase if similarity improvement compensates for it in the overall rate
 
@@ -111,7 +111,23 @@ Where:
 
 - Abstract base class that all analyses must extend
 - Provides access to `ModuleService` for module manipulation operations
+- Provides `recommendationRate(Δ_sim, Δ_vio_norm)`, which applies the recommendation weights in force (`ActiveRatingWeights`)
 - Defines the `execute(List<Module> modules)` contract that all analyses implement
+
+#### Rating Weights
+
+- Two pairs per project (`domains/rating/RatingWeights`): `election`, used by `ModuleService.selectReferenceClasses`, and
+  `recommendation`, used by Split, Merge and Move. Each `WeightPair` is non-negative and sums to 1, so the priority
+  thresholds of `RecommendationsService` keep their meaning; anything else throws `InvalidRatingWeightsException`
+- Stored per project in `rating-weights.json` by `JsonFileRatingWeightsStore` (`RatingWeightsStore`); a project without an
+  entry has 0.5 / 0.5, and deleting a project forgets its entry
+- `ActiveRatingWeights` holds the weights of the project whose modules are saved, injected into `ModuleService` and every
+  analysis. `ProjectService.analyzeProject` adopts the analysed project's weights first
+- `PUT /api/projects/{projectName}/rating-weights` saves new weights; for the analysed project,
+  `ProjectService.updateRatingWeights` re-elects the saved modules, except those with `refClazzesChosenByHand`, re-runs the
+  analyses and saves, so module operations survive
+- `BookstoreRunningExampleTest` pins `examples/bookstore` at the default weights; the README and the ICSE 2027 paper quote
+  those numbers
 
 **ArchitecturalAnalysesRunner** (Service)
 
@@ -136,14 +152,14 @@ Where:
 - Analyzes class similarity patterns within modules to find natural split points
 - Finds a "super ref class" (highest similarity) and a "de-ref class" (lowest similarity non-reference class) as anchors
 - Assigns remaining classes to one of the two new modules based on proximity to the anchor classes
-- Uses balanced rating mechanism combining similarity improvement and violation reduction
+- Uses the rating mechanism, combining similarity improvement and violation reduction with the recommendation weights
 - Only recommends splits with positive rate (net architectural benefit)
 
 **MergeModule Analysis**
 
 - Identifies pairs of modules that could be merged to improve overall architecture
 - Analyzes cross-module dependencies and class relationships
-- Uses balanced rating mechanism to evaluate merge benefits
+- Uses the rating mechanism to evaluate merge benefits
 - Considers both average similarity improvement and violation reduction
 - Only recommends merges with positive rate
 
@@ -151,7 +167,7 @@ Where:
 
 - Identifies individual classes that could be moved to different modules
 - Two-step validation: class-level filter (avgSimilarityWithRefClazzes) + module-level simulation
-- Simulates the move and evaluates impact using balanced rating mechanism
+- Simulates the move and evaluates impact using the rating mechanism
 - Calculates average similarity improvement across both source and target modules
 - Considers violation impact and only accepts moves with positive rate
 - Never moves reference classes to preserve module architectural anchors
@@ -172,7 +188,8 @@ Where:
 - Every module MUST have at least one reference class for objective evaluation
 - Modules can have multiple reference classes to recognize heterogeneous architectural patterns
 - System automatically selects reference classes via rating mechanism (similarity + violations)
-- Architects can manually override automatic selection if needed
+- Architects can manually override automatic selection if needed; the module is then marked `refClazzesChosenByHand`, and
+  a change of election weights leaves it alone
 - Reference class dependencies are stored in `module.getRefClazzesDependencies()` and define the architectural constraints for the module
 
 **Reference Class Selection Algorithm:**
@@ -180,7 +197,8 @@ For each class in a module:
 
 1. Calculate normalized similarity: `norm_sim = similarity / max_similarity`
 2. Calculate normalized violations: `norm_vio = 1.0 - (violations / max_violations)`
-3. Calculate combined rate: `rate = 0.5 × norm_sim + 0.5 × norm_vio`
+3. Calculate combined rate with the project's election weights: `rate = ω_sim × norm_sim + ω_vio × norm_vio` (0.5 / 0.5
+   by default); when no candidate leaves a violation, similarity alone decides
 4. Select class with highest rate as reference class
 
 **Violations:**
@@ -213,8 +231,8 @@ To create a new architectural analysis:
 @Slf4j
 @Component
 public class YourAnalysis extends ArchitecturalAnalysis {
-    public YourAnalysis(ModuleService moduleService) {
-        super(moduleService);
+    public YourAnalysis(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+        super(moduleService, activeWeights);
     }
 
     @Override
@@ -223,8 +241,7 @@ public class YourAnalysis extends ArchitecturalAnalysis {
         YourAnalysisResult result = analyzeModules(modules);
 
         // For structural changes, consider using the rating mechanism:
-        // double rate = ModuleService.SIMILARITY_WEIGHT * similarityImprovement +
-        //               ModuleService.VIOLATION_WEIGHT * violationImprovementNormalized;
+        // double rate = recommendationRate(similarityImprovement, violationImprovementNormalized);
 
         log.info("Your analysis results: {}", result.getSummary());
     }
@@ -280,6 +297,10 @@ The analyses can utilize `ModuleService` methods for:
 5. **Module Operations**: `/api/module/*` endpoints allow manual module manipulation. Every one that changes the saved modules
    (merge, split, move, rename, delete, reference classes) re-runs the analyses as well, so a change made by hand refreshes the
    recommendations like an applied one (#28); the enforcement-mode switch does not, because no analysis reads the mode
+6. **Rating Weights**: `GET`/`PUT /api/projects/{projectName}/rating-weights` read and replace the project's election and
+   recommendation weights (#27). For the analysed project a `PUT` re-elects the saved modules, except reference classes
+   chosen by hand, and re-runs the analyses; the page then reloads with `GET /api/module`, as after an applied
+   recommendation
 
 ### Key Metrics and Formulas
 
@@ -294,9 +315,9 @@ The architectural analysis framework relies on three core metrics:
 **Rating Mechanism:**
 
 - Used by Split, Merge, and Move analyses to evaluate recommendations
-- `rate = 0.5 × Δ_sim + 0.5 × Δ_vio_norm`
+- `rate = ω_sim × Δ_sim + ω_vio × Δ_vio_norm`, with the project's recommendation weights (0.5 / 0.5 by default)
 - Only positive rates are recommended (net architectural benefit)
-- Weights configurable via `ModuleService.SIMILARITY_WEIGHT` and `ModuleService.VIOLATION_WEIGHT`
+- Weights set per project by the architect; see Rating Weights
 
 ### DTO Structure
 
@@ -306,12 +327,13 @@ The architectural analysis framework relies on three core metrics:
   List<ArchitecturalConstraintDTO>)
 - `ArchitecturalConstraintDTO` - Per-module constraints: `moduleId`, `moduleName`, `refClazzesDependencies`
 - `ProjectDetailDTO` - Project summary: `name`
+- `RatingWeightsDTO` - `election`, `recommendation`, each `{similarity, violation}`; validated by `toRatingWeights()`
 - `ProjectsListResponseDTO` - List of projects
 
 **Module DTOs** (`dto/modules/`)
 
 - `ModuleDTO` (Serializable record) - Complete module: `id`, `name`, `refClazzes`, `refClazzesDependencies`, `allDependencies`, `clazzes`,
-  `similarity`, `avgRefClazzesSimilarity`
+  `similarity`, `avgRefClazzesSimilarity`, `refClazzesChosenByHand`
 - `SplitModuleRequest` - `moduleId`, `classIds`
 - `SetRefClazzesRequest` - `moduleId`, `classIds`
 - `SplitModuleResponse` - `splitModules`
@@ -368,8 +390,9 @@ The architectural analysis framework relies on three core metrics:
 - **Dependency Resolution**: Integrates with Maven for resolving external dependencies
 - **File Processing**: Tracks processed files to avoid duplicate analysis
 - **Reference Classes**: Every module requires at least one reference class to define architectural intent and enable objective analysis
-- **Balanced Rating**: All structural recommendations use a balanced rating combining similarity improvements and violation reductions
-- **Persistence**: Modules are saved/loaded as serialized binary files via `ModuleService.saveModules()` / `getModulesFromFile()`
+- **Rating**: All structural recommendations use a rate combining similarity improvements and violation reductions, weighted per project
+- **Persistence**: Modules are saved/loaded as serialized binary files via `ModuleService.saveModules()` / `getModulesFromFile()`;
+  rating weights as JSON in `rating-weights.json`
 
 ### JavaParserService Implementation Constraints
 

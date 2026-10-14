@@ -22,8 +22,8 @@ Point it at a Java project and it will:
 1. **Parse** every source file with JavaParser, resolving imports to fully-qualified types.
 2. **Group** classes into modules by package structure.
 3. **Elect a reference class** per module automatically, by rating each candidate on how well its
-   dependency set represents the module and how few violations it implies. You can override the
-   choice — or pick several reference classes — from the sidebar.
+   dependency set represents the module and how few violations it implies, weighted as you
+   choose. You can override the choice — or pick several reference classes — from the sidebar.
 4. **Measure** each module: similarity between its classes, and violations (dependencies the
    module uses that the reference class does not sanction).
 5. **Recommend** structural refactorings — split a module, merge two, move a class — but only
@@ -133,14 +133,19 @@ how the reference class of `web` is elected and the constraints the tool exports
    each module. This is the one judgement call worth your attention: the reference class defines
    what the module is *allowed* to depend on, so every constraint and every violation downstream
    follows from it. Override it, or select several, when you disagree.
-4. **Set enforcement per reference class.** `ALLOW` (the default) exports as `CAN-DEPEND`; switch
+4. **Weigh similarity against violations, if you want.** The three-dot menu → **Settings** sets
+   two pairs of weights for the project, each on one slider: the **election**, which decides the
+   reference classes, and the **recommendation rate**, which ranks the refactorings. Both start
+   at 0.5 / 0.5. Saving re-elects every module except those whose reference classes you chose by
+   hand, and re-rates the recommendations, without discarding your module operations.
+5. **Set enforcement per reference class.** `ALLOW` (the default) exports as `CAN-DEPEND`; switch
    to `MUST` for dependencies the module is required to have, which exports as `MUST-DEPEND`.
-5. **Reshape modules if you want.** Rename, delete, split, merge (drag one module node onto
+6. **Reshape modules if you want.** Rename, delete, split, merge (drag one module node onto
    another), or move individual classes between modules. Metrics recompute after each operation.
    **Apply Recommendation** on a card in the recommendations panel performs that split, merge or
    move for you, and the panel then lists the recommendations for the new structure. None of
    this touches your source files: analyzing the project again starts over from them.
-6. **Export.** The three-dot menu in the top-right corner → **Export ACs** downloads a PDF of
+7. **Export.** The three-dot menu in the top-right corner → **Export ACs** downloads a PDF of
    every constraint the tool recovered, for the modules as they are on screen.
 
 ## Concepts
@@ -150,10 +155,9 @@ how the reference class of `web` is elected and the constraints the tool exports
 | **Reference class** | The class whose dependency set best represents a module's architectural intent. Every module has at least one; its dependencies are the module's contract. |
 | **Similarity** | `0.5 × [a/(a+b) + a/(a+c)]`, where `a` is dependencies two classes share and `b`, `c` are those unique to each. Range `[0,1]`. |
 | **Violation** | A dependency a module uses that its reference classes do not sanction. |
-| **Rate** | `0.5 × Δ_similarity + 0.5 × Δ_violations_normalized`. Split, merge, and move are each scored this way, and only positive-rate changes are ever suggested — a refactoring has to improve cohesion *and* not cost more violations than it saves. |
-
-Weights are configurable via `SIMILARITY_WEIGHT` and `VIOLATION_WEIGHT` in
-`api/src/main/java/com/archanchor/services/ModuleService.java`.
+| **Election** | Each class of a module is rated `w_sim × similarity_normalized + w_viol × violations_normalized`, the violations being those the module would have with that class as its reference; the best-rated class is elected. |
+| **Rate** | `w_sim × Δ_similarity + w_viol × Δ_violations_normalized`. Split, merge, and move are each scored this way, and only positive-rate changes are ever suggested — a refactoring has to improve cohesion *and* not cost more violations than it saves. |
+| **Rating weights** | Two `(w_sim, w_viol)` pairs per project, one for the election and one for the rate, each non-negative and summing to 1. Both default to 0.5 / 0.5. Set them from **Settings** in the three-dot menu or through `/api/projects/{projectName}/rating-weights`. |
 
 ## API reference
 
@@ -165,6 +169,8 @@ All endpoints are under `http://localhost:8080`.
 | `POST` | `/api/upload` | Upload a project (multipart `files`) |
 | `POST` | `/api/projects/import` | Import a project from GitHub (JSON body: `repositoryUrl`; optional `ref`, `subdirectory`, `projectName`, `accessToken`) |
 | `DELETE` | `/api/projects/{projectName}` | Delete an uploaded project |
+| `GET` | `/api/projects/{projectName}/rating-weights` | The project's election and recommendation weights |
+| `PUT` | `/api/projects/{projectName}/rating-weights` | Replace them (JSON body: `election` and `recommendation`, each `{similarity, violation}` summing to 1); for the analysed project, re-elects the saved modules, except reference classes chosen by hand, and re-rates the recommendations |
 | `POST` | `/api/analyze?projectName=` | Run the full pipeline: parse, group, elect reference classes, measure, analyze |
 | `GET` | `/api/module` | The modules as last saved, after every split, merge and move since the analysis |
 | `POST` | `/api/module/merge?sourceId=&targetId=` | Merge two modules |
@@ -208,8 +214,9 @@ All endpoints are under `http://localhost:8080`.
 | `api/uploads/` | Uploaded or imported project sources, one directory per project; imports in progress are staged in `.staging/` |
 | `api/modules.bin` | The current module graph |
 | `api/project-analyses.bin` | Cached analysis results |
+| `api/rating-weights.json` | Each project's rating weights; a project without an entry has equal weights |
 
-Delete all three to reset the tool to a blank slate. The `.bin` files are Java-serialized, so
+Delete all four to reset the tool to a blank slate. The `.bin` files are Java-serialized, so
 they are also tied to the current class names — a stale file from an older version of the code
 will fail to load, and deleting it is the fix.
 
