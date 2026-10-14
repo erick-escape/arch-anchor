@@ -9,7 +9,6 @@ import com.archanchor.services.InMemoryModuleService;
 import com.archanchor.services.ProjectService;
 import com.archanchor.services.RecommendationsService;
 import com.archanchor.services.architecturalAnalyses.AnalysedShopFixture;
-import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
 import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
 import com.archanchor.services.architecturalAnalyses.MergeModule;
 import com.archanchor.services.architecturalAnalyses.MoveClass;
@@ -45,7 +44,7 @@ final class ShopBackend {
 	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService);
 
 	// Same order as the running application: Spring registers the analyses by class name.
-	private final ArchitecturalAnalysesRunner analysesRunner = new ArchitecturalAnalysesRunner(
+	private final CountingAnalysesRunner analysesRunner = new CountingAnalysesRunner(
 			List.of(architectureViolation, mergeModule, moveClass, splitModule));
 
 	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
@@ -59,6 +58,11 @@ final class ShopBackend {
 		RecommendationsController recommendationsController = new RecommendationsController(recommendationsService,
 				moduleController, projectService);
 		mockMvc = MockMvcBuilders.standaloneSetup(moduleController, recommendationsController).build();
+	}
+
+	/** How often the analyses have run since {@link #analysed()} set the shop up. */
+	int analysisRunsSinceSetUp() {
+		return analysesRunner.runs() - 1;
 	}
 
 	static ShopBackend analysed() {
