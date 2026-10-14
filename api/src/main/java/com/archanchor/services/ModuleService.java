@@ -295,6 +295,7 @@ public class ModuleService {
 
 		List<Clazz> refClazzes = List.of(refClazz);
 		module.setRefClazzes(refClazzes);
+		module.setRefClazzesChosenByHand(false);
 	}
 
 	/**
@@ -819,7 +820,7 @@ public class ModuleService {
 					.map(dependencyMapper::toDto)
 					.toArray(DependencyDTO[]::new),
 				moduleEntity.getClazzes().stream().map(clazzMapper::toDto).toArray(ClazzResponseDTO[]::new),
-				moduleEntity.getSimilarity(), moduleEntity.getAvgRefClazzesSimilarity());
+				moduleEntity.getSimilarity(), moduleEntity.getAvgRefClazzesSimilarity(), true);
 
 		// Replace the module in the list
 		List<ModuleDTO> updatedModules = modules.stream()
