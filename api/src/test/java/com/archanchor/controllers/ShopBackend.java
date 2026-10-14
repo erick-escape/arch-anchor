@@ -14,6 +14,7 @@ import com.archanchor.services.architecturalAnalyses.MergeModule;
 import com.archanchor.services.architecturalAnalyses.MoveClass;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
 import com.archanchor.services.parsers.ParserFactory;
+import com.archanchor.services.rating.ActiveRatingWeights;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -33,15 +34,17 @@ final class ShopBackend {
 
 	final MockMvc mockMvc;
 
-	private final InMemoryModuleService moduleService = new InMemoryModuleService();
+	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 
-	private final SplitModule splitModule = new SplitModule(moduleService);
+	private final InMemoryModuleService moduleService = new InMemoryModuleService(null, activeWeights);
 
-	private final MergeModule mergeModule = new MergeModule(moduleService);
+	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights);
 
-	private final MoveClass moveClass = new MoveClass(moduleService);
+	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights);
 
-	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService);
+	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights);
+
+	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights);
 
 	// Same order as the running application: Spring registers the analyses by class name.
 	private final CountingAnalysesRunner analysesRunner = new CountingAnalysesRunner(

@@ -10,6 +10,7 @@ import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.dependency.Type;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,7 @@ class MergeModuleTest {
 
 	@BeforeEach
 	void setUp() {
-		mergeModule = new MergeModule(moduleService);
+		mergeModule = new MergeModule(moduleService, new ActiveRatingWeights());
 
 		// Setup default mock behavior for avgSimilarityWithRefClazzes calculation with
 		// lenient stubbing

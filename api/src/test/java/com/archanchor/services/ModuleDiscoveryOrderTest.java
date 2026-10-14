@@ -2,6 +2,7 @@ package com.archanchor.services;
 
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
+import com.archanchor.services.rating.ActiveRatingWeights;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -24,7 +25,8 @@ class ModuleDiscoveryOrderTest {
 	@TempDir
 	Path workspace;
 
-	private final ModuleService moduleService = new ModuleService(new UniformDependenciesParserFactory("java.sql"));
+	private final ModuleService moduleService = new ModuleService(new UniformDependenciesParserFactory("java.sql"),
+			new ActiveRatingWeights());
 
 	@Test
 	void classesAreOrderedByFileNameNotByCreationOrder() throws IOException {

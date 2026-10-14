@@ -10,6 +10,7 @@ import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.dependency.Type;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +29,10 @@ class ArchitectureViolationTest {
 	void setUp() {
 		// Use a real ModuleService instance instead of mocking
 		// This ensures tests use actual similarity calculations
-		ModuleService realModuleService = new ModuleService(null); // ParserFactory not
-																	// needed for tests
-		architectureViolation = new ArchitectureViolation(realModuleService);
+		// ParserFactory not needed for tests
+		ActiveRatingWeights activeWeights = new ActiveRatingWeights();
+		ModuleService realModuleService = new ModuleService(null, activeWeights);
+		architectureViolation = new ArchitectureViolation(realModuleService, activeWeights);
 
 		// Store reference for helper methods
 		moduleService = realModuleService;

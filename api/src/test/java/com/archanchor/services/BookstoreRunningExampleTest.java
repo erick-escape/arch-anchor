@@ -1,5 +1,7 @@
 package com.archanchor.services;
 
+import com.archanchor.domains.rating.RatingWeights;
+import com.archanchor.domains.rating.WeightPair;
 import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.recommendations.RecommendationsResponseDTO;
@@ -11,6 +13,7 @@ import com.archanchor.services.architecturalAnalyses.MoveClass;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
 import com.archanchor.services.parsers.JavaParser;
 import com.archanchor.services.parsers.ParserFactory;
+import com.archanchor.services.rating.ActiveRatingWeights;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -34,15 +37,17 @@ class BookstoreRunningExampleTest {
 
 	private final ParserFactory parserFactory = javaParserFactory();
 
-	private final InMemoryModuleService moduleService = new InMemoryModuleService(parserFactory);
+	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 
-	private final SplitModule splitModule = new SplitModule(moduleService);
+	private final InMemoryModuleService moduleService = new InMemoryModuleService(parserFactory, activeWeights);
 
-	private final MergeModule mergeModule = new MergeModule(moduleService);
+	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights);
 
-	private final MoveClass moveClass = new MoveClass(moduleService);
+	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights);
 
-	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService);
+	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights);
+
+	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights);
 
 	// Same order as the running application: Spring registers the analyses by class name.
 	private final ProjectService projectService = new ProjectService(moduleService, parserFactory,
@@ -79,6 +84,24 @@ class BookstoreRunningExampleTest {
 		assertThat(recommendations.merges()).singleElement()
 			.satisfies(merge -> assertThat(merge.metrics().rate()).isCloseTo(0.4196, within(QUOTED_PRECISION)));
 		assertThat(recommendations.summary()).isEqualTo(new RecommendationsSummaryDTO(4, 2, 2, 0));
+	}
+
+	// Every refactoring the bookstore is offered removes its only violation, so the
+	// weights cannot reorder split, move and merge; they change what each is worth, and
+	// whether the merge, which costs similarity, is worth making at all.
+	@Test
+	void similarityFirstRecommendationWeightsRerateTheRefactoringsAndDropTheMerge() throws IOException {
+		activeWeights.adopt("bookstore", new RatingWeights(WeightPair.EQUAL, new WeightPair(0.9, 0.1)));
+		projectService.analyzeProject("bookstore", BOOKSTORE);
+
+		RecommendationsResponseDTO recommendations = recommendationsService.getRecommendations();
+
+		assertThat(recommendations.splits()).singleElement()
+			.satisfies(split -> assertThat(split.metrics().rate()).isCloseTo(0.325, within(QUOTED_PRECISION)));
+		assertThat(recommendations.moves()).singleElement()
+			.satisfies(move -> assertThat(move.metrics().rate()).isCloseTo(0.2125, within(QUOTED_PRECISION)));
+		assertThat(recommendations.merges()).isEmpty();
+		assertThat(recommendations.summary()).isEqualTo(new RecommendationsSummaryDTO(3, 0, 3, 0));
 	}
 
 	// The bookstore declares no dependencies, so the parser resolves everything from the

@@ -10,6 +10,7 @@ import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.dependency.Type;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +34,7 @@ class SplitModuleTest {
 
 	@BeforeEach
 	void setUp() {
-		splitModule = new SplitModule(moduleService);
+		splitModule = new SplitModule(moduleService, new ActiveRatingWeights());
 
 		// Setup lenient mock behavior for similarity calculations
 		lenient().doNothing().when(moduleService).calculateClassSimilaritiesAndSelectRefClasses(any(Module.class));

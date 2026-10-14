@@ -3,6 +3,7 @@ package com.archanchor.services;
 import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.services.parsers.ParserFactory;
+import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +25,15 @@ public class InMemoryModuleService extends ModuleService {
 	private ProjectAnalysesDTO savedProjectAnalyses;
 
 	public InMemoryModuleService() {
-		this(null);
+		this(null, new ActiveRatingWeights());
 	}
 
-	/** For tests that read sources from disk, such as the bookstore example. */
-	public InMemoryModuleService(ParserFactory parserFactory) {
-		super(parserFactory);
+	/**
+	 * For tests that read sources from disk, such as the bookstore example, or that set
+	 * the weights of the election.
+	 */
+	public InMemoryModuleService(ParserFactory parserFactory, ActiveRatingWeights activeWeights) {
+		super(parserFactory, activeWeights);
 	}
 
 	@Override
