@@ -57,7 +57,7 @@ describe('AnalyzePage', () => {
   });
 
   function renderPage() {
-    render(
+    return render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter initialEntries={['/analyze/shop']}>
           <Routes>
@@ -103,6 +103,49 @@ describe('AnalyzePage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Apply Recommendation' }));
 
     expect(await screen.findByText(/100\.00%/)).toBeInTheDocument();
+    expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(1);
+  });
+
+  // New weights re-elect the saved modules and re-rate the recommendations on the server
+  // (#27); the page shows both without analyzing again, which would discard module operations.
+  it('shows the re-elected modules and new recommendations after the weights change', async () => {
+    const repository = clazzFixture({ id: 'c2', name: 'OrderRepository' });
+    const equalWeights = {
+      election: { similarity: 0.5, violation: 0.5 },
+      recommendation: { similarity: 0.5, violation: 0.5 },
+    };
+    fakeApi
+      .respondTo(
+        'GET',
+        '/api/recommendations',
+        recommendationsFixture({ moves: [moveRecommendationFixture()] })
+      )
+      .respondTo('GET', '/api/projects/shop/rating-weights', equalWeights)
+      .respondTo('PUT', '/api/projects/shop/rating-weights', equalWeights)
+      .respondTo('GET', '/api/module', [
+        moduleFixture({ id: 'm1', name: 'orders', refClazzes: [repository] }),
+        moduleFixture({ id: 'm2', name: 'billing' }),
+      ]);
+    const { container } = renderPage();
+    await screen.findByRole('button', { name: 'Apply Recommendation' });
+    fakeApi.respondTo('GET', '/api/recommendations', noRecommendations);
+
+    await userEvent.click(fontAwesomeIcon(container, 'ellipsis-vertical', 0));
+    await userEvent.click(screen.getByText('Settings'));
+    fireEvent.keyDown(await screen.findByRole('slider', { name: 'Election: similarity weight' }), {
+      key: 'ArrowRight',
+      keyCode: 39,
+      which: 39,
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(
+      await screen.findByText((_, element) => element?.textContent === 'Ref Class: OrderRepository')
+    ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Apply Recommendation' })).toBeNull()
+    );
+    expect(fakeApi.requestsTo('PUT', '/api/projects/shop/rating-weights')).toHaveLength(1);
     expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(1);
   });
 
