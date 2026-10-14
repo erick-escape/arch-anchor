@@ -277,7 +277,9 @@ The analyses can utilize `ModuleService` methods for:
    modules, then re-runs the analyses on them (`ProjectService.refreshRecommendations`), so `GET /api/recommendations` describes the
    new structure. The page reloads the modules with `GET /api/module`; re-analysing would discard the change, because module
    operations are never written back to the sources
-5. **Module Operations**: `/api/module/*` endpoints allow manual module manipulation
+5. **Module Operations**: `/api/module/*` endpoints allow manual module manipulation. Every one that changes the saved modules
+   (merge, split, move, rename, delete, reference classes) re-runs the analyses as well, so a change made by hand refreshes the
+   recommendations like an applied one (#28); the enforcement-mode switch does not, because no analysis reads the mode
 
 ### Key Metrics and Formulas
 

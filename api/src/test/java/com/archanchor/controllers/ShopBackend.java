@@ -50,13 +50,13 @@ final class ShopBackend {
 	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
 	private ShopBackend() {
+		ProjectService projectService = new ProjectService(moduleService, new ParserFactory(null), analysesRunner);
 		ModuleController moduleController = new ModuleController(moduleService, new ClazzMapperImpl(),
-				new DependencyMapperImpl(), moduleMapper);
+				new DependencyMapperImpl(), moduleMapper, projectService);
 		RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule, moveClass,
 				architectureViolation);
-		ProjectService projectService = new ProjectService(moduleService, new ParserFactory(null), analysesRunner);
 		RecommendationsController recommendationsController = new RecommendationsController(recommendationsService,
-				moduleController, projectService);
+				moduleController);
 		mockMvc = MockMvcBuilders.standaloneSetup(moduleController, recommendationsController).build();
 	}
 
