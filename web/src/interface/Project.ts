@@ -23,7 +23,7 @@ export interface ImportedProject {
   commitSha: string;
 }
 
-// RFC 9457 body the API returns for failed imports; `detail` is written for the user.
+// RFC 9457 body the API returns for rejected requests; `detail` is written for the user.
 export interface ProblemDetail {
   type?: string;
   title?: string;

@@ -66,4 +66,10 @@ describe('ratingWeightsApi', () => {
   it('falls back to a generic description when the API sent no detail', () => {
     expect(describeRatingWeightsFailure(new Error('Network Error'))).toMatch(/could not save/i);
   });
+
+  it('says what could not be done when the weights did not load', () => {
+    expect(describeRatingWeightsFailure(new Error('Network Error'), 'load')).toMatch(
+      /could not load/i
+    );
+  });
 });

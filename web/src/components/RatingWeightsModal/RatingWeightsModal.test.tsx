@@ -72,9 +72,10 @@ describe('RatingWeightsModal', () => {
 
     await electionSlider();
 
+    // Not toBeVisible: jsdom sees the modal mid-animation, at opacity 0.
     expect(
       screen.getByText(/except those whose reference classes you chose by hand/)
-    ).toBeVisible();
+    ).toBeInTheDocument();
   });
 
   it('saves the pair a slider was moved to, then reports and closes', async () => {

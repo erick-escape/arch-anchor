@@ -4,14 +4,19 @@ import { faBars, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
 import { HeaderProps, HeaderMenuOption } from './headerTypes';
 import styles from './Header.module.css';
 
-const Header = ({ projectName, isSidebarOpen, onToggleSidebar, onExportACs }: HeaderProps) => {
+const Header = ({
+  projectName,
+  isSidebarOpen,
+  onToggleSidebar,
+  onExportACs,
+  onOpenSettings,
+}: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Example menu options - can be expanded later
   const menuOptions: HeaderMenuOption[] = [
     { label: 'Export ACs', onClick: onExportACs },
-    { label: 'Settings', onClick: () => console.log('Settings clicked') },
+    { label: 'Settings', onClick: onOpenSettings },
   ];
 
   const toggleMenu = () => {

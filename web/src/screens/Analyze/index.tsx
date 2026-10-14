@@ -39,6 +39,7 @@ import { MergeConfirmPopup } from '../../components/Popup/MergeConfirmPopup.tsx'
 import Header from '../../components/Header/index.tsx';
 import Sidebar from '../../components/Sidebar/index.tsx';
 import RecommendationsSidebar from '../../components/RecommendationsSidebar/index.tsx';
+import RatingWeightsModal from '../../components/RatingWeightsModal/index.tsx';
 
 // 1) Provide a nodeTypes mapping
 const nodeTypes = {
@@ -59,9 +60,9 @@ const AnalyzePage = () => {
   const { projectName } = useParams();
   const [loading, setLoading] = useState(false);
   const [modules, setModules] = useState<ModuleData[]>([]);
-  // Counts applied recommendations; as the sidebar's key, it makes the sidebar start over
-  // instead of showing a module it copied before the apply.
-  const [appliedRecommendations, setAppliedRecommendations] = useState(0);
+  // Counts reloads of the saved modules (an applied recommendation, new rating weights); as the
+  // sidebar's key, it makes the sidebar start over instead of showing a module it copied before.
+  const [savedModulesReloads, setSavedModulesReloads] = useState(0);
   const [nodes, setNodes, onNodesChange] = useNodesState<ModuleNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { getIntersectingNodes } = useReactFlow<ModuleNode, Edge>();
@@ -70,6 +71,7 @@ const AnalyzePage = () => {
   // State for sidebar and layout
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRecommendationsSidebarOpen] = useState(true);
+  const [isRatingWeightsOpen, setIsRatingWeightsOpen] = useState(false);
 
   // Ref to track if we've already initiated analysis for this project
   const analysisInitiated = useRef<string | null>(null);
@@ -243,11 +245,12 @@ const AnalyzePage = () => {
     doc.save(`architectural-constraints-${projectName}.pdf`);
   };
 
-  // Load the modules as the backend saved them. Analyzing again would read the sources, which
-  // no module operation changes, and discard what was just applied (#19).
-  const onRecommendationApplied = async () => {
+  // Load the modules as the backend saved them, after it applied a recommendation or re-elected
+  // them with new rating weights (#27). Analyzing again would read the sources, which no module
+  // operation changes, and discard what was just applied (#19).
+  const reloadSavedModules = async () => {
     try {
-      console.log('🔄 [FRONTEND] Refreshing modules after recommendation applied');
+      console.log('🔄 [FRONTEND] Reloading the saved modules');
 
       const response = await axios.get<ModuleData[]>('/api/module');
       const data = response.data;
@@ -255,7 +258,7 @@ const AnalyzePage = () => {
       console.log('✅ [FRONTEND] Received', data.length, 'modules from backend');
 
       setModules(data);
-      setAppliedRecommendations((count) => count + 1);
+      setSavedModulesReloads((count) => count + 1);
 
       // Keep the positions of modules that survived, so the graph does not jump
       setNodes((current) => rebuildNodesPreservingPositions(current, data, viewportCenter()));
@@ -281,6 +284,7 @@ const AnalyzePage = () => {
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={toggleSidebar}
         onExportACs={handleExportACs}
+        onOpenSettings={() => setIsRatingWeightsOpen(true)}
       />
 
       <div
@@ -343,7 +347,7 @@ const AnalyzePage = () => {
       </div>
 
       <Sidebar
-        key={appliedRecommendations}
+        key={savedModulesReloads}
         isOpen={isSidebarOpen}
         modules={modules}
         onDeleteRefresh={onDeleteRefresh}
@@ -353,7 +357,16 @@ const AnalyzePage = () => {
         onRefClazzesRefresh={onRefClazzesRefresh}
       />
 
-      <RecommendationsSidebar onRecommendationApplied={onRecommendationApplied} />
+      <RecommendationsSidebar onRecommendationApplied={reloadSavedModules} />
+
+      {projectName && (
+        <RatingWeightsModal
+          projectName={projectName}
+          open={isRatingWeightsOpen}
+          onClose={() => setIsRatingWeightsOpen(false)}
+          onSaved={reloadSavedModules}
+        />
+      )}
     </div>
   );
 };

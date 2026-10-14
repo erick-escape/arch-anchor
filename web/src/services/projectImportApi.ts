@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { ImportedProject, ProblemDetail, RepositoryImportRequest } from '../interface/Project';
+import { ImportedProject, RepositoryImportRequest } from '../interface/Project';
+import { problemDetailOf } from './problemDetail';
 
 const OPTIONAL_FIELDS = ['ref', 'subdirectory', 'projectName', 'accessToken'] as const;
 
@@ -28,10 +29,10 @@ export const importRepository = async (
  * message.error(describeImportFailure(error));
  */
 export function describeImportFailure(error: unknown): string {
-  if (axios.isAxiosError<ProblemDetail>(error) && error.response?.data?.detail) {
-    return error.response.data.detail;
-  }
-  return 'Could not import the repository. Check that the API is running and try again.';
+  return (
+    problemDetailOf(error) ??
+    'Could not import the repository. Check that the API is running and try again.'
+  );
 }
 
 function withoutBlankFields(request: RepositoryImportRequest): RepositoryImportRequest {

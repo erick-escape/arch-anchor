@@ -3,6 +3,7 @@ export interface HeaderProps {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   onExportACs: () => void;
+  onOpenSettings: () => void;
 }
 
 export interface HeaderMenuOption {
