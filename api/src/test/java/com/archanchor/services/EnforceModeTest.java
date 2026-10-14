@@ -151,7 +151,7 @@ class EnforceModeTest {
 
 	private ModuleDTO buildModuleDTO(String id, String name, ClazzResponseDTO[] refClazzes) {
 		return new ModuleDTO(id, name, refClazzes, new DependencyDTO[0], new DependencyDTO[0], new ClazzResponseDTO[0],
-				0.8, 0.8);
+				0.8, 0.8, false);
 	}
 
 	private void validateMode(String mode) {
