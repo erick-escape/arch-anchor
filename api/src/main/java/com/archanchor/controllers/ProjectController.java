@@ -1,11 +1,17 @@
 package com.archanchor.controllers;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.archanchor.domains.rating.InvalidRatingWeightsException;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.projects.ProjectDetailDTO;
 import com.archanchor.dto.projects.ProjectsListResponseDTO;
+import com.archanchor.dto.projects.RatingWeightsDTO;
+import com.archanchor.services.InvalidProjectNameException;
+import com.archanchor.services.ProjectNotFoundException;
 import com.archanchor.services.ProjectService;
 import com.archanchor.services.ProjectsDirectory;
 
@@ -79,6 +85,7 @@ public class ProjectController {
 	public String deleteProject(@PathVariable String projectName) {
 		try {
 			if (projectsDirectory.deleteProject(projectName)) {
+				projectService.forgetRatingWeights(projectName);
 				return "Project " + projectName + " deleted successfully!";
 			}
 			else {
@@ -103,6 +110,40 @@ public class ProjectController {
 		catch (Exception e) {
 			log.error("ProjectController -> analyzeProject: ", e);
 			throw new RuntimeException("Project analysis failed!");
+		}
+	}
+
+	/** The weights of the project's election and recommendation rate (#27). */
+	@GetMapping("/projects/{projectName}/rating-weights")
+	public RatingWeightsDTO ratingWeights(@PathVariable String projectName) {
+		requireProject(projectName);
+		return RatingWeightsDTO.of(projectService.ratingWeightsOf(projectName));
+	}
+
+	/**
+	 * Replaces the project's weights; if it is the analysed project, its saved modules
+	 * are re-elected and the recommendations refreshed before this returns (#27).
+	 */
+	@PutMapping("/projects/{projectName}/rating-weights")
+	public RatingWeightsDTO updateRatingWeights(@PathVariable String projectName,
+			@RequestBody RatingWeightsDTO weights) {
+		requireProject(projectName);
+		return RatingWeightsDTO.of(projectService.updateRatingWeights(projectName, weights.toRatingWeights()));
+	}
+
+	@ExceptionHandler({ InvalidRatingWeightsException.class, InvalidProjectNameException.class })
+	ProblemDetail rejectInvalidInput(RuntimeException failure) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, failure.getMessage());
+	}
+
+	@ExceptionHandler(ProjectNotFoundException.class)
+	ProblemDetail reportUnknownProject(ProjectNotFoundException failure) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, failure.getMessage());
+	}
+
+	private void requireProject(String projectName) {
+		if (!Files.isDirectory(projectsDirectory.resolveProject(projectName))) {
+			throw new ProjectNotFoundException(projectName);
 		}
 	}
 
