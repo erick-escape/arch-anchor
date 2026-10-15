@@ -1,4 +1,5 @@
 import {
+  MergeModuleRecommendation,
   MoveClassRecommendation,
   RecommendationsResponse,
   SplitModuleRecommendation,
@@ -91,6 +92,36 @@ export function splitRecommendationFixture(
       similarityImprovement: 0.25,
       violationsImprovement: 1,
       rate: 0.625,
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a merge recommendation as the backend serialises it (`MergeModuleRecommendationDTO`),
+ * with the bookstore's numbers: merging costs similarity but removes the violation (#26).
+ *
+ * @example
+ * const merge = mergeRecommendationFixture();
+ */
+export function mergeRecommendationFixture(
+  overrides: Partial<MergeModuleRecommendation> = {}
+): MergeModuleRecommendation {
+  return {
+    module1Id: 'm2',
+    module1Name: 'bookstore/persistence',
+    module2Id: 'm1',
+    module2Name: 'bookstore/web',
+    metrics: {
+      module1Similarity: 1,
+      module2Similarity: 0.75,
+      mergedSimilarity: 0.7143,
+      module1Violations: 0,
+      module2Violations: 1,
+      mergedViolations: 0,
+      similarityImprovement: -0.1607,
+      violationsImprovement: 1,
+      rate: 0.4196,
     },
     ...overrides,
   };

@@ -76,6 +76,33 @@ class RecommendationsControllerTest {
 		recommendations().andExpect(jsonPath("$.merges", empty()));
 	}
 
+	// #26: the card showed the reference classes' agreement under these labels, so its
+	// similarities did not add up to the improvement below them.
+	@Test
+	void mergeCardShowsTheModuleSimilaritiesItsImprovementIsComputedFrom() throws Exception {
+		String recommended = recommendations().andReturn().getResponse().getContentAsString();
+		String module1Id = JsonPath.read(recommended, "$.merges[0].module1Id");
+		String module2Id = JsonPath.read(recommended, "$.merges[0].module2Id");
+		String savedModules = backend.mockMvc.perform(get("/api/module"))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		String merged = backend.mockMvc
+			.perform(post("/api/recommendations/apply/merge").param("sourceId", module1Id).param("targetId", module2Id))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		double module1Similarity = similarityOf(savedModules, module1Id);
+		double module2Similarity = similarityOf(savedModules, module2Id);
+		double mergedSimilarity = JsonPath.<Number>read(merged, "$.similarity").doubleValue();
+		assertEquals(module1Similarity, metric(recommended, "module1Similarity"), 1e-9);
+		assertEquals(module2Similarity, metric(recommended, "module2Similarity"), 1e-9);
+		assertEquals(mergedSimilarity, metric(recommended, "mergedSimilarity"), 1e-9);
+		assertEquals(mergedSimilarity - (module1Similarity + module2Similarity) / 2,
+				metric(recommended, "similarityImprovement"), 1e-9);
+	}
+
 	// The module operation an apply delegates to refreshes too; running twice would only
 	// cost time (#28).
 	@Test
@@ -98,6 +125,15 @@ class RecommendationsControllerTest {
 
 	private ResultActions recommendations() throws Exception {
 		return backend.mockMvc.perform(get("/api/recommendations"));
+	}
+
+	private static double similarityOf(String modules, String moduleId) {
+		List<Number> similarities = JsonPath.read(modules, "$[?(@.id == '" + moduleId + "')].similarity");
+		return similarities.get(0).doubleValue();
+	}
+
+	private static double metric(String recommendations, String name) {
+		return JsonPath.<Number>read(recommendations, "$.merges[0].metrics." + name).doubleValue();
 	}
 
 	private ResultActions applySplit(String moduleId, List<String> classIds) throws Exception {
