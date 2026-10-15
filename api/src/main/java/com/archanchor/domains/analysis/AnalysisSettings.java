@@ -23,11 +23,15 @@ import java.io.Serializable;
  * move and violation analyses judge it; packages, because the similarity is computed on
  * them
  * @param minRecommendationRate the lowest rate of a split, merge or move that is shown
+ * @param minMergeSimilarityChange the lowest similarity change of a recommended merge, so
+ * that 0 keeps out merges that only remove violations at a cost in similarity (#41);
+ * {@code null} for no limit
  */
 public record AnalysisSettings(int minSplitModuleClasses, int minSourceClassesAfterMove, Integer maxMoveTargetsPerClass,
-		int minClassDependencies, double minRecommendationRate) implements Serializable {
+		int minClassDependencies, double minRecommendationRate,
+		Double minMergeSimilarityChange) implements Serializable {
 
-	public static final AnalysisSettings DEFAULT = new AnalysisSettings(1, 1, null, 0, 0.0);
+	public static final AnalysisSettings DEFAULT = new AnalysisSettings(1, 1, null, 0, 0.0, null);
 
 	public AnalysisSettings {
 		requireAtLeast("minSplitModuleClasses", minSplitModuleClasses, 1);
@@ -41,6 +45,13 @@ public record AnalysisSettings(int minSplitModuleClasses, int minSourceClassesAf
 		if (!(minRecommendationRate >= 0.0 && minRecommendationRate <= 1.0)) {
 			throw new InvalidAnalysisSettingsException(
 					"Expected minRecommendationRate in [0, 1], got " + minRecommendationRate);
+		}
+		// A similarity change lies in [-1, 1], so no other limit can matter
+		if (minMergeSimilarityChange != null
+				&& !(minMergeSimilarityChange >= -1.0 && minMergeSimilarityChange <= 1.0)) {
+			throw new InvalidAnalysisSettingsException(
+					"Expected minMergeSimilarityChange in [-1, 1], or none for no limit, got "
+							+ minMergeSimilarityChange);
 		}
 	}
 
@@ -64,6 +75,14 @@ public record AnalysisSettings(int minSplitModuleClasses, int minSourceClassesAf
 	 */
 	public boolean judgesClassWith(int packageDependencyCount) {
 		return packageDependencyCount >= minClassDependencies;
+	}
+
+	/**
+	 * Whether a merge that changes similarity by {@code similarityChange} (merged minus
+	 * the mean of the two modules') may be recommended (#41).
+	 */
+	public boolean allowsMergeChangingSimilarityBy(double similarityChange) {
+		return minMergeSimilarityChange == null || similarityChange >= minMergeSimilarityChange;
 	}
 
 	/** Whether a split, merge or move rated {@code rate} is shown. */

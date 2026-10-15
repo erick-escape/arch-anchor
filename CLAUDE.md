@@ -159,7 +159,7 @@ cd api
 
 **Analysis Settings** (#36):
 - Per project (`AnalysisSettings`), set from **Settings** or `PUT /api/projects/{projectName}/analysis-settings`, stored in `analysis-settings.json`; the defaults filter nothing
-- Minimum classes per split half, minimum classes a move leaves in its source, maximum move targets per class, minimum package dependencies of a class before it gets move or violation entries, minimum rate of a shown split, merge or move (violations are always shown)
+- Minimum classes per split half, minimum classes a move leaves in its source, maximum move targets per class, minimum package dependencies of a class before it gets move or violation entries, minimum rate of a shown split, merge or move (violations are always shown), lowest similarity change of a recommended merge (#41)
 - Read through `ActiveAnalysisSettings`; changing them re-runs the analyses without re-electing
 
 ### Important Implementation Constraints

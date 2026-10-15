@@ -41,6 +41,7 @@ const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettin
   const shown = draft ?? saved.data;
   const change = (changed: Partial<AnalysisSettings>) => setDraft({ ...shown, ...changed });
   const unlimitedTargets = shown.maxMoveTargetsPerClass === null;
+  const unlimitedMergeLoss = shown.minMergeSimilarityChange === null;
   return (
     <>
       <SettingNumber
@@ -93,6 +94,26 @@ const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettin
         precision={2}
         onChange={(minRecommendationRate) => change({ minRecommendationRate })}
       />
+      <SettingNumber
+        label="Lowest similarity change of a recommended merge"
+        explanation="0 keeps out merges that lower similarity, recommended only for the violations they remove."
+        value={shown.minMergeSimilarityChange}
+        min={-1}
+        max={1}
+        step={0.05}
+        precision={2}
+        disabled={unlimitedMergeLoss}
+        onChange={(minMergeSimilarityChange) => change({ minMergeSimilarityChange })}
+      >
+        <Checkbox
+          checked={unlimitedMergeLoss}
+          onChange={(event) =>
+            change({ minMergeSimilarityChange: event.target.checked ? null : 0 })
+          }
+        >
+          No limit
+        </Checkbox>
+      </SettingNumber>
       {save.isError && (
         <Alert type="error" showIcon message={describeAnalysisSettingsFailure(save.error)} />
       )}

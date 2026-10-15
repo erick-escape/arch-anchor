@@ -140,11 +140,14 @@ Where:
       (`MoveClass`, `ArchitectureViolation`); module violation counts, and so the rates, still include it
     - `minRecommendationRate` (0): `RecommendationsService` hides splits, merges and moves rated lower, before the summary;
       violation entries have no rate and are always shown
+    - `minMergeSimilarityChange` (null, no limit; #41): `MergeModule` does not recommend a merge that changes similarity by
+      less; 0 keeps out merges that only remove violations at a cost in similarity
 - Invalid values throw `InvalidAnalysisSettingsException`, naming the setting, the value and the range
 - Stored per project in `analysis-settings.json` by `JsonFileAnalysisSettingsStore` (`AnalysisSettingsStore`; the JSON file
   handling is shared with the weights in `util/PerProjectJsonFile`); deleting a project forgets them
 - `ActiveAnalysisSettings` holds the settings of the project whose modules are saved, injected into `SplitModule`,
-  `MoveClass`, `ArchitectureViolation` and `RecommendationsService`; `ProjectService.analyzeProject` adopts them
+  `MergeModule`, `MoveClass`, `ArchitectureViolation` and `RecommendationsService`; `ProjectService.analyzeProject`
+  adopts them
 - `PUT /api/projects/{projectName}/analysis-settings` saves them; for the analysed project,
   `ProjectService.updateAnalysisSettings` re-runs the analyses without re-electing, since no setting affects the election
 

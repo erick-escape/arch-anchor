@@ -16,6 +16,7 @@ const DEFAULTS: AnalysisSettings = {
   maxMoveTargetsPerClass: null,
   minClassDependencies: 0,
   minRecommendationRate: 0,
+  minMergeSimilarityChange: null,
 };
 
 const STRICT: AnalysisSettings = {
@@ -24,6 +25,7 @@ const STRICT: AnalysisSettings = {
   maxMoveTargetsPerClass: 1,
   minClassDependencies: 5,
   minRecommendationRate: 0.2,
+  minMergeSimilarityChange: 0,
 };
 
 describe('analysisSettingsApi', () => {

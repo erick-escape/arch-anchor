@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: AnalysisSettings = {
   maxMoveTargetsPerClass: null,
   minClassDependencies: 0,
   minRecommendationRate: 0,
+  minMergeSimilarityChange: null,
 };
 
 const EQUAL: RatingWeights = {
@@ -136,6 +137,7 @@ describe('SettingsModal', () => {
         maxMoveTargetsPerClass: 1,
         minClassDependencies: 5,
         minRecommendationRate: 0.2,
+        minMergeSimilarityChange: -0.1,
       });
       renderModal();
 
@@ -144,9 +146,14 @@ describe('SettingsModal', () => {
       expect(await settingInput('Fewest classes in each half of a split')).toHaveValue('2');
       expect(await settingInput('Fewest classes a move leaves in its module')).toHaveValue('3');
       expect(await settingInput('Move targets per class')).toHaveValue('1');
-      expect(screen.getByRole('checkbox', { name: 'No limit' })).not.toBeChecked();
+      for (const noLimit of screen.getAllByRole('checkbox', { name: 'No limit' })) {
+        expect(noLimit).not.toBeChecked();
+      }
       expect(await settingInput('Fewest package dependencies of a judged class')).toHaveValue('5');
       expect(await settingInput('Lowest rate of a shown split, merge or move')).toHaveValue('0.20');
+      expect(await settingInput('Lowest similarity change of a recommended merge')).toHaveValue(
+        '-0.10'
+      );
     });
 
     it('says that violations are always shown', async () => {
@@ -167,13 +174,20 @@ describe('SettingsModal', () => {
       const splitHalf = await settingInput('Fewest classes in each half of a split');
       await userEvent.clear(splitHalf);
       await userEvent.type(splitHalf, '2');
-      await userEvent.click(screen.getByRole('checkbox', { name: 'No limit' }));
+      const [noTargetLimit, noMergeLimit] = screen.getAllByRole('checkbox', { name: 'No limit' });
+      await userEvent.click(noTargetLimit);
+      await userEvent.click(noMergeLimit);
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
       await vi.waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
       expect(onClose).toHaveBeenCalledOnce();
       expect(sentBodies(SETTINGS_URL)).toEqual([
-        { ...DEFAULT_SETTINGS, minSplitModuleClasses: 2, maxMoveTargetsPerClass: 1 },
+        {
+          ...DEFAULT_SETTINGS,
+          minSplitModuleClasses: 2,
+          maxMoveTargetsPerClass: 1,
+          minMergeSimilarityChange: 0,
+        },
       ]);
     });
 

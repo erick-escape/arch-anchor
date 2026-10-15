@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
@@ -16,8 +17,12 @@ public class MergeModule extends ArchitecturalAnalysis {
 
 	private List<MergeModuleResult> results;
 
-	public MergeModule(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+	private final ActiveAnalysisSettings activeSettings;
+
+	public MergeModule(ModuleService moduleService, ActiveRatingWeights activeWeights,
+			ActiveAnalysisSettings activeSettings) {
 		super(moduleService, activeWeights);
+		this.activeSettings = activeSettings;
 	}
 
 	@Override
@@ -217,8 +222,10 @@ public class MergeModule extends ArchitecturalAnalysis {
 						() -> calculateModuleMergeRate(module1, module2, mergedModule));
 
 				// Only recommend merge if rate is positive (considering both similarity
-				// and violations)
-				if (rateResult.rate > 0) {
+				// and violations), and if it costs no more similarity than the architect
+				// accepts (#41)
+				if (rateResult.rate > 0
+						&& activeSettings.current().allowsMergeChangingSimilarityBy(rateResult.similarityImprovement)) {
 					results.add(new MergeModuleResult(module1.getId(), module1.getName(), module2.getId(),
 							module2.getName(), rateResult.module1Similarity, rateResult.module2Similarity,
 							rateResult.mergedSimilarity, rateResult.module1Violations, rateResult.module2Violations,

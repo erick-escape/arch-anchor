@@ -26,7 +26,7 @@ public class JsonFileAnalysisSettingsStore implements AnalysisSettingsStore {
 			@Value("${archanchor.analysis-settings-file:analysis-settings.json}") String file) {
 		this.file = new PerProjectJsonFile<>(Path.of(file), AnalysisSettings.class, "analysis settings",
 				"a JSON object from project name to {minSplitModuleClasses, minSourceClassesAfterMove, "
-						+ "maxMoveTargetsPerClass, minClassDependencies, minRecommendationRate}");
+						+ "maxMoveTargetsPerClass, minClassDependencies, minRecommendationRate, minMergeSimilarityChange}");
 	}
 
 	@Override

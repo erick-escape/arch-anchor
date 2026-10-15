@@ -17,11 +17,30 @@ class AnalysisSettingsTest {
 		assertThat(defaults.limitsMoveTargets()).isFalse();
 		assertThat(defaults.judgesClassWith(0)).isTrue();
 		assertThat(defaults.shows(0.0001)).isTrue();
+		assertThat(defaults.allowsMergeChangingSimilarityBy(-1.0)).isTrue();
+	}
+
+	// #41: 0 keeps out every merge that lowers similarity; the limit is inclusive.
+	@Test
+	void aMinimumSimilarityChangeKeepsOutMergesBelowIt() {
+		AnalysisSettings settings = new AnalysisSettings(1, 1, null, 0, 0.0, 0.0);
+
+		assertThat(settings.allowsMergeChangingSimilarityBy(0.0)).isTrue();
+		assertThat(settings.allowsMergeChangingSimilarityBy(-0.01)).isFalse();
+	}
+
+	@Test
+	void aMinimumSimilarityChangeOutsideMinusOneToOneIsRejected() {
+		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, 0, 0.0, 1.5))
+			.isInstanceOf(InvalidAnalysisSettingsException.class)
+			.hasMessageContaining("minMergeSimilarityChange")
+			.hasMessageContaining("[-1, 1]")
+			.hasMessageContaining("no limit");
 	}
 
 	@Test
 	void eachMinimumIsInclusive() {
-		AnalysisSettings settings = new AnalysisSettings(2, 3, 1, 5, 0.2);
+		AnalysisSettings settings = new AnalysisSettings(2, 3, 1, 5, 0.2, null);
 
 		assertThat(settings.allowsSplitHalfOf(2)).isTrue();
 		assertThat(settings.allowsSplitHalfOf(1)).isFalse();
@@ -35,7 +54,7 @@ class AnalysisSettingsTest {
 
 	@Test
 	void aMaximumOfMoveTargetsLimitsThem() {
-		AnalysisSettings settings = new AnalysisSettings(1, 1, 2, 0, 0.0);
+		AnalysisSettings settings = new AnalysisSettings(1, 1, 2, 0, 0.0, null);
 
 		assertThat(settings.limitsMoveTargets()).isTrue();
 		assertThat(settings.maxMoveTargetsPerClass()).isEqualTo(2);
@@ -43,7 +62,7 @@ class AnalysisSettingsTest {
 
 	@Test
 	void aSplitHalfOfNoClassIsRejectedNamingTheSettingAndTheExpectedRange() {
-		assertThatThrownBy(() -> new AnalysisSettings(0, 1, null, 0, 0.0))
+		assertThatThrownBy(() -> new AnalysisSettings(0, 1, null, 0, 0.0, null))
 			.isInstanceOf(InvalidAnalysisSettingsException.class)
 			.hasMessageContaining("minSplitModuleClasses")
 			.hasMessageContaining(">= 1")
@@ -52,14 +71,14 @@ class AnalysisSettingsTest {
 
 	@Test
 	void aMoveMayNotLeaveAnEmptyModule() {
-		assertThatThrownBy(() -> new AnalysisSettings(1, 0, null, 0, 0.0))
+		assertThatThrownBy(() -> new AnalysisSettings(1, 0, null, 0, 0.0, null))
 			.isInstanceOf(InvalidAnalysisSettingsException.class)
 			.hasMessageContaining("minSourceClassesAfterMove");
 	}
 
 	@Test
 	void aMaximumOfNoMoveTargetIsRejected() {
-		assertThatThrownBy(() -> new AnalysisSettings(1, 1, 0, 0, 0.0))
+		assertThatThrownBy(() -> new AnalysisSettings(1, 1, 0, 0, 0.0, null))
 			.isInstanceOf(InvalidAnalysisSettingsException.class)
 			.hasMessageContaining("maxMoveTargetsPerClass")
 			.hasMessageContaining("no limit");
@@ -67,7 +86,7 @@ class AnalysisSettingsTest {
 
 	@Test
 	void aNegativeDependencyCountIsRejected() {
-		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, -1, 0.0))
+		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, -1, 0.0, null))
 			.isInstanceOf(InvalidAnalysisSettingsException.class)
 			.hasMessageContaining("minClassDependencies")
 			.hasMessageContaining(">= 0");
@@ -77,12 +96,12 @@ class AnalysisSettingsTest {
 	// 1.
 	@Test
 	void aMinimumRateOutsideZeroToOneIsRejected() {
-		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, 0, 1.5))
+		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, 0, 1.5, null))
 			.isInstanceOf(InvalidAnalysisSettingsException.class)
 			.hasMessageContaining("minRecommendationRate")
 			.hasMessageContaining("[0, 1]")
 			.hasMessageContaining("1.5");
-		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, 0, Double.NaN))
+		assertThatThrownBy(() -> new AnalysisSettings(1, 1, null, 0, Double.NaN, null))
 			.isInstanceOf(InvalidAnalysisSettingsException.class);
 	}
 
