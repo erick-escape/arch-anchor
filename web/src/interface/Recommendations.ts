@@ -105,7 +105,8 @@ export type RecommendationType = 'split' | 'merge' | 'move' | 'violation';
 export interface UnifiedRecommendation {
   id: string; // Unique identifier for React keys
   type: RecommendationType;
-  rating: number; // For sorting (rate for split/merge/move, 0.3 default for violations)
+  // The rate of a split, merge or move; null for a violation, which has none (#48)
+  rating: number | null;
   title: string;
   description: string;
   data:

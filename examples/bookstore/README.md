@@ -117,15 +117,15 @@ AC7 - bookstore/web CAN-DEPEND bookstore.service
 ### Recommendations
 
 Three structural changes would remove the violation. At the default recommendation weights the
-tool rates each as `0.5 × Δ similarity + 0.5 × Δ violations` and lists them in that order,
-followed by the violation itself:
+tool rates each as `0.5 × Δ similarity + 0.5 × Δ violations` and lists them in that order under
+**Refactorings**; the violation itself, which has no rate, is under **Violations**:
 
 | Recommendation | Rate | Priority | Similarity | Violations |
 |---|---|---|---|---|
 | Split `bookstore/web` into the three controllers and `SalesReport` | 0.625 | High | 75.00 % → 100.00 % | 1 → 0 |
 | Move `SalesReport` from `bookstore/web` to `bookstore/persistence` | 0.5625 | High | +12.5 % across the two modules | 1 → 0 |
 | Merge `bookstore/persistence` and `bookstore/web` | 0.4196 | Medium | −16.1 % | 1 → 0 |
-| Fix violation in `SalesReport` | | Medium | | |
+| Fix violation in `SalesReport` (Violations tab) | | | | |
 
 The move is what an architect would do: a class that only reads the database belongs with the
 repositories. The split is the same idea with a new module for reporting. The merge also makes

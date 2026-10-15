@@ -14,8 +14,11 @@ import {
   ArchitectureViolationRecommendation,
 } from '../../interface/Recommendations';
 import { formatSignedPercent } from '../../utils/formatSignedPercent';
+import { priorityOf } from '../../utils/priority';
 
 const { Panel } = Collapse;
+
+const VIOLATION_TAG = { label: 'Violation', color: '#fa8c16' };
 
 interface RecommendationCardProps {
   recommendation: UnifiedRecommendation;
@@ -28,18 +31,6 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
   onApply,
   isApplying,
 }) => {
-  const getPriorityColor = (rating: number): string => {
-    if (rating > 0.5) return '#ff4d4f'; // red
-    if (rating > 0.2) return '#faad14'; // orange
-    return '#52c41a'; // green
-  };
-
-  const getPriorityLabel = (rating: number): string => {
-    if (rating > 0.5) return 'High';
-    if (rating > 0.2) return 'Medium';
-    return 'Low';
-  };
-
   const getIcon = () => {
     switch (recommendation.type) {
       case 'split':
@@ -165,8 +156,9 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
     </div>
   );
 
-  const priorityColor = getPriorityColor(recommendation.rating);
-  const priorityLabel = getPriorityLabel(recommendation.rating);
+  // A violation has no rate, so no priority: it is tagged as what it is (#48).
+  const { label: priorityLabel, color: priorityColor } =
+    recommendation.rating === null ? VIOLATION_TAG : priorityOf(recommendation.rating);
 
   return (
     <div

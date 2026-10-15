@@ -8,8 +8,10 @@ import RecommendationsSidebar from './index';
 import { api } from '../../services/api';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
 import {
+  moveRecommendationFixture,
   recommendationsFixture,
   splitRecommendationFixture,
+  violationRecommendationFixture,
 } from '../../test/fixtures/recommendationFixtures';
 
 describe('RecommendationsSidebar', () => {
@@ -71,5 +73,59 @@ describe('RecommendationsSidebar', () => {
 
     expect(await screen.findByText(/Failed to apply split/)).toBeInTheDocument();
     expect(onRecommendationApplied).not.toHaveBeenCalled();
+  });
+
+  // #48: violations have no rate; they were sorted among the refactorings at a made-up 0.3.
+  describe('with refactorings and violations', () => {
+    beforeEach(() => {
+      fakeApi.respondTo(
+        'GET',
+        '/api/recommendations',
+        recommendationsFixture({
+          splits: [splitRecommendationFixture()],
+          moves: [
+            moveRecommendationFixture({
+              metrics: { ...moveRecommendationFixture().metrics, rate: 0.1 },
+            }),
+          ],
+          violations: [violationRecommendationFixture()],
+        })
+      );
+    });
+
+    it('lists the violations in a tab of their own', async () => {
+      renderSidebar();
+
+      expect(await screen.findByText('Split "shop/web"')).toBeInTheDocument();
+      expect(screen.queryByText('Fix violation in "SalesReport"')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: /Violations/ }));
+
+      expect(await screen.findByText('Fix violation in "SalesReport"')).toBeInTheDocument();
+    });
+
+    it('names each tab with its number of cards', async () => {
+      renderSidebar();
+
+      expect(await screen.findByRole('tab', { name: /Refactorings\s*2/ })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Violations\s*1/ })).toBeInTheDocument();
+    });
+
+    it('counts the priorities of the refactorings only', async () => {
+      renderSidebar();
+
+      expect(await screen.findByLabelText('High priority')).toHaveTextContent('1');
+      expect(screen.getByLabelText('Medium priority')).toHaveTextContent('0');
+      expect(screen.getByLabelText('Low priority')).toHaveTextContent('1');
+    });
+
+    it('shows a violation without a priority', async () => {
+      renderSidebar();
+
+      await userEvent.click(await screen.findByRole('tab', { name: /Violations/ }));
+
+      expect(await screen.findByText('Violation', { selector: '.ant-tag' })).toBeInTheDocument();
+      expect(screen.queryByText('Medium', { selector: '.ant-tag' })).not.toBeInTheDocument();
+    });
   });
 });
