@@ -1,5 +1,7 @@
 package com.archanchor.services;
 
+import com.archanchor.util.PackageDeclaration;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import com.archanchor.domains.clazz.Clazz;
@@ -185,16 +187,14 @@ public class ModuleService {
 	 * @param moduleDependencies All dependencies from all classes in the module
 	 * @return The number of violations (dependencies that would not be allowed)
 	 */
-	private int calculateViolations(Clazz candidateClass, List<Dependency> moduleDependencies) {
+	private int calculateViolations(Clazz candidateClass, List<Dependency> moduleDependencies, ModuleScope scope) {
 		if (moduleDependencies == null || moduleDependencies.isEmpty()) {
 			return 0;
 		}
 
-		// Get the dependency package names from the candidate class
-		Set<String> candidateDependencies = candidateClass.getDependencies()
-			.stream()
-			.map(Dependency::getPackageName)
-			.collect(Collectors.toSet());
+		// Get the dependency package names from the candidate class, leaving out its
+		// references to the module's own classes (#43)
+		Set<String> candidateDependencies = scope.packagesOf(candidateClass);
 
 		// Count how many module dependencies are NOT in the candidate's dependencies
 		// These would be violations if this class became the refClass
@@ -212,13 +212,14 @@ public class ModuleService {
 	 */
 	public void calculateClassSimilarities(Module module) {
 		List<Clazz> clazzes = module.getClazzes();
+		ModuleScope scope = ModuleScope.of(module);
 
 		if (clazzes.size() > 1) {
 			for (Clazz clazz : clazzes) {
 				double totalSimilarity = 0.0;
 				for (Clazz otherClazz : clazzes) {
 					if (!clazz.equals(otherClazz)) {
-						totalSimilarity += calculateSimilarity(clazz, otherClazz);
+						totalSimilarity += calculateSimilarity(clazz, otherClazz, scope);
 					}
 				}
 				clazz.setSimilarity(totalSimilarity / (clazzes.size() - 1));
@@ -246,13 +247,14 @@ public class ModuleService {
 		// Ensure module dependencies are populated for violation calculation
 		populateModuleDependencies(module);
 		List<Dependency> moduleDependencies = module.getModuleDependencies();
+		ModuleScope scope = ModuleScope.of(module);
 
 		// Calculate violations for each class and find max for normalization
 		Map<Clazz, Integer> violationsMap = new HashMap<>();
 		int maxViolations = 0;
 
 		for (Clazz clazz : clazzes) {
-			int violations = calculateViolations(clazz, moduleDependencies);
+			int violations = calculateViolations(clazz, moduleDependencies, scope);
 			violationsMap.put(clazz, violations);
 			maxViolations = Math.max(maxViolations, violations);
 		}
@@ -343,6 +345,7 @@ public class ModuleService {
 	public void calculateAvgSimilarityWithRefClazzes(Module module) {
 		List<Clazz> clazzes = module.getClazzes();
 		List<Clazz> refClazzes = module.getRefClazzes();
+		ModuleScope scope = ModuleScope.of(module);
 
 		if (refClazzes == null || refClazzes.isEmpty()) {
 			// If no reference classes, set all avgSimilarityWithRefClazzes to 0.0
@@ -361,7 +364,7 @@ public class ModuleService {
 			// reference class
 			for (Clazz clazz : clazzes) {
 				if (!clazz.equals(refClazz)) {
-					double similarity = calculateSimilarity(clazz, refClazz);
+					double similarity = calculateSimilarity(clazz, refClazz, scope);
 					clazz.setAvgSimilarityWithRefClazzes(similarity);
 				}
 			}
@@ -377,7 +380,7 @@ public class ModuleService {
 					// classes
 					for (Clazz refClazz : refClazzes) {
 						if (!clazz.equals(refClazz)) {
-							totalSimilarity += calculateSimilarity(clazz, refClazz);
+							totalSimilarity += calculateSimilarity(clazz, refClazz, scope);
 							count++;
 						}
 					}
@@ -385,7 +388,7 @@ public class ModuleService {
 				else {
 					// If not a reference class, calculate with all reference classes
 					for (Clazz refClazz : refClazzes) {
-						totalSimilarity += calculateSimilarity(clazz, refClazz);
+						totalSimilarity += calculateSimilarity(clazz, refClazz, scope);
 						count++;
 					}
 				}
@@ -435,31 +438,41 @@ public class ModuleService {
 	 * classes
 	 */
 	public double calculateAvgSimilarityWithRefClazzes(Clazz clazz, List<Clazz> refClazzes) {
+		return calculateAvgSimilarityWithRefClazzes(clazz, refClazzes, ModuleScope.of(List.of()));
+	}
+
+	/**
+	 * The same, for a class in the module that {@code scope} describes, e.g. a target
+	 * with the class moved in (#43).
+	 */
+	public double calculateAvgSimilarityWithRefClazzes(Clazz clazz, List<Clazz> refClazzes, ModuleScope scope) {
 		if (refClazzes == null || refClazzes.isEmpty()) {
 			return 0.0;
 		}
 
 		if (refClazzes.size() == 1) {
-			return calculateSimilarity(clazz, refClazzes.get(0));
+			return calculateSimilarity(clazz, refClazzes.get(0), scope);
 		}
 
 		double totalSimilarity = 0.0;
 		for (Clazz refClazz : refClazzes) {
-			totalSimilarity += calculateSimilarity(clazz, refClazz);
+			totalSimilarity += calculateSimilarity(clazz, refClazz, scope);
 		}
 
 		return totalSimilarity / refClazzes.size();
 	}
 
 	public double calculateSimilarity(Clazz clazz1, Clazz clazz2) {
-		Set<String> deps1 = clazz1.getDependencies()
-			.stream()
-			.map(Dependency::getPackageName)
-			.collect(Collectors.toSet());
-		Set<String> deps2 = clazz2.getDependencies()
-			.stream()
-			.map(Dependency::getPackageName)
-			.collect(Collectors.toSet());
+		return calculateSimilarity(clazz1, clazz2, ModuleScope.of(List.of()));
+	}
+
+	/**
+	 * The similarity of two classes of one module, leaving out their references to the
+	 * module's own classes (#43).
+	 */
+	public double calculateSimilarity(Clazz clazz1, Clazz clazz2, ModuleScope scope) {
+		Set<String> deps1 = scope.packagesOf(clazz1);
+		Set<String> deps2 = scope.packagesOf(clazz2);
 
 		int a = (int) deps1.stream().filter(deps2::contains).count();
 		int b = deps1.size() - a;
@@ -519,10 +532,12 @@ public class ModuleService {
 		}
 
 		Map<String, Dependency> uniqueDependencies = new HashMap<>();
+		// References to the module's own classes are internal (#43)
+		ModuleScope scope = ModuleScope.of(module);
 
 		for (Clazz clazz : module.getClazzes()) {
 			if (clazz.getDependencies() != null) {
-				for (Dependency dependency : clazz.getDependencies()) {
+				for (Dependency dependency : scope.dependenciesOf(clazz)) {
 					if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
 						String packageName = dependency.getPackageName();
 
@@ -568,10 +583,12 @@ public class ModuleService {
 		}
 
 		Map<String, Dependency> uniqueDependencies = new HashMap<>();
+		// A reference class's references to the module's own classes allow nothing (#43)
+		ModuleScope scope = ModuleScope.of(module);
 
 		for (Clazz clazz : module.getRefClazzes()) {
 			if (clazz.getDependencies() != null) {
-				for (Dependency dependency : clazz.getDependencies()) {
+				for (Dependency dependency : scope.dependenciesOf(clazz)) {
 					if (dependency.getPackageName() != null && !dependency.getPackageName().isEmpty()) {
 						String packageName = dependency.getPackageName();
 
@@ -675,6 +692,10 @@ public class ModuleService {
 						modulePath.getFileName().toString(), // currentModule
 						"ALLOW" // enforceMode default
 				);
+				// Identifies the class in other classes' references after a move (#43)
+				if (filePath.toString().endsWith(".java")) {
+					clazz.setPackageName(PackageDeclaration.of(filePath));
+				}
 				clazzes.add(clazz);
 			}
 			catch (UnsupportedOperationException e) {

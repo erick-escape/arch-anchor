@@ -146,7 +146,7 @@ class EnforceModeTest {
 
 	private ClazzResponseDTO buildRefClassDTO(String id, String name, String mode, String packageName) {
 		DependencyDTO dep = new DependencyDTO(packageName, List.of());
-		return new ClazzResponseDTO(id, name, List.of(dep), 0.8, 0.8, "module", "module", mode);
+		return new ClazzResponseDTO(id, name, List.of(dep), 0.8, 0.8, "module", "module", mode, null);
 	}
 
 	private ModuleDTO buildModuleDTO(String id, String name, ClazzResponseDTO[] refClazzes) {

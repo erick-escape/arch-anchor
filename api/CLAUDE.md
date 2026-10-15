@@ -207,6 +207,16 @@ Where:
 
 #### Reference Classes and Violations
 
+**Module scope (#43):**
+
+- A module read from disk never depends on its own classes, because the parser drops same-package references. A class
+  moved or merged into a module keeps the references it was parsed with, so `ModuleScope` treats a reference to one of
+  the module's own classes (or a type nested in one) as internal: `ModuleService` leaves it out of similarity, module
+  and reference-class dependencies, violations and the election, and `MoveClass` and `ArchitectureViolation` judge a
+  class moved into a target with `ModuleScope.of(target).with(clazz)`
+- Each `Clazz` records the package its source declares (`packageName`, read by `util/PackageDeclaration`), kept in
+  `ClazzResponseDTO`; a class of unknown package is never matched
+
 **Reference Classes:**
 
 - Exemplar classes that embody a module's architectural intent through their dependency patterns
