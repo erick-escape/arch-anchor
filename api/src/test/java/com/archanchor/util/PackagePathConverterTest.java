@@ -53,6 +53,20 @@ public class PackagePathConverterTest {
 		assertEquals(expected, actual);
 	}
 
+	// #35: a nested type's enclosing class is not a package.
+	@Test
+	void aNestedTypeBelongsToThePackageOfItsEnclosingClass() {
+		assertEquals("java.util", packageNameExtractor.extractPackageName("java.util.Map.Entry"));
+		assertEquals("org.apache.ibatis.annotations",
+				packageNameExtractor.extractPackageName("org.apache.ibatis.annotations.Select.List"));
+	}
+
+	@Test
+	void aStaticMemberBelongsToThePackageOfItsClass() {
+		assertEquals("org.apache.ibatis.annotations", packageNameExtractor
+			.extractPackageName("org.apache.ibatis.annotations.AnnotationConstants.NULL_TYPE_DISCRIMINATOR"));
+	}
+
 	@Test
 	void testAlternativeMethod() {
 		String input = "com.archanchor.domains.dependency.Dependency";

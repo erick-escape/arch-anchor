@@ -2,12 +2,21 @@ package com.archanchor.util;
 
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
+
 public class PackageNameExtractor {
 
 	/**
-	 * Extracts package name from fully qualified class name Example:
-	 * "com.archanchor.domains.dependency.Dependency" ->
-	 * "com.archanchor.domains.dependency"
+	 * The package of a qualified type name by the Java naming convention: package names
+	 * are lower case and type names start with a capital, so the package ends before the
+	 * first capitalised segment. A nested type's enclosing class is therefore not taken
+	 * for a package (#35). A name with no capitalised segment keeps everything before its
+	 * last dot.
+	 *
+	 * <pre>
+	 * extractPackageName("java.util.Map.Entry"); // "java.util"
+	 * extractPackageName("com.archanchor.domains.dependency.Dependency"); // "com.archanchor.domains.dependency"
+	 * </pre>
 	 * @param fullyQualifiedClassName the fully qualified class name
 	 * @return the package name without the class name
 	 */
@@ -16,16 +25,16 @@ public class PackageNameExtractor {
 			return "";
 		}
 
-		// Find the last dot which separates package from class name
-		int lastDotIndex = fullyQualifiedClassName.lastIndexOf('.');
-
-		// If no dot found, it means there's no package (class in default package)
-		if (lastDotIndex == -1) {
-			return "";
+		String[] segments = fullyQualifiedClassName.split("\\.");
+		for (int index = 0; index < segments.length - 1; index++) {
+			if (!segments[index].isEmpty() && Character.isUpperCase(segments[index].charAt(0))) {
+				return String.join(".", Arrays.copyOfRange(segments, 0, index));
+			}
 		}
 
-		// Return everything before the last dot
-		return fullyQualifiedClassName.substring(0, lastDotIndex);
+		// No capitalised segment before the last one: the last segment is the type
+		int lastDotIndex = fullyQualifiedClassName.lastIndexOf('.');
+		return lastDotIndex == -1 ? "" : fullyQualifiedClassName.substring(0, lastDotIndex);
 	}
 
 	/**

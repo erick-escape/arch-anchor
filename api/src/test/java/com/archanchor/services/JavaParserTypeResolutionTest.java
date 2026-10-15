@@ -1,5 +1,7 @@
 package com.archanchor.services;
 
+import com.archanchor.util.PackageNameExtractor;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -58,10 +60,10 @@ class JavaParserTypeResolutionTest {
 	 * "org.springframework.boot"
 	 */
 	private static Set<String> extractExpectedPackages(Set<String> fullyQualifiedTypes) {
-		return fullyQualifiedTypes.stream().map(fqn -> {
-			int lastDotIndex = fqn.lastIndexOf('.');
-			return lastDotIndex != -1 ? fqn.substring(0, lastDotIndex) : fqn;
-		}).collect(Collectors.toSet());
+		// The parser's own rule, so a nested type's package is not its enclosing class
+		// (#35)
+		PackageNameExtractor packageNameExtractor = new PackageNameExtractor();
+		return fullyQualifiedTypes.stream().map(packageNameExtractor::extractPackageName).collect(Collectors.toSet());
 	}
 
 	/**
