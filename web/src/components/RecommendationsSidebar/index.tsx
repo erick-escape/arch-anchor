@@ -14,7 +14,7 @@ import {
   MoveClassRecommendation,
   ArchitectureViolationRecommendation,
 } from '../../interface/Recommendations';
-import RecommendationCard from './RecommendationCard';
+import CardList from './CardList';
 import { PRIORITY_COLORS, PriorityLabel, priorityOf } from '../../utils/priority';
 
 const SUMMARY_BOXES = (['High', 'Medium', 'Low'] as const).map((label) => ({
@@ -23,8 +23,10 @@ const SUMMARY_BOXES = (['High', 'Medium', 'Low'] as const).map((label) => ({
 }));
 
 // A tab's name followed by its number of cards, as plain text, so it is part of the tab's name.
+// Light text: the panel is dark, and the inactive tab's default text is dark too (#48); the
+// active tab is marked by its underline.
 const TabLabel = ({ name, count }: { name: string; count: number }) => (
-  <span>
+  <span style={{ color: '#d9d9d9' }}>
     {name} <span style={{ color: '#999' }}>{count}</span>
   </span>
 );
@@ -220,20 +222,6 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
     padding: '16px',
   };
 
-  const renderCards = (cards: UnifiedRecommendation[], whenEmpty: string) =>
-    cards.length === 0 ? (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>{whenEmpty}</div>
-    ) : (
-      cards.map((recommendation) => (
-        <RecommendationCard
-          key={recommendation.id}
-          recommendation={recommendation}
-          onApply={() => handleApply(recommendation)}
-          isApplying={applyingId === recommendation.id}
-        />
-      ))
-    );
-
   return (
     <div style={sidebarStyle}>
       <div style={toggleButtonStyle} onClick={() => setIsOpen(!isOpen)}>
@@ -290,14 +278,26 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
                         </div>
                       ))}
                     </div>
-                    {renderCards(refactorings, 'No refactorings recommended')}
+                    <CardList
+                      cards={refactorings}
+                      whenEmpty="No refactorings recommended"
+                      onApply={handleApply}
+                      applyingId={applyingId}
+                    />
                   </>
                 ),
               },
               {
                 key: 'violations',
                 label: <TabLabel name="Violations" count={violations.length} />,
-                children: renderCards(violations, 'No violations'),
+                children: (
+                  <CardList
+                    cards={violations}
+                    whenEmpty="No violations"
+                    onApply={handleApply}
+                    applyingId={applyingId}
+                  />
+                ),
               },
             ]}
           />

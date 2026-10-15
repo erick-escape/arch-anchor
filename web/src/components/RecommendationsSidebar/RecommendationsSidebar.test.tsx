@@ -128,4 +128,39 @@ describe('RecommendationsSidebar', () => {
       expect(screen.queryByText('Medium', { selector: '.ant-tag' })).not.toBeInTheDocument();
     });
   });
+
+  // #49: drawing every card at once froze the page for about 40 s on bytecode-viewer (1,593 cards).
+  describe('with more cards than a page', () => {
+    beforeEach(() => {
+      const moves = Array.from({ length: 120 }, (_, index) =>
+        moveRecommendationFixture({ classId: `c${index}`, className: `Report${index}` })
+      );
+      fakeApi.respondTo('GET', '/api/recommendations', recommendationsFixture({ moves }));
+    });
+
+    it('draws the first 50 cards', async () => {
+      renderSidebar();
+
+      expect(await screen.findAllByRole('button', { name: 'Apply Recommendation' })).toHaveLength(
+        50
+      );
+    });
+
+    it('draws the next 50 on request, then the rest', async () => {
+      renderSidebar();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Show 50 more of 70' }));
+      expect(screen.getAllByRole('button', { name: 'Apply Recommendation' })).toHaveLength(100);
+
+      await userEvent.click(screen.getByRole('button', { name: 'Show 20 more of 20' }));
+      expect(screen.getAllByRole('button', { name: 'Apply Recommendation' })).toHaveLength(120);
+      expect(screen.queryByRole('button', { name: /Show .* more/ })).not.toBeInTheDocument();
+    });
+
+    it('still names the tab with every card', async () => {
+      renderSidebar();
+
+      expect(await screen.findByRole('tab', { name: /Refactorings\s*120/ })).toBeInTheDocument();
+    });
+  });
 });
