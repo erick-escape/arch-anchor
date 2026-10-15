@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Badge, Spin, Alert } from 'antd';
+import { Badge, Spin, Alert, Tabs } from 'antd';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
 import {
   useRecommendations,
@@ -15,6 +15,19 @@ import {
   ArchitectureViolationRecommendation,
 } from '../../interface/Recommendations';
 import RecommendationCard from './RecommendationCard';
+import { PRIORITY_COLORS, PriorityLabel, priorityOf } from '../../utils/priority';
+
+const SUMMARY_BOXES = (['High', 'Medium', 'Low'] as const).map((label) => ({
+  label,
+  color: PRIORITY_COLORS[label],
+}));
+
+// A tab's name followed by its number of cards, as plain text, so it is part of the tab's name.
+const TabLabel = ({ name, count }: { name: string; count: number }) => (
+  <span>
+    {name} <span style={{ color: '#999' }}>{count}</span>
+  </span>
+);
 
 interface RecommendationsSidebarProps {
   onRecommendationApplied?: () => void;
@@ -31,62 +44,63 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
   const applyMerge = useApplyMerge();
   const applyMove = useApplyMove();
 
-  const unifiedRecommendations = useMemo<UnifiedRecommendation[]>(() => {
-    if (!recommendations) return [];
+  // Splits, merges and moves have a rate and are listed by it; violations have none and get a
+  // tab of their own (#48), instead of a made-up rating among the refactorings.
+  const { refactorings, violations } = useMemo(() => {
+    if (!recommendations) {
+      return { refactorings: [], violations: [] };
+    }
 
-    const unified: UnifiedRecommendation[] = [];
-
-    // Convert split recommendations
-    recommendations.splits.forEach((split, index) => {
-      unified.push({
+    const rated: UnifiedRecommendation[] = [
+      ...recommendations.splits.map((split, index) => ({
         id: `split-${index}`,
-        type: 'split',
+        type: 'split' as const,
         rating: split.metrics.rate,
         title: `Split "${split.originalModuleName}"`,
         description: `Split into 2 modules with ${split.metrics.rate.toFixed(2)} improvement`,
         data: split,
-      });
-    });
-
-    // Convert merge recommendations
-    recommendations.merges.forEach((merge, index) => {
-      unified.push({
+      })),
+      ...recommendations.merges.map((merge, index) => ({
         id: `merge-${index}`,
-        type: 'merge',
+        type: 'merge' as const,
         rating: merge.metrics.rate,
         title: `Merge "${merge.module1Name}" and "${merge.module2Name}"`,
         description: `Combine modules with ${merge.metrics.rate.toFixed(2)} improvement`,
         data: merge,
-      });
-    });
-
-    // Convert move recommendations
-    recommendations.moves.forEach((move, index) => {
-      unified.push({
+      })),
+      ...recommendations.moves.map((move, index) => ({
         id: `move-${index}`,
-        type: 'move',
+        type: 'move' as const,
         rating: move.metrics.rate,
         title: `Move "${move.className}"`,
         description: `Move class with ${move.metrics.rate.toFixed(2)} improvement`,
         data: move,
-      });
-    });
+      })),
+    ];
+    // Highest rate first; the sort is stable, so equal rates keep the order above
+    rated.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 
-    // Convert violation recommendations (default medium priority = 0.3)
-    recommendations.violations.forEach((violation, index) => {
-      unified.push({
+    const violationCards: UnifiedRecommendation[] = recommendations.violations.map(
+      (violation, index) => ({
         id: `violation-${index}`,
-        type: 'violation',
-        rating: 0.3,
+        type: 'violation' as const,
+        rating: null,
         title: `Fix violation in "${violation.className}"`,
         description: `Resolve ${violation.violation} dependency violation`,
         data: violation,
-      });
-    });
+      })
+    );
 
-    // Sort by rating descending
-    return unified.sort((a, b) => b.rating - a.rating);
+    return { refactorings: rated, violations: violationCards };
   }, [recommendations]);
+
+  const priorityCounts = useMemo(() => {
+    const counts: Record<PriorityLabel, number> = { High: 0, Medium: 0, Low: 0 };
+    refactorings.forEach((card) => {
+      counts[priorityOf(card.rating ?? 0).label] += 1;
+    });
+    return counts;
+  }, [refactorings]);
 
   const handleApply = async (recommendation: UnifiedRecommendation) => {
     setApplyingId(recommendation.id);
@@ -206,6 +220,20 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
     padding: '16px',
   };
 
+  const renderCards = (cards: UnifiedRecommendation[], whenEmpty: string) =>
+    cards.length === 0 ? (
+      <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>{whenEmpty}</div>
+    ) : (
+      cards.map((recommendation) => (
+        <RecommendationCard
+          key={recommendation.id}
+          recommendation={recommendation}
+          onApply={() => handleApply(recommendation)}
+          isApplying={applyingId === recommendation.id}
+        />
+      ))
+    );
+
   return (
     <div style={sidebarStyle}>
       <div style={toggleButtonStyle} onClick={() => setIsOpen(!isOpen)}>
@@ -224,29 +252,6 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
         </h3>
       </div>
 
-      {recommendations && (
-        <div style={summaryStyle}>
-          <div style={summaryItemStyle('#ff4d4f')}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#ff4d4f' }}>
-              {recommendations.summary.highPriority}
-            </div>
-            <div style={{ fontSize: '12px', color: '#999' }}>High</div>
-          </div>
-          <div style={summaryItemStyle('#faad14')}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#faad14' }}>
-              {recommendations.summary.mediumPriority}
-            </div>
-            <div style={{ fontSize: '12px', color: '#999' }}>Medium</div>
-          </div>
-          <div style={summaryItemStyle('#52c41a')}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#52c41a' }}>
-              {recommendations.summary.lowPriority}
-            </div>
-            <div style={{ fontSize: '12px', color: '#999' }}>Low</div>
-          </div>
-        </div>
-      )}
-
       <div style={contentStyle}>
         {isLoading && (
           <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -263,20 +268,40 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
           />
         )}
 
-        {!isLoading && !error && unifiedRecommendations.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-            No recommendations available
-          </div>
-        )}
-
-        {unifiedRecommendations.map((recommendation) => (
-          <RecommendationCard
-            key={recommendation.id}
-            recommendation={recommendation}
-            onApply={() => handleApply(recommendation)}
-            isApplying={applyingId === recommendation.id}
+        {recommendations && (
+          <Tabs
+            items={[
+              {
+                key: 'refactorings',
+                label: <TabLabel name="Refactorings" count={refactorings.length} />,
+                children: (
+                  <>
+                    <div style={summaryStyle}>
+                      {SUMMARY_BOXES.map(({ label, color }) => (
+                        <div
+                          key={label}
+                          style={summaryItemStyle(color)}
+                          aria-label={`${label} priority`}
+                        >
+                          <div style={{ fontSize: '20px', fontWeight: 'bold', color }}>
+                            {priorityCounts[label]}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#999' }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {renderCards(refactorings, 'No refactorings recommended')}
+                  </>
+                ),
+              },
+              {
+                key: 'violations',
+                label: <TabLabel name="Violations" count={violations.length} />,
+                children: renderCards(violations, 'No violations'),
+              },
+            ]}
           />
-        ))}
+        )}
       </div>
     </div>
   );

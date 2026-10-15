@@ -1,4 +1,5 @@
 import {
+  ArchitectureViolationRecommendation,
   MergeModuleRecommendation,
   MoveClassRecommendation,
   RecommendationsResponse,
@@ -123,6 +124,36 @@ export function mergeRecommendationFixture(
       violationsImprovement: 1,
       rate: 0.4196,
     },
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a violation entry as the backend serialises it (`ArchitectureViolationRecommendationDTO`):
+ * the bookstore's SalesReport, a web class that uses java.sql.
+ *
+ * @example
+ * const violation = violationRecommendationFixture();
+ */
+export function violationRecommendationFixture(
+  overrides: Partial<ArchitectureViolationRecommendation> = {}
+): ArchitectureViolationRecommendation {
+  return {
+    classId: 'c9',
+    className: 'SalesReport',
+    sourceModuleId: 'm1',
+    sourceModuleName: 'shop/web',
+    violation: 'java.sql',
+    violatingDependencies: ['java.sql.Connection'],
+    bestSuggestion: {
+      targetModuleId: 'm2',
+      targetModuleName: 'shop/persistence',
+      similarityImprovement: 0.25,
+      newViolationsCreated: 0,
+      requiresNewModule: false,
+      reason: 'Perfect architectural fit, improved similarity and no new violations',
+    },
+    alternativeSuggestions: [],
     ...overrides,
   };
 }
