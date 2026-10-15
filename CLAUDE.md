@@ -114,7 +114,7 @@ cd api
 
 **Controllers** (`src/main/java/com/archanchor/controllers/`)
 - REST endpoints for project upload or GitHub import, analysis, and module/class operations
-- Key endpoints: `/api/upload`, `/api/projects/import`, `/api/analyze`, `/api/projects`, `/api/projects/{projectName}/rating-weights`, `/api/module/*`, `/api/recommendations/*`
+- Key endpoints: `/api/upload`, `/api/projects/import`, `/api/analyze`, `/api/projects`, `/api/projects/{projectName}/rating-weights`, `/api/projects/{projectName}/analysis-settings`, `/api/module/*`, `/api/recommendations/*`
 
 **Services** (`src/main/java/com/archanchor/services/`)
 - `JavaParserService` - Core parsing and dependency resolution using JavaParser
@@ -156,6 +156,11 @@ cd api
 - Set by the architect from the analysis page (**Settings**) or `PUT /api/projects/{projectName}/rating-weights`, stored per project in `rating-weights.json` (`JsonFileRatingWeightsStore`)
 - `ModuleService` and the analyses read the weights in force from the injected `ActiveRatingWeights`, which `ProjectService.analyzeProject` sets to the analysed project's
 - `examples/bookstore` at the defaults is pinned by `BookstoreRunningExampleTest`: its numbers are quoted in the README and the ICSE 2027 paper
+
+**Analysis Settings** (#36):
+- Per project (`AnalysisSettings`), set from **Settings** or `PUT /api/projects/{projectName}/analysis-settings`, stored in `analysis-settings.json`; the defaults filter nothing
+- Minimum classes per split half, minimum classes a move leaves in its source, maximum move targets per class, minimum package dependencies of a class before it gets move or violation entries, minimum rate of a shown split, merge or move (violations are always shown)
+- Read through `ActiveAnalysisSettings`; changing them re-runs the analyses without re-electing
 
 ### Important Implementation Constraints
 

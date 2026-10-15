@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
@@ -17,8 +18,12 @@ public class SplitModule extends ArchitecturalAnalysis {
 
 	private List<SplitModuleResult> results;
 
-	public SplitModule(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+	private final ActiveAnalysisSettings activeSettings;
+
+	public SplitModule(ModuleService moduleService, ActiveRatingWeights activeWeights,
+			ActiveAnalysisSettings activeSettings) {
 		super(moduleService, activeWeights);
+		this.activeSettings = activeSettings;
 	}
 
 	@Override
@@ -268,8 +273,10 @@ public class SplitModule extends ArchitecturalAnalysis {
 			}
 
 			// Need at least 3 classes: 1 reference class, 1 non-reference class to form
-			// edges, and 1 to split
-			if (module.getClazzes().size() < 3) {
+			// edges, and 1 to split; and enough for two halves of the architect's
+			// minimum size (#36)
+			int minHalf = activeSettings.current().minSplitModuleClasses();
+			if (module.getClazzes().size() < Math.max(3, 2 * minHalf)) {
 				log.debug("Skipping module '{}' - insufficient classes for splitting ({})", module.getName(),
 						module.getClazzes().size());
 				continue;
@@ -298,9 +305,12 @@ public class SplitModule extends ArchitecturalAnalysis {
 			List<Clazz> module2Classes = new ArrayList<>();
 			assignClassesToModules(module, superRefClass, deRefClass, module1Classes, module2Classes);
 
-			// Both modules must have at least one class
-			if (module1Classes.isEmpty() || module2Classes.isEmpty()) {
-				log.debug("Skipping split - one of the split modules would be empty");
+			// Both halves need the architect's minimum of classes, at least one (#36): a
+			// one-class half scores similarity 1 by definition
+			if (!activeSettings.current().allowsSplitHalfOf(module1Classes.size())
+					|| !activeSettings.current().allowsSplitHalfOf(module2Classes.size())) {
+				log.debug("Skipping split of '{}' - a half of {} or {} classes is below the minimum", module.getName(),
+						module1Classes.size(), module2Classes.size());
 				continue;
 			}
 

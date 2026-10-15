@@ -4,11 +4,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
+import com.archanchor.domains.analysis.AnalysisSettings;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -17,8 +21,12 @@ public class MoveClass extends ArchitecturalAnalysis {
 
 	private List<MoveClassResult> results;
 
-	public MoveClass(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+	private final ActiveAnalysisSettings activeSettings;
+
+	public MoveClass(ModuleService moduleService, ActiveRatingWeights activeWeights,
+			ActiveAnalysisSettings activeSettings) {
 		super(moduleService, activeWeights);
+		this.activeSettings = activeSettings;
 	}
 
 	@Override
@@ -225,6 +233,40 @@ public class MoveClass extends ArchitecturalAnalysis {
 				targetAvgSimilarity, similarityImprovement, normalizedViolationsImprovement, rate);
 	}
 
+	/**
+	 * Whether a class is a candidate for a move under the architect's settings (#36): it
+	 * has enough package dependencies to say where it belongs, and moving it leaves its
+	 * module enough classes. A one-class module scores similarity 1 by definition, so
+	 * without the second check every target shares the gain of emptying a small module.
+	 */
+	private boolean isJudged(Clazz clazz, Module sourceModule) {
+		AnalysisSettings settings = activeSettings.current();
+		int dependencies = clazz.getDependencies() != null ? clazz.getDependencies().size() : 0;
+		return settings.judgesClassWith(dependencies)
+				&& settings.allowsMoveLeaving(sourceModule.getClazzes().size() - 1);
+	}
+
+	/**
+	 * Keeps each class's best-rated targets, as many as the architect allows (#36).
+	 * {@code moves} is sorted by rate, highest first, so a class's first moves are its
+	 * best ones.
+	 */
+	private List<MoveClassResult> bestTargetsOfEachClass(List<MoveClassResult> moves) {
+		AnalysisSettings settings = activeSettings.current();
+		if (!settings.limitsMoveTargets()) {
+			return moves;
+		}
+		Map<String, Integer> keptByClass = new HashMap<>();
+		List<MoveClassResult> kept = new ArrayList<>();
+		for (MoveClassResult move : moves) {
+			int keptSoFar = keptByClass.merge(move.classId, 1, Integer::sum);
+			if (keptSoFar <= settings.maxMoveTargetsPerClass()) {
+				kept.add(move);
+			}
+		}
+		return kept;
+	}
+
 	public void moveClassAnalysis(List<Module> modules) {
 		log.info("Starting move class analysis based on avgSimilarityWithRefClazzes...");
 
@@ -243,6 +285,7 @@ public class MoveClass extends ArchitecturalAnalysis {
 			List<Clazz> classesToConsider = sourceModule.getClazzes()
 				.stream()
 				.filter(clazz -> !sourceModule.getRefClazzes().contains(clazz))
+				.filter(clazz -> isJudged(clazz, sourceModule))
 				.toList();
 
 			for (Clazz classToMove : classesToConsider) {
@@ -286,7 +329,7 @@ public class MoveClass extends ArchitecturalAnalysis {
 		potentialMoves.sort((a, b) -> Double.compare(b.rate, a.rate));
 
 		// Store results
-		this.results = potentialMoves;
+		this.results = bestTargetsOfEachClass(potentialMoves);
 
 		log.info("Found {} potential beneficial moves", potentialMoves.size());
 		if (potentialMoves.isEmpty()) {

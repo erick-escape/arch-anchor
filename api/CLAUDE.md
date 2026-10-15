@@ -129,6 +129,25 @@ Where:
 - `BookstoreRunningExampleTest` pins `examples/bookstore` at the default weights; the README and the ICSE 2027 paper quote
   those numbers
 
+#### Analysis Settings
+
+- Per project (`domains/analysis/AnalysisSettings`, #36), deciding what the analyses recommend and show; the defaults
+  filter nothing:
+    - `minSplitModuleClasses` (1): `SplitModule` rejects a split with a smaller half
+    - `minSourceClassesAfterMove` (1): `MoveClass` skips a class whose move would leave its module smaller
+    - `maxMoveTargetsPerClass` (null, no limit): `MoveClass` keeps each class's best-rated targets
+    - `minClassDependencies` (0): a class with fewer package dependencies gets no move and no violation entry
+      (`MoveClass`, `ArchitectureViolation`); module violation counts, and so the rates, still include it
+    - `minRecommendationRate` (0): `RecommendationsService` hides splits, merges and moves rated lower, before the summary;
+      violation entries have no rate and are always shown
+- Invalid values throw `InvalidAnalysisSettingsException`, naming the setting, the value and the range
+- Stored per project in `analysis-settings.json` by `JsonFileAnalysisSettingsStore` (`AnalysisSettingsStore`; the JSON file
+  handling is shared with the weights in `util/PerProjectJsonFile`); deleting a project forgets them
+- `ActiveAnalysisSettings` holds the settings of the project whose modules are saved, injected into `SplitModule`,
+  `MoveClass`, `ArchitectureViolation` and `RecommendationsService`; `ProjectService.analyzeProject` adopts them
+- `PUT /api/projects/{projectName}/analysis-settings` saves them; for the analysed project,
+  `ProjectService.updateAnalysisSettings` re-runs the analyses without re-electing, since no setting affects the election
+
 **ArchitecturalAnalysesRunner** (Service)
 
 - Spring service that orchestrates the execution of all registered analyses
@@ -304,6 +323,9 @@ The analyses can utilize `ModuleService` methods for:
    recommendation weights (#27). For the analysed project a `PUT` re-elects the saved modules, except reference classes
    chosen by hand, and re-runs the analyses; the page then reloads with `GET /api/module`, as after an applied
    recommendation
+7. **Analysis Settings**: `GET`/`PUT /api/projects/{projectName}/analysis-settings` read and replace what the analyses
+   recommend and show (#36). For the analysed project a `PUT` re-runs the analyses on the saved modules, without
+   re-electing
 
 ### Key Metrics and Formulas
 

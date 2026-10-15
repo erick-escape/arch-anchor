@@ -10,6 +10,7 @@ import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.dependency.Type;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
@@ -32,7 +33,8 @@ class ArchitectureViolationTest {
 		// ParserFactory not needed for tests
 		ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 		ModuleService realModuleService = new ModuleService(null, activeWeights);
-		architectureViolation = new ArchitectureViolation(realModuleService, activeWeights);
+		architectureViolation = new ArchitectureViolation(realModuleService, activeWeights,
+				new ActiveAnalysisSettings());
 
 		// Store reference for helper methods
 		moduleService = realModuleService;

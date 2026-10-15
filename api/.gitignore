@@ -39,3 +39,4 @@ modules.bin
 
 project-analyses.bin
 rating-weights.json
+analysis-settings.json

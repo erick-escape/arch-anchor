@@ -10,6 +10,7 @@ import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.dependency.Type;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
@@ -35,7 +36,7 @@ class MoveClassTest {
 
 	@BeforeEach
 	void setUp() {
-		moveClass = new MoveClass(moduleService, new ActiveRatingWeights());
+		moveClass = new MoveClass(moduleService, new ActiveRatingWeights(), new ActiveAnalysisSettings());
 
 		// Use lenient stubbing to avoid UnnecessaryStubbingException in tests that don't
 		// use these mocks

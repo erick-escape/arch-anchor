@@ -3,6 +3,7 @@ package com.archanchor.services.architecturalAnalyses;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -28,11 +29,19 @@ class AnalysesKeepClassMetricsTest {
 
 	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 
+	private final ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
+
 	private final ModuleService moduleService = new ModuleService(null, activeWeights);
 
 	static Stream<Named<BiFunction<ModuleService, ActiveRatingWeights, ArchitecturalAnalysis>>> analyses() {
-		return Stream.of(analysis("SplitModule", SplitModule::new), analysis("MergeModule", MergeModule::new),
-				analysis("MoveClass", MoveClass::new), analysis("ArchitectureViolation", ArchitectureViolation::new));
+		return Stream.of(
+				analysis("SplitModule",
+						(service, weights) -> new SplitModule(service, weights, new ActiveAnalysisSettings())),
+				analysis("MergeModule", MergeModule::new),
+				analysis("MoveClass",
+						(service, weights) -> new MoveClass(service, weights, new ActiveAnalysisSettings())),
+				analysis("ArchitectureViolation", (service, weights) -> new ArchitectureViolation(service, weights,
+						new ActiveAnalysisSettings())));
 	}
 
 	private static Named<BiFunction<ModuleService, ActiveRatingWeights, ArchitecturalAnalysis>> analysis(String name,
@@ -57,7 +66,8 @@ class AnalysesKeepClassMetricsTest {
 		List<MoveClass.MoveClassResult> movesAlone = movesAfter();
 
 		List<MoveClass.MoveClassResult> movesAfterEarlierAnalyses = movesAfter(
-				new SplitModule(moduleService, activeWeights), new ArchitectureViolation(moduleService, activeWeights));
+				new SplitModule(moduleService, activeWeights, activeSettings),
+				new ArchitectureViolation(moduleService, activeWeights, activeSettings));
 
 		assertThat(movesAlone).extracting(move -> move.className).containsExactly(AnalysedShopFixture.MISPLACED_CLASS);
 		assertThat(movesAfterEarlierAnalyses).usingRecursiveComparison().isEqualTo(movesAlone);
@@ -66,9 +76,9 @@ class AnalysesKeepClassMetricsTest {
 	@Test
 	void splitStillIsolatesTheMisplacedClassAfterMoveClassRan() {
 		List<Module> modules = AnalysedShopFixture.webAndPersistence(moduleService);
-		SplitModule splitModule = new SplitModule(moduleService, activeWeights);
+		SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 
-		new MoveClass(moduleService, activeWeights).execute(modules);
+		new MoveClass(moduleService, activeWeights, activeSettings).execute(modules);
 		splitModule.execute(modules);
 
 		assertThat(splitModule.getResults()).singleElement().satisfies(split -> {
@@ -80,7 +90,7 @@ class AnalysesKeepClassMetricsTest {
 	private List<MoveClass.MoveClassResult> movesAfter(ArchitecturalAnalysis... earlierAnalyses) {
 		List<Module> modules = AnalysedShopFixture.webAndPersistence(moduleService);
 		Arrays.stream(earlierAnalyses).forEach(analysis -> analysis.execute(modules));
-		MoveClass moveClass = new MoveClass(moduleService, activeWeights);
+		MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
 		moveClass.execute(modules);
 		return moveClass.getResults();
 	}
