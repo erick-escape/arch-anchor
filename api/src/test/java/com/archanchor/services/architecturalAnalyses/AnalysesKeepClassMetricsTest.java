@@ -37,7 +37,8 @@ class AnalysesKeepClassMetricsTest {
 		return Stream.of(
 				analysis("SplitModule",
 						(service, weights) -> new SplitModule(service, weights, new ActiveAnalysisSettings())),
-				analysis("MergeModule", MergeModule::new),
+				analysis("MergeModule",
+						(service, weights) -> new MergeModule(service, weights, new ActiveAnalysisSettings())),
 				analysis("MoveClass",
 						(service, weights) -> new MoveClass(service, weights, new ActiveAnalysisSettings())),
 				analysis("ArchitectureViolation", (service, weights) -> new ArchitectureViolation(service, weights,

@@ -56,7 +56,7 @@ class BookstoreRunningExampleTest {
 
 	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 
-	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights);
+	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights, activeSettings);
 
 	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
 
@@ -126,7 +126,7 @@ class BookstoreRunningExampleTest {
 	// rate and stays (#36).
 	@Test
 	void aMinimumRateSavedBeforeTheAnalysisHidesTheMerge() throws IOException {
-		analysisSettingsStore.save("bookstore", new AnalysisSettings(1, 1, null, 0, 0.5));
+		analysisSettingsStore.save("bookstore", new AnalysisSettings(1, 1, null, 0, 0.5, null));
 
 		projectService.analyzeProject("bookstore", BOOKSTORE);
 

@@ -11,7 +11,7 @@ import java.util.Map;
  *
  * <pre>
  * InMemoryAnalysisSettingsStore store = new InMemoryAnalysisSettingsStore();
- * store.save("shop", new AnalysisSettings(2, 1, null, 0, 0.0));
+ * store.save("shop", new AnalysisSettings(2, 1, null, 0, 0.0, null));
  * </pre>
  */
 public class InMemoryAnalysisSettingsStore implements AnalysisSettingsStore {

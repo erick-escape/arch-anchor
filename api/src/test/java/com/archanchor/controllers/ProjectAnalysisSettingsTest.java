@@ -53,7 +53,8 @@ class ProjectAnalysisSettingsTest {
 			.andExpect(jsonPath("$.minSourceClassesAfterMove").value(1))
 			.andExpect(jsonPath("$.maxMoveTargetsPerClass").value(nullValue()))
 			.andExpect(jsonPath("$.minClassDependencies").value(0))
-			.andExpect(jsonPath("$.minRecommendationRate").value(0.0));
+			.andExpect(jsonPath("$.minRecommendationRate").value(0.0))
+			.andExpect(jsonPath("$.minMergeSimilarityChange").value(nullValue()));
 		recommendations(backend).andExpect(jsonPath("$.splits", hasSize(1)))
 			.andExpect(jsonPath("$.moves", hasSize(1)))
 			.andExpect(jsonPath("$.merges", hasSize(1)))
@@ -64,7 +65,7 @@ class ProjectAnalysisSettingsTest {
 	void savedSettingsAreTheProjectsFromThenOn() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(2, 3, 1, 4, 0.25)).andExpect(status().isOk())
+		setSettings(backend, PROJECT, settings(2, 3, 1, 4, 0.25, null)).andExpect(status().isOk())
 			.andExpect(jsonPath("$.maxMoveTargetsPerClass").value(1));
 
 		settingsOf(backend, PROJECT).andExpect(jsonPath("$.minSplitModuleClasses").value(2))
@@ -77,7 +78,7 @@ class ProjectAnalysisSettingsTest {
 	void aSplitWithAHalfBelowTheMinimumIsNotRecommended() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(2, 1, null, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(2, 1, null, 0, 0.0, null)).andExpect(status().isOk());
 
 		recommendations(backend).andExpect(jsonPath("$.splits", empty())).andExpect(jsonPath("$.moves", hasSize(1)));
 	}
@@ -87,10 +88,10 @@ class ProjectAnalysisSettingsTest {
 	void aMoveThatLeavesItsSourceBelowTheMinimumIsNotRecommended() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(1, 4, null, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(1, 4, null, 0, 0.0, null)).andExpect(status().isOk());
 		recommendations(backend).andExpect(jsonPath("$.moves", empty()));
 
-		setSettings(backend, PROJECT, settings(1, 3, null, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(1, 3, null, 0, 0.0, null)).andExpect(status().isOk());
 		recommendations(backend).andExpect(jsonPath("$.moves", hasSize(1)));
 	}
 
@@ -99,7 +100,7 @@ class ProjectAnalysisSettingsTest {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndTwoDatabaseModules);
 		recommendations(backend).andExpect(jsonPath("$.moves[*].targetModuleName", contains(PERSISTENCE, ARCHIVE)));
 
-		setSettings(backend, PROJECT, settings(1, 1, 1, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(1, 1, 1, 0, 0.0, null)).andExpect(status().isOk());
 
 		recommendations(backend).andExpect(jsonPath("$.moves[*].targetModuleName", contains(PERSISTENCE)));
 	}
@@ -110,7 +111,7 @@ class ProjectAnalysisSettingsTest {
 	void aClassWithTooFewDependenciesGetsNoMoveAndNoViolationEntry() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(1, 1, null, 3, 0.0)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(1, 1, null, 3, 0.0, null)).andExpect(status().isOk());
 
 		recommendations(backend).andExpect(jsonPath("$.moves", empty()))
 			.andExpect(jsonPath("$.violations", empty()))
@@ -123,7 +124,7 @@ class ProjectAnalysisSettingsTest {
 	void recommendationsRatedBelowTheMinimumAreHiddenButViolationsAreNot() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(1, 1, null, 0, 0.5)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(1, 1, null, 0, 0.5, null)).andExpect(status().isOk());
 
 		recommendations(backend).andExpect(jsonPath("$.merges", empty()))
 			.andExpect(jsonPath("$.splits", hasSize(1)))
@@ -132,12 +133,25 @@ class ProjectAnalysisSettingsTest {
 			.andExpect(jsonPath("$.summary.totalRecommendations").value(3));
 	}
 
+	// #41: the shop's merge costs 0.175 of similarity and removes the web module's
+	// violation.
+	@Test
+	void aMergeThatCostsMoreSimilarityThanAllowedIsNotRecommended() throws Exception {
+		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
+
+		setSettings(backend, PROJECT, settings(1, 1, null, 0, 0.0, 0.0)).andExpect(status().isOk());
+		recommendations(backend).andExpect(jsonPath("$.merges", empty())).andExpect(jsonPath("$.moves", hasSize(1)));
+
+		setSettings(backend, PROJECT, settings(1, 1, null, 0, 0.0, -0.2)).andExpect(status().isOk());
+		recommendations(backend).andExpect(jsonPath("$.merges", hasSize(1)));
+	}
+
 	// The settings do not affect the election, so nothing is re-elected.
 	@Test
 	void newSettingsRunTheAnalysesOnce() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(2, 1, null, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, PROJECT, settings(2, 1, null, 0, 0.0, null)).andExpect(status().isOk());
 
 		assertEquals(1, backend.analysisRunsSinceSetUp());
 	}
@@ -146,7 +160,7 @@ class ProjectAnalysisSettingsTest {
 	void settingsOfAProjectOtherThanTheAnalysedOneAreOnlyStored() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, OTHER_PROJECT, settings(2, 1, null, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, OTHER_PROJECT, settings(2, 1, null, 0, 0.0, null)).andExpect(status().isOk());
 
 		settingsOf(backend, OTHER_PROJECT).andExpect(jsonPath("$.minSplitModuleClasses").value(2));
 		recommendations(backend).andExpect(jsonPath("$.splits", hasSize(1)));
@@ -157,10 +171,10 @@ class ProjectAnalysisSettingsTest {
 	void aSettingBelowItsRangeIsRejectedNamingItAndTheRange() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(0, 1, null, 0, 0.0)).andExpect(status().isBadRequest())
+		setSettings(backend, PROJECT, settings(0, 1, null, 0, 0.0, null)).andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.detail",
 					allOf(containsString("minSplitModuleClasses"), containsString(">= 1"), containsString("got 0"))));
-		setSettings(backend, PROJECT, settings(1, 1, null, 0, 1.5)).andExpect(status().isBadRequest())
+		setSettings(backend, PROJECT, settings(1, 1, null, 0, 1.5, null)).andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.detail", allOf(containsString("minRecommendationRate"), containsString("[0, 1]"))));
 	}
 
@@ -180,7 +194,7 @@ class ProjectAnalysisSettingsTest {
 	void aRejectedChangeKeepsTheSettingsAndRunsNothing() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
 
-		setSettings(backend, PROJECT, settings(0, 1, null, 0, 0.0)).andExpect(status().isBadRequest());
+		setSettings(backend, PROJECT, settings(0, 1, null, 0, 0.0, null)).andExpect(status().isBadRequest());
 
 		settingsOf(backend, PROJECT).andExpect(jsonPath("$.minSplitModuleClasses").value(1));
 		assertEquals(0, backend.analysisRunsSinceSetUp());
@@ -192,14 +206,14 @@ class ProjectAnalysisSettingsTest {
 
 		settingsOf(backend, "no-such-project").andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.detail", containsString("no-such-project")));
-		setSettings(backend, "no-such-project", settings(1, 1, null, 0, 0.0)).andExpect(status().isNotFound());
+		setSettings(backend, "no-such-project", settings(1, 1, null, 0, 0.0, null)).andExpect(status().isNotFound());
 	}
 
 	// Otherwise a new project of the same name would start from the old one's settings.
 	@Test
 	void deletingAProjectForgetsItsSettings() throws Exception {
 		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
-		setSettings(backend, OTHER_PROJECT, settings(2, 1, null, 0, 0.0)).andExpect(status().isOk());
+		setSettings(backend, OTHER_PROJECT, settings(2, 1, null, 0, 0.0, null)).andExpect(status().isOk());
 
 		backend.mockMvc.perform(delete("/api/projects/" + OTHER_PROJECT)).andExpect(status().isOk());
 
@@ -227,11 +241,12 @@ class ProjectAnalysisSettingsTest {
 	}
 
 	private static String settings(int minSplitModuleClasses, int minSourceClassesAfterMove,
-			Integer maxMoveTargetsPerClass, int minClassDependencies, double minRecommendationRate) {
+			Integer maxMoveTargetsPerClass, int minClassDependencies, double minRecommendationRate,
+			Double minMergeSimilarityChange) {
 		return "{\"minSplitModuleClasses\":" + minSplitModuleClasses + ",\"minSourceClassesAfterMove\":"
 				+ minSourceClassesAfterMove + ",\"maxMoveTargetsPerClass\":" + maxMoveTargetsPerClass
 				+ ",\"minClassDependencies\":" + minClassDependencies + ",\"minRecommendationRate\":"
-				+ minRecommendationRate + "}";
+				+ minRecommendationRate + ",\"minMergeSimilarityChange\":" + minMergeSimilarityChange + "}";
 	}
 
 }

@@ -60,7 +60,7 @@ final class ShopBackend {
 
 	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 
-	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights);
+	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights, activeSettings);
 
 	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
 

@@ -10,4 +10,7 @@ export interface AnalysisSettings {
   minClassDependencies: number;
   // The lowest rate of a shown split, merge or move; violations are always shown.
   minRecommendationRate: number;
+  // The lowest similarity change of a recommended merge (#41); 0 keeps out merges that lower
+  // similarity, null for no limit.
+  minMergeSimilarityChange: number | null;
 }
