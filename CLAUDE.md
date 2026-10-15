@@ -148,6 +148,7 @@ cd api
 **Metrics:**
 - **Similarity**: `0.5 × [a/(a+b) + a/(a+c)]` where a=shared deps, b/c=unique deps (range [0,1])
 - **Violations**: Count of `moduleDependencies` NOT present in `refClazzesDependencies`
+- **Module scope** (#43): within a module, a reference to one of its own classes (or a type nested in one) is internal and counts for neither similarity, dependencies, violations nor the election (`ModuleScope`). The parser already drops same-package references; this keeps that true after a simulated or applied move or merge. Each `Clazz` records its declared `packageName` for this
 - **Avg Similarity with RefClazzes**: Evaluates how well a class fits module's pattern
 
 **Rating Mechanism:**

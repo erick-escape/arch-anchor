@@ -66,15 +66,15 @@ class MoveClassTest {
 		List<Module> modules = List.of(module1, module2);
 
 		// Mock: all potential moves show no improvement
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any())).thenReturn(0.8); // Lower
-																											// than
-																											// current
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any())).thenReturn(0.8); // Lower
+		// than
+		// current
 
 		// When
 		moveClass.execute(modules);
 
 		// Then - Should find no beneficial moves
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Test Case 2: Single Beneficial Move - One class fits better in target module
@@ -94,7 +94,8 @@ class MoveClassTest {
 		List<Module> modules = List.of(sourceModule, targetModule);
 
 		// Mock: misfit class has higher similarity with target's ref classes
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(misfitClass), eq(targetModule.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(misfitClass), eq(targetModule.getRefClazzes()),
+				any()))
 			.thenReturn(0.85); // Much better than current 0.4
 
 		// Mock module similarity calculations for move simulation
@@ -123,7 +124,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should suggest moving misfit class to target module
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 		verify(moduleService, atLeastOnce()).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -145,9 +146,9 @@ class MoveClassTest {
 		List<Module> modules = List.of(sourceModule, targetModule);
 
 		// Mock: both misfit classes have better similarity with target
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(misfit1), eq(targetModule.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(misfit1), eq(targetModule.getRefClazzes()), any()))
 			.thenReturn(0.8); // Better than current 0.3
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(misfit2), eq(targetModule.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(misfit2), eq(targetModule.getRefClazzes()), any()))
 			.thenReturn(0.75); // Better than current 0.35
 
 		// Mock module similarity calculations
@@ -180,7 +181,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should suggest multiple moves
-		verify(moduleService, atLeast(2)).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeast(2)).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 		verify(moduleService, atLeast(2)).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -198,7 +199,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should skip module without ref classes
-		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Test Case 5: Target Module Without Reference Classes - Should skip target
@@ -215,7 +216,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should not evaluate moves to module without ref classes
-		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), eq(null));
+		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), eq(null), any());
 	}
 
 	// Test Case 6: High Improvement Move - Class much better suited elsewhere
@@ -236,7 +237,7 @@ class MoveClassTest {
 
 		// Mock: very high similarity with perfect target
 		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(poorFitClass),
-				eq(perfectTargetModule.getRefClazzes())))
+				eq(perfectTargetModule.getRefClazzes()), any()))
 			.thenReturn(0.95); // Massive improvement from 0.2 to 0.95
 
 		// Mock module similarity calculations showing significant improvement
@@ -264,7 +265,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should strongly recommend this move
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(eq(poorFitClass), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(eq(poorFitClass), any(), any());
 		verify(moduleService, atLeastOnce()).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -285,7 +286,8 @@ class MoveClassTest {
 		List<Module> modules = List.of(sourceModule, targetModule);
 
 		// Mock: marginal improvement
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(marginalClass), eq(targetModule.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(marginalClass), eq(targetModule.getRefClazzes()),
+				any()))
 			.thenReturn(0.72); // Small improvement from 0.7 to 0.72
 
 		// Mock module similarity calculations with marginal improvement
@@ -313,7 +315,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should still suggest move (any positive improvement)
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 		verify(moduleService, atLeastOnce()).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -331,14 +333,14 @@ class MoveClassTest {
 		List<Module> modules = List.of(module1, module2);
 
 		// Mock: same similarity in both modules
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(neutralClass), eq(module2.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(neutralClass), eq(module2.getRefClazzes()), any()))
 			.thenReturn(0.6); // Same as current
 
 		// When
 		moveClass.execute(modules);
 
 		// Then - Should not suggest move (improvement = 0)
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Test Case 9: Multiple Target Options - Class could move to several modules
@@ -362,9 +364,9 @@ class MoveClassTest {
 		List<Module> modules = List.of(sourceModule, target1, target2);
 
 		// Mock: class fits well in both targets (but differently)
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(versatileClass), eq(target1.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(versatileClass), eq(target1.getRefClazzes()), any()))
 			.thenReturn(0.7); // Good improvement
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(versatileClass), eq(target2.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(versatileClass), eq(target2.getRefClazzes()), any()))
 			.thenReturn(0.75); // Even better improvement
 
 		// Mock module similarity calculations
@@ -401,7 +403,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should suggest both moves, ranked by improvement
-		verify(moduleService, times(2)).calculateAvgSimilarityWithRefClazzes(eq(versatileClass), any());
+		verify(moduleService, times(2)).calculateAvgSimilarityWithRefClazzes(eq(versatileClass), any(), any());
 		verify(moduleService, atLeast(4)).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -415,7 +417,7 @@ class MoveClassTest {
 		moveClass.execute(emptyModules);
 
 		// Then - Should complete without errors
-		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Test Case 11: Single Module - Cannot move classes
@@ -429,7 +431,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should not suggest any moves (no target modules)
-		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, never()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Test Case 12: Class with Null avgSimilarityWithRefClazzes - Should handle
@@ -450,7 +452,7 @@ class MoveClassTest {
 		List<Module> modules = List.of(sourceModule, targetModule);
 
 		// Mock: target has better similarity (null is treated as 0.0)
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(classWithNullSim), any())).thenReturn(0.7);
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(classWithNullSim), any(), any())).thenReturn(0.7);
 
 		// Mock module similarity calculations
 		doAnswer(invocation -> {
@@ -477,7 +479,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should treat null as 0.0 and calculate improvement
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(eq(classWithNullSim), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(eq(classWithNullSim), any(), any());
 		verify(moduleService, atLeastOnce()).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -500,7 +502,7 @@ class MoveClassTest {
 		List<Module> modules = List.of(sourceModule, targetModule);
 
 		// Mock: average similarity with multiple ref classes
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(testClass), eq(targetModule.getRefClazzes())))
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(testClass), eq(targetModule.getRefClazzes()), any()))
 			.thenReturn(0.82); // Good fit with multiple ref classes
 
 		// Mock module similarity calculations
@@ -529,7 +531,7 @@ class MoveClassTest {
 
 		// Then - Should calculate average similarity with all ref classes
 		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(eq(testClass),
-				eq(targetModule.getRefClazzes()));
+				eq(targetModule.getRefClazzes()), any());
 		verify(moduleService, atLeastOnce()).calculateModuleSimilarity(any(Module.class));
 	}
 
@@ -549,14 +551,14 @@ class MoveClassTest {
 
 		// Mock: much worse similarity in target
 		when(moduleService.calculateAvgSimilarityWithRefClazzes(eq(wellPlacedClass),
-				eq(poorTargetModule.getRefClazzes())))
+				eq(poorTargetModule.getRefClazzes()), any()))
 			.thenReturn(0.3); // Much worse than current 0.9
 
 		// When
 		moveClass.execute(modules);
 
 		// Then - Should not suggest move (negative improvement)
-		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeastOnce()).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Test Case 15: Large Number of Modules - Performance test
@@ -571,8 +573,8 @@ class MoveClassTest {
 		}
 
 		// Mock: some improvements available (most will be rejected)
-		when(moduleService.calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any())).thenReturn(0.6, 0.75, 0.88,
-				0.65, 0.70, 0.89); // Varied results, some better
+		when(moduleService.calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any())).thenReturn(0.6, 0.75,
+				0.88, 0.65, 0.70, 0.89); // Varied results, some better
 
 		// Mock module similarity calculations
 		doAnswer(invocation -> {
@@ -589,7 +591,7 @@ class MoveClassTest {
 		moveClass.execute(modules);
 
 		// Then - Should complete in reasonable time
-		verify(moduleService, atLeast(1)).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any());
+		verify(moduleService, atLeast(1)).calculateAvgSimilarityWithRefClazzes(any(Clazz.class), any(), any());
 	}
 
 	// Helper methods to create test data

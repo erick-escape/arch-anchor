@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
 import com.archanchor.domains.analysis.AnalysisSettings;
+import com.archanchor.services.ModuleScope;
 import com.archanchor.services.ModuleService;
 import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
@@ -155,8 +156,9 @@ public class MoveClass extends ArchitecturalAnalysis {
 
 		double targetAvgSimilarity = 0.0;
 		if (targetModule.getRefClazzes() != null && !targetModule.getRefClazzes().isEmpty()) {
+			// Within the target, the class's references to its classes are internal (#43)
 			targetAvgSimilarity = this.moduleService.calculateAvgSimilarityWithRefClazzes(classToMove,
-					targetModule.getRefClazzes());
+					targetModule.getRefClazzes(), ModuleScope.of(targetModule).with(classToMove));
 		}
 
 		// If class's similarity wouldn't improve, reject the move with negative rate
@@ -241,7 +243,7 @@ public class MoveClass extends ArchitecturalAnalysis {
 	 */
 	private boolean isJudged(Clazz clazz, Module sourceModule) {
 		AnalysisSettings settings = activeSettings.current();
-		int dependencies = clazz.getDependencies() != null ? clazz.getDependencies().size() : 0;
+		int dependencies = ModuleScope.of(sourceModule).dependenciesOf(clazz).size();
 		return settings.judgesClassWith(dependencies)
 				&& settings.allowsMoveLeaving(sourceModule.getClazzes().size() - 1);
 	}

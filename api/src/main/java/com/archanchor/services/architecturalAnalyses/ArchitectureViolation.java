@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.module.Module;
+import com.archanchor.services.ModuleScope;
 import com.archanchor.services.ModuleService;
 import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
@@ -418,13 +419,14 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 		List<ViolatingClass> violatingClasses = new ArrayList<>();
 
 		// Find all classes in the module that depend on the violation. A class with too
-		// few dependencies to say where it belongs is not judged (#36).
+		// few dependencies to say where it belongs is not judged (#36); references to the
+		// module's own classes are internal (#43).
+		ModuleScope scope = ModuleScope.of(module);
 		for (Clazz clazz : module.getClazzes()) {
-			int dependencies = clazz.getDependencies() != null ? clazz.getDependencies().size() : 0;
-			if (!activeSettings.current().judgesClassWith(dependencies)) {
+			if (!activeSettings.current().judgesClassWith(scope.dependenciesOf(clazz).size())) {
 				continue;
 			}
-			List<String> violatingDependencyFQNs = checkIfClassHasViolation(clazz, violation);
+			List<String> violatingDependencyFQNs = checkIfClassHasViolation(clazz, violation, scope);
 
 			if (!violatingDependencyFQNs.isEmpty()) {
 				// Generate move suggestions for this violating class
@@ -463,7 +465,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 				newModulesRequired);
 	}
 
-	private List<String> checkIfClassHasViolation(Clazz clazz, String violation) {
+	private List<String> checkIfClassHasViolation(Clazz clazz, String violation, ModuleScope scope) {
 		List<String> violatingFQNs = new ArrayList<>();
 
 		// Handle null or empty dependencies gracefully
@@ -471,7 +473,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 			return violatingFQNs;
 		}
 
-		for (Dependency dependency : clazz.getDependencies()) {
+		for (Dependency dependency : scope.dependenciesOf(clazz)) {
 			if (dependency != null && dependency.getPackageName() != null
 					&& dependency.getPackageName().equals(violation)) {
 				// Collect all types from this forbidden package
@@ -615,8 +617,8 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 		double newTargetSimilarity = targetWithClass.getSimilarity();
 		// Calculate new violations that would be created (simplified - would need full
 		// analysis)
-		int newViolationsCreated = getClazzViolations(clazz, targetModule);
-		int currentViolations = getClazzViolations(clazz, sourceModule);
+		int newViolationsCreated = getClazzViolations(clazz, targetModule, ModuleScope.of(targetModule).with(clazz));
+		int currentViolations = getClazzViolations(clazz, sourceModule, ModuleScope.of(sourceModule));
 		double sourceImprovement = newSourceSimilarity - originalSourceSimilarity;
 		double targetImprovement = newTargetSimilarity - originalTargetSimilarity;
 		// double totalImprovement = sourceImprovement + targetImprovement;
@@ -649,7 +651,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 		);
 	}
 
-	private int getClazzViolations(Clazz clazz, Module module) {
+	private int getClazzViolations(Clazz clazz, Module module, ModuleScope scope) {
 		// Simplified estimation - in a full implementation, this would perform
 		// a complete violation analysis on the hypothetical target module
 		if (clazz.getDependencies() == null)
@@ -661,7 +663,7 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 			.collect(Collectors.toSet());
 
 		int violations = 0;
-		for (Dependency dependency : clazz.getDependencies()) {
+		for (Dependency dependency : scope.dependenciesOf(clazz)) {
 			if (dependency.getPackageName() != null && !allowedRules.contains(dependency.getPackageName())) {
 				violations++;
 			}
