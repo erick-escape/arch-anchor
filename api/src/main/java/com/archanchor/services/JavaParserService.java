@@ -11,6 +11,7 @@ import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.ForEachStmt;
 import com.github.javaparser.ast.type.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.github.javaparser.resolution.declarations.ResolvedTypeDeclaration;
 import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
@@ -702,15 +703,21 @@ public class JavaParserService {
 
 		private String currentPackage = "";
 
-		private String currentClassName = "";
+		// The package each qualified name was found to belong to; resolving a name costs
+		// a
+		// type-solver lookup or more (#35).
+		private final Map<String, String> packageByQualifiedName = new HashMap<>();
 
 		public JavaParserDependencyVisitor(CombinedTypeSolver typeSolver) {
 			this.typeSolver = typeSolver;
 		}
 
+		// The visitor reaches the imports before the package declaration, so the package
+		// is read first: otherwise an import from the same package, such as a static
+		// import of a constant, is never recognised as one (#35).
 		@Override
-		public void visit(PackageDeclaration n, Void arg) {
-			currentPackage = n.getNameAsString();
+		public void visit(CompilationUnit n, Void arg) {
+			currentPackage = n.getPackageDeclaration().map(PackageDeclaration::getNameAsString).orElse("");
 			super.visit(n, arg);
 		}
 
@@ -724,12 +731,14 @@ public class JavaParserService {
 				log.debug("Added wildcard import: {}", importName);
 			}
 			else {
-				// Explicit import
+				// Explicit import. A static one names a member, and the dependency is on
+				// the type that declares it (#35).
+				String importedType = n.isStatic() ? typeDeclaringStaticImport(importName) : importName;
 				String simpleName = importName.substring(importName.lastIndexOf('.') + 1);
-				importMap.put(simpleName, importName);
+				importMap.put(simpleName, importedType);
 
 				// Add as dependency
-				addDependencyIfNotExists(importName);
+				addDependencyIfNotExists(importedType);
 			}
 
 			super.visit(n, arg);
@@ -737,9 +746,6 @@ public class JavaParserService {
 
 		@Override
 		public void visit(ClassOrInterfaceDeclaration n, Void arg) {
-			// Track current class name to avoid self-references
-			currentClassName = n.getNameAsString();
-
 			// Process class annotations - this was missing and causing test failures!
 			for (AnnotationExpr annotation : n.getAnnotations()) {
 				processAnnotation(annotation);
@@ -767,8 +773,6 @@ public class JavaParserService {
 
 		@Override
 		public void visit(EnumDeclaration n, Void arg) {
-			currentClassName = n.getNameAsString();
-
 			// Process enum annotations
 			for (AnnotationExpr annotation : n.getAnnotations()) {
 				processAnnotation(annotation);
@@ -784,8 +788,6 @@ public class JavaParserService {
 
 		@Override
 		public void visit(RecordDeclaration n, Void arg) {
-			currentClassName = n.getNameAsString();
-
 			// Process record annotations
 			for (AnnotationExpr annotation : n.getAnnotations()) {
 				processAnnotation(annotation);
@@ -811,8 +813,6 @@ public class JavaParserService {
 
 		@Override
 		public void visit(AnnotationDeclaration n, Void arg) {
-			currentClassName = n.getNameAsString();
-
 			// Process annotation declaration annotations (meta-annotations)
 			for (AnnotationExpr annotation : n.getAnnotations()) {
 				processAnnotation(annotation);
@@ -1043,7 +1043,11 @@ public class JavaParserService {
 					// Only add the container type if it's not a generic container OR has
 					// no type parameters
 					if (!isGenericContainer || !hasTypeParameters) {
-						addDependencyIfNotExists(qualifiedName);
+						String packageName = resolvedType.asReferenceType()
+							.getTypeDeclaration()
+							.map(ResolvedTypeDeclaration::getPackageName)
+							.orElseGet(() -> packageOf(qualifiedName));
+						addDependency(qualifiedName, packageName);
 					}
 					else {
 						log.debug("Skipping generic container (resolved): {}", qualifiedName);
@@ -1288,8 +1292,58 @@ public class JavaParserService {
 		}
 
 		private void addDependencyIfNotExists(String fullyQualifiedName) {
-			if (isSignificantDependency(fullyQualifiedName)) {
-				String packageName = packageNameExtractor.extractPackageName(fullyQualifiedName);
+			addDependency(fullyQualifiedName, packageOf(fullyQualifiedName));
+		}
+
+		/**
+		 * The type a static import takes its member from: the import itself when it names
+		 * a nested type, its qualifier otherwise.
+		 */
+		private String typeDeclaringStaticImport(String importName) {
+			if (isSolvedType(importName) || !importName.contains(".")) {
+				return importName;
+			}
+			return importName.substring(0, importName.lastIndexOf('.'));
+		}
+
+		/**
+		 * The package a qualified type name belongs to. Everything before the last dot is
+		 * the enclosing class for a nested type ({@code java.util.Map.Entry}), so the
+		 * name is resolved, or failing that each enclosing name; an unresolved name falls
+		 * back to the Java naming convention (#35).
+		 */
+		private String packageOf(String qualifiedName) {
+			return packageByQualifiedName.computeIfAbsent(qualifiedName, this::resolvePackageOf);
+		}
+
+		private String resolvePackageOf(String qualifiedName) {
+			for (String candidate = qualifiedName; candidate
+				.contains("."); candidate = candidate.substring(0, candidate.lastIndexOf('.'))) {
+				Optional<String> packageName = solvedPackageOf(candidate);
+				if (packageName.isPresent()) {
+					return packageName.get();
+				}
+			}
+			return packageNameExtractor.extractPackageName(qualifiedName);
+		}
+
+		private Optional<String> solvedPackageOf(String qualifiedName) {
+			try {
+				var resolved = typeSolver.tryToSolveType(qualifiedName);
+				return resolved.isSolved() ? Optional.of(resolved.getCorrespondingDeclaration().getPackageName())
+						: Optional.empty();
+			}
+			catch (Exception e) {
+				return Optional.empty();
+			}
+		}
+
+		private boolean isSolvedType(String qualifiedName) {
+			return solvedPackageOf(qualifiedName).isPresent();
+		}
+
+		private void addDependency(String fullyQualifiedName, String packageName) {
+			if (isSignificantDependency(fullyQualifiedName, packageName)) {
 				com.archanchor.domains.dependency.Type type = new com.archanchor.domains.dependency.Type(
 						fullyQualifiedName);
 
@@ -1314,7 +1368,7 @@ public class JavaParserService {
 			}
 		}
 
-		private boolean isSignificantDependency(String fullyQualifiedName) {
+		private boolean isSignificantDependency(String fullyQualifiedName, String packageName) {
 			if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
 				return false;
 			}
@@ -1338,19 +1392,10 @@ public class JavaParserService {
 				return false;
 			}
 
-			// Skip self-references
-			if (fullyQualifiedName.equals(currentClassName) || fullyQualifiedName.endsWith("." + currentClassName)) {
-				return false;
-			}
-
-			// Skip types from the same package
-			if (!currentPackage.isEmpty()) {
-				String typePackage = fullyQualifiedName.contains(".")
-						? fullyQualifiedName.substring(0, fullyQualifiedName.lastIndexOf('.')) : "";
-				return !currentPackage.equals(typePackage);
-			}
-
-			return true;
+			// Skip types from the same package, the class itself and its nested types
+			// included. The package is the real one, not the text before the last dot,
+			// which for a nested type is its enclosing class (#35).
+			return !currentPackage.equals(packageName);
 		}
 
 	}
