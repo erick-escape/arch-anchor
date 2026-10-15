@@ -105,24 +105,32 @@ public class ModuleController {
 			.distinct()
 			.toList();
 
-		Module newModule = new Module(moduleService.generateNewUUID(), newName, null, // refClass
-																						// will
-																						// be
-																						// calculated
-																						// later
-				null, // refClazzesDependencies will be calculated later
+		// The merged module keeps the reference classes of both modules, as the merge
+		// card
+		// was rated (#34). Electing one would bring back the violations the other
+		// allowed.
+		List<Clazz> referenceClasses = Stream
+			.concat(Arrays.stream(Optional.ofNullable(module1.refClazzes()).orElse(new ClazzResponseDTO[0])),
+					Arrays.stream(Optional.ofNullable(module2.refClazzes()).orElse(new ClazzResponseDTO[0])))
+			.map(clazzMapper::toEntity)
+			.collect(Collectors.toList());
+
+		Module newModule = new Module(moduleService.generateNewUUID(), newName, referenceClasses, null, // refClazzesDependencies
+																										// will
+																										// be
+																										// calculated
+																										// later
 				null, // moduleDependencies will be calculated later
 				mergedClasses, 0.0, // Similarity will be calculated later
 				0.0, // avgRefClazzesSimilarity will be calculated later
 				0 // violations will be calculated later
 		);
-		// Recalculate similarities using ModuleService
-		moduleService.calculateClassSimilaritiesAndSelectRefClasses(newModule);
-		moduleService.calculateAvgSimilarityWithRefClazzes(newModule);
-		moduleService.calculateModuleSimilarity(newModule);
-		moduleService.populateRefClazzesDependencies(newModule);
-		moduleService.populateModuleDependencies(newModule);
-		moduleService.calculateModuleViolations(newModule);
+		moduleService.relinkReferenceClasses(newModule);
+		moduleService.measureWithReferenceClasses(newModule);
+		// Re-election skips modules chosen by hand, so a change of election weights does
+		// not collapse the merged module to one reference class. Applying the merge is
+		// the architect's choice.
+		newModule.setRefClazzesChosenByHand(true);
 
 		return moduleMapper.toDto(newModule);
 	}

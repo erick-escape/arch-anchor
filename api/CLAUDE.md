@@ -162,6 +162,9 @@ Where:
 - Uses the rating mechanism to evaluate merge benefits
 - Considers both average similarity improvement and violation reduction
 - Only recommends merges with positive rate
+- The merged module keeps the reference classes of both modules, in the rating and when the merge is applied
+  (`ModuleService.measureWithReferenceClasses`, #34); an applied merge is marked `refClazzesChosenByHand`, so a change
+  of election weights does not collapse it to one reference class
 
 **MoveClass Analysis**
 
