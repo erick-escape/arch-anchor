@@ -1,11 +1,14 @@
 package com.archanchor.services;
 
+import com.archanchor.domains.analysis.AnalysisSettings;
 import com.archanchor.domains.rating.RatingWeights;
 import com.archanchor.domains.rating.WeightPair;
 import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.recommendations.RecommendationsResponseDTO;
 import com.archanchor.dto.recommendations.RecommendationsSummaryDTO;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
+import com.archanchor.services.analysis.InMemoryAnalysisSettingsStore;
 import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
 import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
 import com.archanchor.services.architecturalAnalyses.MergeModule;
@@ -45,23 +48,28 @@ class BookstoreRunningExampleTest {
 
 	private final InMemoryRatingWeightsStore ratingWeightsStore = new InMemoryRatingWeightsStore();
 
+	private final ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
+
+	private final InMemoryAnalysisSettingsStore analysisSettingsStore = new InMemoryAnalysisSettingsStore();
+
 	private final InMemoryModuleService moduleService = new InMemoryModuleService(parserFactory, activeWeights);
 
-	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights);
+	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 
 	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights);
 
-	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights);
+	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
 
-	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights);
+	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights,
+			activeSettings);
 
 	// Same order as the running application: Spring registers the analyses by class name.
 	private final ProjectService projectService = new ProjectService(moduleService, parserFactory,
 			new ArchitecturalAnalysesRunner(List.of(architectureViolation, mergeModule, moveClass, splitModule)),
-			ratingWeightsStore, activeWeights);
+			ratingWeightsStore, activeWeights, analysisSettingsStore, activeSettings);
 
 	private final RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule,
-			moveClass, architectureViolation);
+			moveClass, architectureViolation, activeSettings);
 
 	@Test
 	void electsTheReferenceClassesTheReadmeQuotes() throws IOException {
@@ -112,6 +120,19 @@ class BookstoreRunningExampleTest {
 		projectService.updateRatingWeights("bookstore", SIMILARITY_FIRST_RECOMMENDATIONS);
 
 		assertSimilarityFirstRecommendations();
+	}
+
+	// The merge is rated 0.4196, the split and the move above 0.5; the violation has no
+	// rate and stays (#36).
+	@Test
+	void aMinimumRateSavedBeforeTheAnalysisHidesTheMerge() throws IOException {
+		analysisSettingsStore.save("bookstore", new AnalysisSettings(1, 1, null, 0, 0.5));
+
+		projectService.analyzeProject("bookstore", BOOKSTORE);
+
+		RecommendationsResponseDTO recommendations = recommendationsService.getRecommendations();
+		assertThat(recommendations.merges()).isEmpty();
+		assertThat(recommendations.summary()).isEqualTo(new RecommendationsSummaryDTO(3, 2, 1, 0));
 	}
 
 	private void assertSimilarityFirstRecommendations() {

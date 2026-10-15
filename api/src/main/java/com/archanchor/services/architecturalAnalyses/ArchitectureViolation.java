@@ -6,6 +6,7 @@ import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.module.Module;
 import com.archanchor.services.ModuleService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.util.ArrayList;
@@ -20,8 +21,12 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
 	private ArchitectureViolationResult result;
 
-	public ArchitectureViolation(ModuleService moduleService, ActiveRatingWeights activeWeights) {
+	private final ActiveAnalysisSettings activeSettings;
+
+	public ArchitectureViolation(ModuleService moduleService, ActiveRatingWeights activeWeights,
+			ActiveAnalysisSettings activeSettings) {
 		super(moduleService, activeWeights);
+		this.activeSettings = activeSettings;
 	}
 
 	@Override
@@ -362,6 +367,12 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 
 		for (String violation : violations) {
 			ViolationAnalysis violationAnalysis = analyzeViolation(module, violation, allModules);
+			// No class left to report, e.g. all below the architect's minimum of
+			// dependencies (#36): the module still counts the violation, but there is no
+			// entry to show
+			if (violationAnalysis.classCount == 0) {
+				continue;
+			}
 			violationClazz.add(violationAnalysis.violation);
 
 			if (violationAnalysis.isCluster) {
@@ -406,8 +417,13 @@ public class ArchitectureViolation extends ArchitecturalAnalysis {
 	private ViolationAnalysis analyzeViolation(Module module, String violation, List<Module> allModules) {
 		List<ViolatingClass> violatingClasses = new ArrayList<>();
 
-		// Find all classes in the module that depend on the violation
+		// Find all classes in the module that depend on the violation. A class with too
+		// few dependencies to say where it belongs is not judged (#36).
 		for (Clazz clazz : module.getClazzes()) {
+			int dependencies = clazz.getDependencies() != null ? clazz.getDependencies().size() : 0;
+			if (!activeSettings.current().judgesClassWith(dependencies)) {
+				continue;
+			}
 			List<String> violatingDependencyFQNs = checkIfClassHasViolation(clazz, violation);
 
 			if (!violatingDependencyFQNs.isEmpty()) {

@@ -4,6 +4,7 @@ import com.archanchor.domains.module.Module;
 import com.archanchor.mapstruct.ModuleMapperImpl;
 import com.archanchor.services.architecturalAnalyses.AnalysedShopFixture;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,8 @@ class SavedModulesForAnalysisTest {
 
 	@Test
 	void aSplitOfASavedModuleListsEachClassOnce() {
-		SplitModule splitModule = new SplitModule(moduleService, new ActiveRatingWeights());
+		SplitModule splitModule = new SplitModule(moduleService, new ActiveRatingWeights(),
+				new ActiveAnalysisSettings());
 
 		splitModule.execute(moduleService.savedModulesForAnalysis());
 

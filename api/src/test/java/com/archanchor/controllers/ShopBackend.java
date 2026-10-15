@@ -10,6 +10,8 @@ import com.archanchor.services.ModuleService;
 import com.archanchor.services.ProjectService;
 import com.archanchor.services.ProjectsDirectory;
 import com.archanchor.services.RecommendationsService;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
+import com.archanchor.services.analysis.InMemoryAnalysisSettingsStore;
 import com.archanchor.services.architecturalAnalyses.AnalysedShopFixture;
 import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
 import com.archanchor.services.architecturalAnalyses.MergeModule;
@@ -50,15 +52,20 @@ final class ShopBackend {
 
 	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 
+	final InMemoryAnalysisSettingsStore analysisSettingsStore = new InMemoryAnalysisSettingsStore();
+
+	private final ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
+
 	private final InMemoryModuleService moduleService = new InMemoryModuleService(null, activeWeights);
 
-	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights);
+	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 
 	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights);
 
-	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights);
+	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
 
-	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights);
+	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights,
+			activeSettings);
 
 	// Same order as the running application: Spring registers the analyses by class name.
 	private final CountingAnalysesRunner analysesRunner = new CountingAnalysesRunner(
@@ -68,11 +75,11 @@ final class ShopBackend {
 
 	private ShopBackend(Path projectsRoot) {
 		ProjectService projectService = new ProjectService(moduleService, new ParserFactory(null), analysesRunner,
-				ratingWeightsStore, activeWeights);
+				ratingWeightsStore, activeWeights, analysisSettingsStore, activeSettings);
 		ModuleController moduleController = new ModuleController(moduleService, new ClazzMapperImpl(),
 				new DependencyMapperImpl(), moduleMapper, projectService);
 		RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule, moveClass,
-				architectureViolation);
+				architectureViolation, activeSettings);
 		RecommendationsController recommendationsController = new RecommendationsController(recommendationsService,
 				moduleController);
 		ProjectController projectController = new ProjectController(projectService,
@@ -97,6 +104,7 @@ final class ShopBackend {
 	static ShopBackend analysed(Function<ModuleService, List<Module>> fixture, Path projectsRoot) {
 		ShopBackend backend = new ShopBackend(projectsRoot);
 		backend.activeWeights.adopt(PROJECT, backend.ratingWeightsStore.weightsOf(PROJECT));
+		backend.activeSettings.adopt(PROJECT, backend.analysisSettingsStore.settingsOf(PROJECT));
 		List<Module> modules = fixture.apply(backend.moduleService);
 		backend.analysesRunner.executeAll(modules);
 		backend.moduleService.saveModules(modules.stream().map(backend.moduleMapper::toDto).toList());

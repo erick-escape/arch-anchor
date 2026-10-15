@@ -5,7 +5,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.archanchor.domains.analysis.InvalidAnalysisSettingsException;
 import com.archanchor.domains.rating.InvalidRatingWeightsException;
+import com.archanchor.dto.projects.AnalysisSettingsDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.projects.ProjectDetailDTO;
 import com.archanchor.dto.projects.ProjectsListResponseDTO;
@@ -85,7 +87,7 @@ public class ProjectController {
 	public String deleteProject(@PathVariable String projectName) {
 		try {
 			if (projectsDirectory.deleteProject(projectName)) {
-				projectService.forgetRatingWeights(projectName);
+				projectService.forgetSettingsOf(projectName);
 				return "Project " + projectName + " deleted successfully!";
 			}
 			else {
@@ -131,7 +133,27 @@ public class ProjectController {
 		return RatingWeightsDTO.of(projectService.updateRatingWeights(projectName, weights.toRatingWeights()));
 	}
 
-	@ExceptionHandler({ InvalidRatingWeightsException.class, InvalidProjectNameException.class })
+	/** What the analyses recommend and show for the project (#36). */
+	@GetMapping("/projects/{projectName}/analysis-settings")
+	public AnalysisSettingsDTO analysisSettings(@PathVariable String projectName) {
+		requireProject(projectName);
+		return AnalysisSettingsDTO.of(projectService.analysisSettingsOf(projectName));
+	}
+
+	/**
+	 * Replaces the project's analysis settings; if it is the analysed project, the
+	 * recommendations are refreshed before this returns (#36).
+	 */
+	@PutMapping("/projects/{projectName}/analysis-settings")
+	public AnalysisSettingsDTO updateAnalysisSettings(@PathVariable String projectName,
+			@RequestBody AnalysisSettingsDTO settings) {
+		requireProject(projectName);
+		return AnalysisSettingsDTO
+			.of(projectService.updateAnalysisSettings(projectName, settings.toAnalysisSettings()));
+	}
+
+	@ExceptionHandler({ InvalidRatingWeightsException.class, InvalidAnalysisSettingsException.class,
+			InvalidProjectNameException.class })
 	ProblemDetail rejectInvalidInput(RuntimeException failure) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, failure.getMessage());
 	}

@@ -27,6 +27,8 @@ public final class AnalysedShopFixture {
 
 	public static final String MISPLACED_CLASS = "SalesReport";
 
+	public static final String ARCHIVE = "shop/archive";
+
 	private AnalysedShopFixture() {
 	}
 
@@ -38,6 +40,24 @@ public final class AnalysedShopFixture {
 		List<Module> modules = List.of(web, persistence);
 		modules.forEach(module -> analyse(module, moduleService));
 		return modules;
+	}
+
+	/**
+	 * The shop with a second module that uses the database, so {@code SalesReport} has
+	 * two places to go. The archive's classes also use {@code java.time}, so it is the
+	 * worse fit of the two (#36).
+	 */
+	public static List<Module> webAndTwoDatabaseModules(ModuleService moduleService) {
+		List<Module> modules = new ArrayList<>(webAndPersistence(moduleService));
+		Module archive = moduleOf(ARCHIVE, archived("OrderArchive"), archived("InvoiceArchive"),
+				archived("ReturnArchive"));
+		analyse(archive, moduleService);
+		modules.add(archive);
+		return modules;
+	}
+
+	private static Clazz archived(String name) {
+		return clazzOf(name, ARCHIVE, "java.sql.Connection", "shop.model.Book", "java.time.LocalDate");
 	}
 
 	private static Clazz controller(String name) {

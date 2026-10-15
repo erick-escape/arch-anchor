@@ -3,6 +3,7 @@ package com.archanchor.services;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import com.archanchor.dto.recommendations.*;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
 import com.archanchor.services.architecturalAnalyses.MergeModule;
 import com.archanchor.services.architecturalAnalyses.MoveClass;
@@ -28,12 +29,15 @@ public class RecommendationsService {
 
 	private final ArchitectureViolation architectureViolation;
 
+	private final ActiveAnalysisSettings activeSettings;
+
 	public RecommendationsService(SplitModule splitModule, MergeModule mergeModule, MoveClass moveClass,
-			ArchitectureViolation architectureViolation) {
+			ArchitectureViolation architectureViolation, ActiveAnalysisSettings activeSettings) {
 		this.splitModule = splitModule;
 		this.mergeModule = mergeModule;
 		this.moveClass = moveClass;
 		this.architectureViolation = architectureViolation;
+		this.activeSettings = activeSettings;
 	}
 
 	public RecommendationsResponseDTO getRecommendations() {
@@ -52,9 +56,18 @@ public class RecommendationsService {
 		return new RecommendationsResponseDTO(splits, merges, moves, violations, summary);
 	}
 
+	// Splits, merges and moves below the architect's minimum rate are not shown;
+	// violation
+	// entries have no rate and always are (#36). Filtered before the summary, so its
+	// counts match the cards.
+	private boolean isShown(double rate) {
+		return activeSettings.current().shows(rate);
+	}
+
 	private List<SplitModuleRecommendationDTO> convertSplitResults() {
 		return splitModule.getResults()
 			.stream()
+			.filter(result -> isShown(result.rate))
 			.map(result -> new SplitModuleRecommendationDTO(result.originalModuleId, result.originalModuleName,
 					result.superRefClassName, result.deRefClassName, result.module1ClassIds, result.module2ClassIds,
 					new SplitMetricsDTO(result.originalSimilarity,
@@ -67,6 +80,7 @@ public class RecommendationsService {
 	private List<MergeModuleRecommendationDTO> convertMergeResults() {
 		return mergeModule.getResults()
 			.stream()
+			.filter(result -> isShown(result.rate))
 			.map(result -> new MergeModuleRecommendationDTO(result.module1Id, result.module1Name, result.module2Id,
 					result.module2Name,
 					new MergeMetricsDTO(result.module1Similarity, result.module2Similarity, result.mergedSimilarity,
@@ -78,6 +92,7 @@ public class RecommendationsService {
 	private List<MoveClassRecommendationDTO> convertMoveResults() {
 		return moveClass.getResults()
 			.stream()
+			.filter(result -> isShown(result.rate))
 			.map(result -> new MoveClassRecommendationDTO(result.classId, result.className, result.sourceModuleId,
 					result.sourceModuleName, result.targetModuleId, result.targetModuleName, new MoveMetricsDTO(0.0, // classCurrentSimilarity
 																														// not

@@ -2,6 +2,7 @@ package com.archanchor.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.archanchor.domains.analysis.AnalysisSettings;
 import com.archanchor.domains.module.Module;
 import com.archanchor.domains.rating.RatingWeights;
 import com.archanchor.dto.module.ModuleDTO;
@@ -11,6 +12,8 @@ import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.projects.RefClassConstraintDTO;
 import com.archanchor.mapstruct.ModuleMapper;
 import com.archanchor.mapstruct.ModuleMapperImpl;
+import com.archanchor.services.analysis.ActiveAnalysisSettings;
+import com.archanchor.services.analysis.AnalysisSettingsStore;
 import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
 import com.archanchor.services.parsers.ParserFactory;
 import com.archanchor.services.rating.ActiveRatingWeights;
@@ -36,16 +39,23 @@ public class ProjectService {
 
 	private final ActiveRatingWeights activeWeights;
 
+	private final AnalysisSettingsStore analysisSettingsStore;
+
+	private final ActiveAnalysisSettings activeSettings;
+
 	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
 	public ProjectService(ModuleService moduleService, ParserFactory parserFactory,
 			ArchitecturalAnalysesRunner analysesRunner, RatingWeightsStore ratingWeightsStore,
-			ActiveRatingWeights activeWeights) {
+			ActiveRatingWeights activeWeights, AnalysisSettingsStore analysisSettingsStore,
+			ActiveAnalysisSettings activeSettings) {
 		this.moduleService = moduleService;
 		this.parserFactory = parserFactory;
 		this.analysesRunner = analysesRunner;
 		this.ratingWeightsStore = ratingWeightsStore;
 		this.activeWeights = activeWeights;
+		this.analysisSettingsStore = analysisSettingsStore;
+		this.activeSettings = activeSettings;
 	}
 
 	/**
@@ -66,6 +76,7 @@ public class ProjectService {
 		// Clear parser cache for fresh analysis to prevent duplicate processing
 		parserFactory.clearProcessingCache();
 		activeWeights.adopt(projectName, ratingWeightsStore.weightsOf(projectName));
+		activeSettings.adopt(projectName, analysisSettingsStore.settingsOf(projectName));
 
 		List<Module> modules = moduleService.getModules(directoryPath);
 		modules.forEach(this::electAndMeasure);
@@ -97,9 +108,35 @@ public class ProjectService {
 		return weights;
 	}
 
-	/** A deleted project's weights must not pass to a new project of the same name. */
-	public void forgetRatingWeights(String projectName) {
+	public AnalysisSettings analysisSettingsOf(String projectName) {
+		return analysisSettingsStore.settingsOf(projectName);
+	}
+
+	/**
+	 * Saves the project's analysis settings. If its modules are the saved ones, the
+	 * analyses run again on them; nothing is re-elected, because no setting affects the
+	 * election. Any other project picks the settings up when it is next analysed (#36).
+	 *
+	 * <pre>
+	 * projectService.updateAnalysisSettings("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2));
+	 * </pre>
+	 */
+	public AnalysisSettings updateAnalysisSettings(String projectName, AnalysisSettings settings) {
+		analysisSettingsStore.save(projectName, settings);
+		if (activeSettings.appliesTo(projectName)) {
+			activeSettings.adopt(projectName, settings);
+			refreshRecommendations();
+		}
+		return settings;
+	}
+
+	/**
+	 * A deleted project's weights and settings must not pass to a new project of the same
+	 * name.
+	 */
+	public void forgetSettingsOf(String projectName) {
 		ratingWeightsStore.forget(projectName);
+		analysisSettingsStore.forget(projectName);
 	}
 
 	// Re-electing even when only the recommendation pair changed costs little, and it
