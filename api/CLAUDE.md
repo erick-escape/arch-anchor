@@ -322,7 +322,8 @@ The analyses can utilize `ModuleService` methods for:
    directly under the chosen root, because `ModuleService.getModules` starts there
 2. **Analysis**: `/api/analyze` triggers `ProjectService.analyzeProject()` which:
     - Uses `JavaParserService` to parse Java files and resolve dependencies
-    - Organizes code into modules based on package structure
+    - Organizes code into modules based on package structure: one module per directory with sources, under `src/main`
+      when the project has one, so that tests are not modules (#47), and under `src` otherwise
     - Populates similarity and violation metrics
     - Runs architectural analyses via `ArchitecturalAnalysesRunner`
     - Returns `ProjectAnalysesDTO` with modules and architectural constraints

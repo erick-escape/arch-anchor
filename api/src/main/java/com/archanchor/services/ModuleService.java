@@ -765,8 +765,22 @@ public class ModuleService {
 		return relativePath.toString().replace(File.separatorChar, '/');
 	}
 
+	/**
+	 * Where the modules are read from: {@code src/main} in the standard Maven and Gradle
+	 * layout, so that the tests in {@code src/test} are not taken for modules (#47);
+	 * {@code src} itself otherwise.
+	 *
+	 * <pre>
+	 * sourceRoot(Path.of("mybatis-3/src")); // mybatis-3/src/main
+	 * </pre>
+	 */
+	private static Path sourceRoot(Path src) {
+		Path production = src.resolve("main");
+		return Files.isDirectory(production) ? production : src;
+	}
+
 	public List<Module> getModules(String projectDirectory) throws IOException {
-		Path srcPath = Paths.get(projectDirectory, "src"); // Start from 'src' directory
+		Path srcPath = sourceRoot(Paths.get(projectDirectory, "src"));
 		if (!Files.exists(srcPath) || !Files.isDirectory(srcPath)) {
 			return this.modules; // Return empty list if 'src' does not exist or is not a
 									// directory
