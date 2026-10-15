@@ -117,14 +117,9 @@ public class MergeModule extends ArchitecturalAnalysis {
 	 * positive or negative)
 	 */
 	private MergeRateResult calculateModuleMergeRate(Module module1, Module module2, Module mergedModule) {
-		// Calculate class similarities without overwriting the manually merged reference
-		// classes
-		this.moduleService.calculateClassSimilarities(mergedModule);
-		this.moduleService.calculateAvgSimilarityWithRefClazzes(mergedModule);
-		this.moduleService.calculateModuleSimilarity(mergedModule);
-		this.moduleService.populateRefClazzesDependencies(mergedModule);
-		this.moduleService.populateModuleDependencies(mergedModule);
-		this.moduleService.calculateModuleViolations(mergedModule);
+		// Measured with both modules' reference classes, as an applied merge keeps them
+		// (#34)
+		this.moduleService.measureWithReferenceClasses(mergedModule);
 
 		// Get similarity values
 		double module1Similarity = module1.getSimilarity() != null ? module1.getSimilarity() : 0.0;

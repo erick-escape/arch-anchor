@@ -34,6 +34,9 @@ class MergeModuleTest {
 	void setUp() {
 		mergeModule = new MergeModule(moduleService, new ActiveRatingWeights());
 
+		// The merged module is measured by the steps stubbed below (#34)
+		lenient().doCallRealMethod().when(moduleService).measureWithReferenceClasses(any(Module.class));
+
 		// Setup default mock behavior for avgSimilarityWithRefClazzes calculation with
 		// lenient stubbing
 		lenient().doAnswer(invocation -> {

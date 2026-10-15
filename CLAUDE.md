@@ -142,6 +142,7 @@ cd api
 **Reference Classes:**
 - Every module MUST have at least one reference class defining architectural intent
 - Selected automatically via rating (similarity + violations, weighted by the project's election weights) or manually by architect; a module whose reference classes were chosen by hand (`refClazzesChosenByHand`) keeps them when the election weights change
+- A merged module keeps the reference classes of both modules, as its merge card was rated (#34), and counts as chosen by hand
 - Reference class dependencies stored in `module.getRefClazzesDependencies()` define architectural constraints
 
 **Metrics:**

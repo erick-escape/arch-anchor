@@ -102,10 +102,18 @@ public class ModuleService {
 		return savedModules;
 	}
 
-	// Mapping from the DTO builds refClazzes and clazzes separately, so a reference class
-	// comes back as two objects. A reference class missing from the class list is left as
-	// it is: nothing in this class produces one.
-	private void relinkReferenceClasses(Module module) {
+	/**
+	 * Points the module's reference classes at the instances in its class list, matched
+	 * by id. Mapping from the DTO builds refClazzes and clazzes separately, so a
+	 * reference class comes back as two objects, and the analyses compare classes by
+	 * identity. A reference class missing from the class list is left as it is: nothing
+	 * in this class produces one.
+	 *
+	 * <pre>
+	 * moduleService.relinkReferenceClasses(moduleMapper.toEntity(savedModule));
+	 * </pre>
+	 */
+	public void relinkReferenceClasses(Module module) {
 		if (module.getRefClazzes() == null || module.getClazzes() == null) {
 			return;
 		}
@@ -308,6 +316,25 @@ public class ModuleService {
 	 * method.
 	 * @param module The module to process
 	 */
+	/**
+	 * Measures a module with the reference classes it already has, without an election. A
+	 * merged module keeps the reference classes of both modules: the merge card is rated
+	 * on that module, and applying the merge builds the same one (#34).
+	 *
+	 * <pre>
+	 * merged.setRefClazzes(bothModulesReferenceClasses);
+	 * moduleService.measureWithReferenceClasses(merged);
+	 * </pre>
+	 */
+	public void measureWithReferenceClasses(Module module) {
+		calculateClassSimilarities(module);
+		calculateAvgSimilarityWithRefClazzes(module);
+		calculateModuleSimilarity(module);
+		populateRefClazzesDependencies(module);
+		populateModuleDependencies(module);
+		calculateModuleViolations(module);
+	}
+
 	public void calculateClassSimilaritiesAndSelectRefClasses(Module module) {
 		calculateClassSimilarities(module);
 		selectReferenceClasses(module);
