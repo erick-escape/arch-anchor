@@ -172,7 +172,9 @@ Where:
 
 - Identifies modules that could benefit from being split into smaller, more cohesive modules
 - Analyzes class similarity patterns within modules to find natural split points
-- Finds a "super ref class" (highest similarity) and a "de-ref class" (lowest similarity non-reference class) as anchors
+- Finds a "super ref class" (highest similarity) and a "de-ref class" (lowest similarity non-reference class) as anchors;
+  the de-ref class is chosen among classes with at least one package dependency and the minimum of the analysis settings
+  (#44), since a class with none is similar to nothing
 - Assigns remaining classes to one of the two new modules based on proximity to the anchor classes
 - Uses the rating mechanism, combining similarity improvement and violation reduction with the recommendation weights
 - Only recommends splits with positive rate (net architectural benefit)

@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import com.archanchor.domains.clazz.Clazz;
 import com.archanchor.domains.module.Module;
+import com.archanchor.services.ModuleScope;
 import com.archanchor.services.ModuleService;
 import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.rating.ActiveRatingWeights;
@@ -128,14 +129,20 @@ public class SplitModule extends ArchitecturalAnalysis {
 
 	/**
 	 * Finds the non-reference class with the lowest avgSimilarityWithRefClazzes
-	 * (deRefClass)
+	 * (deRefClass), among the classes the analyses judge: at least one package
+	 * dependency, and the architect's minimum (#44). A class with no dependencies is
+	 * similar to nothing, so it would always be the anchor, and every other class would
+	 * join the reference class's side.
 	 */
 	private Clazz findDeRefClass(Module module) {
 		List<Clazz> refClazzes = module.getRefClazzes() != null ? module.getRefClazzes() : new ArrayList<>();
+		ModuleScope scope = ModuleScope.of(module);
+		int minimumDependencies = Math.max(1, activeSettings.current().minClassDependencies());
 
 		return module.getClazzes()
 			.stream()
 			.filter(clazz -> !refClazzes.contains(clazz)) // Exclude reference classes
+			.filter(clazz -> scope.dependenciesOf(clazz).size() >= minimumDependencies)
 			.min((c1, c2) -> {
 				double sim1 = c1.getAvgSimilarityWithRefClazzes() != null ? c1.getAvgSimilarityWithRefClazzes() : 0.0;
 				double sim2 = c2.getAvgSimilarityWithRefClazzes() != null ? c2.getAvgSimilarityWithRefClazzes() : 0.0;
