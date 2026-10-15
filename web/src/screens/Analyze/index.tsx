@@ -39,7 +39,7 @@ import { MergeConfirmPopup } from '../../components/Popup/MergeConfirmPopup.tsx'
 import Header from '../../components/Header/index.tsx';
 import Sidebar from '../../components/Sidebar/index.tsx';
 import RecommendationsSidebar from '../../components/RecommendationsSidebar/index.tsx';
-import RatingWeightsModal from '../../components/RatingWeightsModal/index.tsx';
+import SettingsModal from '../../components/SettingsModal/index.tsx';
 
 // 1) Provide a nodeTypes mapping
 const nodeTypes = {
@@ -71,7 +71,7 @@ const AnalyzePage = () => {
   // State for sidebar and layout
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRecommendationsSidebarOpen] = useState(true);
-  const [isRatingWeightsOpen, setIsRatingWeightsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Ref to track if we've already initiated analysis for this project
   const analysisInitiated = useRef<string | null>(null);
@@ -284,7 +284,7 @@ const AnalyzePage = () => {
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={toggleSidebar}
         onExportACs={handleExportACs}
-        onOpenSettings={() => setIsRatingWeightsOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       <div
@@ -360,10 +360,10 @@ const AnalyzePage = () => {
       <RecommendationsSidebar onRecommendationApplied={reloadSavedModules} />
 
       {projectName && (
-        <RatingWeightsModal
+        <SettingsModal
           projectName={projectName}
-          open={isRatingWeightsOpen}
-          onClose={() => setIsRatingWeightsOpen(false)}
+          open={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
           onSaved={reloadSavedModules}
         />
       )}
