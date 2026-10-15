@@ -40,11 +40,13 @@ public class MergeModule extends ArchitecturalAnalysis {
 
 		public String module2Name;
 
-		public double module1AvgRefSim;
+		// Module similarity, the value the rate is computed from (#26), not the
+		// reference classes' agreement.
+		public double module1Similarity;
 
-		public double module2AvgRefSim;
+		public double module2Similarity;
 
-		public double mergedAvgRefSim;
+		public double mergedSimilarity;
 
 		public int module1Violations;
 
@@ -59,16 +61,16 @@ public class MergeModule extends ArchitecturalAnalysis {
 		public double rate;
 
 		public MergeModuleResult(String module1Id, String module1Name, String module2Id, String module2Name,
-				double module1AvgRefSim, double module2AvgRefSim, double mergedAvgRefSim, int module1Violations,
+				double module1Similarity, double module2Similarity, double mergedSimilarity, int module1Violations,
 				int module2Violations, int mergedViolations, double similarityImprovement, double violationsImprovement,
 				double rate) {
 			this.module1Id = module1Id;
 			this.module1Name = module1Name;
 			this.module2Id = module2Id;
 			this.module2Name = module2Name;
-			this.module1AvgRefSim = module1AvgRefSim;
-			this.module2AvgRefSim = module2AvgRefSim;
-			this.mergedAvgRefSim = mergedAvgRefSim;
+			this.module1Similarity = module1Similarity;
+			this.module2Similarity = module2Similarity;
+			this.mergedSimilarity = mergedSimilarity;
 			this.module1Violations = module1Violations;
 			this.module2Violations = module2Violations;
 			this.mergedViolations = mergedViolations;
@@ -146,11 +148,17 @@ public class MergeModule extends ArchitecturalAnalysis {
 		// Weighted by the project's recommendation weights (#27)
 		double rate = recommendationRate(similarityImprovement, normalizedViolationsImprovement);
 
-		return new MergeRateResult(module1Violations, module2Violations, mergedViolations, similarityImprovement,
-				normalizedViolationsImprovement, rate);
+		return new MergeRateResult(module1Similarity, module2Similarity, mergedSimilarity, module1Violations,
+				module2Violations, mergedViolations, similarityImprovement, normalizedViolationsImprovement, rate);
 	}
 
 	private static class MergeRateResult {
+
+		double module1Similarity;
+
+		double module2Similarity;
+
+		double mergedSimilarity;
 
 		int module1Violations;
 
@@ -164,8 +172,12 @@ public class MergeModule extends ArchitecturalAnalysis {
 
 		double rate;
 
-		public MergeRateResult(int module1Violations, int module2Violations, int mergedViolations,
-				double similarityImprovement, double violationsImprovement, double rate) {
+		public MergeRateResult(double module1Similarity, double module2Similarity, double mergedSimilarity,
+				int module1Violations, int module2Violations, int mergedViolations, double similarityImprovement,
+				double violationsImprovement, double rate) {
+			this.module1Similarity = module1Similarity;
+			this.module2Similarity = module2Similarity;
+			this.mergedSimilarity = mergedSimilarity;
 			this.module1Violations = module1Violations;
 			this.module2Violations = module2Violations;
 			this.mergedViolations = mergedViolations;
@@ -212,16 +224,11 @@ public class MergeModule extends ArchitecturalAnalysis {
 				// Only recommend merge if rate is positive (considering both similarity
 				// and violations)
 				if (rateResult.rate > 0) {
-					double module1AvgRefSim = module1.getAvgRefClazzesSimilarity() != null
-							? module1.getAvgRefClazzesSimilarity() : 0.0;
-					double module2AvgRefSim = module2.getAvgRefClazzesSimilarity() != null
-							? module2.getAvgRefClazzesSimilarity() : 0.0;
-					double mergedAvgRefSim = mergedModule.getAvgRefClazzesSimilarity();
-
 					results.add(new MergeModuleResult(module1.getId(), module1.getName(), module2.getId(),
-							module2.getName(), module1AvgRefSim, module2AvgRefSim, mergedAvgRefSim,
-							rateResult.module1Violations, rateResult.module2Violations, rateResult.mergedViolations,
-							rateResult.similarityImprovement, rateResult.violationsImprovement, rateResult.rate));
+							module2.getName(), rateResult.module1Similarity, rateResult.module2Similarity,
+							rateResult.mergedSimilarity, rateResult.module1Violations, rateResult.module2Violations,
+							rateResult.mergedViolations, rateResult.similarityImprovement,
+							rateResult.violationsImprovement, rateResult.rate));
 
 					log.debug(
 							"Potential merge: '{}' with '{}' - Rate: {}, Similarity improvement: {}, Violations improvement: {}",

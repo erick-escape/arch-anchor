@@ -69,7 +69,7 @@ public class RecommendationsService {
 			.stream()
 			.map(result -> new MergeModuleRecommendationDTO(result.module1Id, result.module1Name, result.module2Id,
 					result.module2Name,
-					new MergeMetricsDTO(result.module1AvgRefSim, result.module2AvgRefSim, result.mergedAvgRefSim,
+					new MergeMetricsDTO(result.module1Similarity, result.module2Similarity, result.mergedSimilarity,
 							result.module1Violations, result.module2Violations, result.mergedViolations,
 							result.similarityImprovement, result.violationsImprovement, result.rate)))
 			.collect(Collectors.toList());

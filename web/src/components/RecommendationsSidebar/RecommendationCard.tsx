@@ -13,6 +13,7 @@ import {
   MoveClassRecommendation,
   ArchitectureViolationRecommendation,
 } from '../../interface/Recommendations';
+import { formatSignedPercent } from '../../utils/formatSignedPercent';
 
 const { Panel } = Collapse;
 
@@ -74,8 +75,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
         <strong>After Split (Avg):</strong> {(data.metrics.avgSplitSimilarity * 100).toFixed(1)}%
       </p>
       <p>
-        <strong>Similarity Improvement:</strong> +
-        {(data.metrics.similarityImprovement * 100).toFixed(1)}%
+        <strong>Similarity Improvement:</strong>{' '}
+        {formatSignedPercent(data.metrics.similarityImprovement)}
       </p>
       <p>
         <strong>Violations:</strong> {data.metrics.originalViolations} →{' '}
@@ -102,8 +103,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
         <strong>Merged Similarity:</strong> {(data.metrics.mergedSimilarity * 100).toFixed(1)}%
       </p>
       <p>
-        <strong>Similarity Improvement:</strong> +
-        {(data.metrics.similarityImprovement * 100).toFixed(1)}%
+        <strong>Similarity Improvement:</strong>{' '}
+        {formatSignedPercent(data.metrics.similarityImprovement)}
       </p>
       <p>
         <strong>Violations:</strong>{' '}
@@ -122,8 +123,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
         <strong>To Module:</strong> {data.targetModuleName}
       </p>
       <p>
-        <strong>Similarity Improvement:</strong> +
-        {(data.metrics.similarityImprovement * 100).toFixed(1)}%
+        <strong>Similarity Improvement:</strong>{' '}
+        {formatSignedPercent(data.metrics.similarityImprovement)}
       </p>
       <p>
         <strong>Source Violations:</strong> {data.metrics.sourceViolationsBefore} →{' '}
@@ -153,8 +154,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = ({
             <strong>Suggested Target:</strong> {data.bestSuggestion.targetModuleName}
           </p>
           <p>
-            <strong>Similarity Improvement:</strong> +
-            {(data.bestSuggestion.similarityImprovement * 100).toFixed(1)}%
+            <strong>Similarity Improvement:</strong>{' '}
+            {formatSignedPercent(data.bestSuggestion.similarityImprovement)}
           </p>
           <p>
             <strong>New Violations:</strong> {data.bestSuggestion.newViolationsCreated}
