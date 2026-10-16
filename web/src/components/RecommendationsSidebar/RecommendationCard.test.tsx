@@ -6,17 +6,10 @@ import RecommendationCard from './RecommendationCard';
 import { UnifiedRecommendation } from '../../interface/Recommendations';
 import {
   mergeRecommendationFixture,
-  moveRecommendationFixture,
+  moveCardFixture,
 } from '../../test/fixtures/recommendationFixtures';
 
-const move: UnifiedRecommendation = {
-  id: 'move-0',
-  type: 'move',
-  rating: 0.5625,
-  title: 'Move "SalesReport"',
-  description: 'Move class with 0.56 improvement',
-  data: moveRecommendationFixture(),
-};
+const move = moveCardFixture();
 
 const merge: UnifiedRecommendation = {
   id: 'merge-0',
