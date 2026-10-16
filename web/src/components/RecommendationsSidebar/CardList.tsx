@@ -12,6 +12,8 @@ interface CardListProps {
   whenEmpty: string;
   onApply: (card: UnifiedRecommendation) => void;
   applyingId: string | null;
+  // Cards per page, CARDS_PER_PAGE unless given; tests page through a few cards (#54).
+  pageSize?: number;
 }
 
 /**
@@ -20,8 +22,14 @@ interface CardListProps {
  * @example
  * <CardList cards={violations} whenEmpty="No violations" onApply={apply} applyingId={null} />
  */
-const CardList = ({ cards, whenEmpty, onApply, applyingId }: CardListProps) => {
-  const [shown, setShown] = useState(CARDS_PER_PAGE);
+const CardList = ({
+  cards,
+  whenEmpty,
+  onApply,
+  applyingId,
+  pageSize = CARDS_PER_PAGE,
+}: CardListProps) => {
+  const [shown, setShown] = useState(pageSize);
 
   if (cards.length === 0) {
     return <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>{whenEmpty}</div>;
@@ -39,8 +47,8 @@ const CardList = ({ cards, whenEmpty, onApply, applyingId }: CardListProps) => {
         />
       ))}
       {left > 0 && (
-        <Button block onClick={() => setShown(shown + CARDS_PER_PAGE)}>
-          Show {Math.min(left, CARDS_PER_PAGE)} more of {left}
+        <Button block onClick={() => setShown(shown + pageSize)}>
+          Show {Math.min(left, pageSize)} more of {left}
         </Button>
       )}
     </>
