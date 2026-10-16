@@ -4,6 +4,7 @@ import {
   MoveClassRecommendation,
   RecommendationsResponse,
   SplitModuleRecommendation,
+  UnifiedRecommendation,
 } from '../../interface/Recommendations';
 
 type RecommendationLists = Omit<RecommendationsResponse, 'summary'>;
@@ -65,6 +66,24 @@ export function moveRecommendationFixture(
       rate: 0.5625,
     },
     ...overrides,
+  };
+}
+
+/**
+ * Builds the card the recommendations panel draws for a move of the class `className`.
+ *
+ * @example
+ * const cards = [moveCardFixture('Report0'), moveCardFixture('Report1')];
+ */
+export function moveCardFixture(className = 'SalesReport'): UnifiedRecommendation {
+  const move = moveRecommendationFixture({ className });
+  return {
+    id: `move-${className}`,
+    type: 'move',
+    rating: move.metrics.rate,
+    title: `Move "${className}"`,
+    description: `Move class with ${move.metrics.rate.toFixed(2)} improvement`,
+    data: move,
   };
 }
 
