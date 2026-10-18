@@ -16,14 +16,21 @@ Files next to this brief:
 
 | Path | What it is |
 |---|---|
-| `brand/archanchor-mark.svg` | The mark for light backgrounds, with real cut-outs |
+| `brand/archanchor-mark.svg` | The mark for light backgrounds |
 | `brand/archanchor-mark-dark.svg` | The mark for dark backgrounds |
+| `brand/archanchor-mark-mono.svg` | The chevron alone, single ink, for favicons and the reference-class tile |
 | `current-ui/overview-before.png` | The Analyze page today, bookstore example |
 | `current-ui/sidebars-violation.png` | Module detail + a violation card today |
 | `current-ui/recommendations-panel.png` | The recommendations panel today |
 
 The screenshots were taken at `c35fbdf` (13 Oct 2026), before the Refactorings / Violations tabs
 were added (`ae6d6e0`). Section 4 describes `main` as of `f804c45`.
+
+Built from this brief in Claude Design. Both are private to their owner until shared:
+- the **ArchAnchor design system**: the tokens of section 3 and the vocabulary of 2.5 as live
+  components. https://claude.ai/artifact/VSYe8N7r7uV7iktGn6nFRR
+- the **ArchAnchor redesign** canvas: the artboards of section 7.
+  https://claude.ai/artifact/1Y6dWU4pnRbY77RTm9yD9z
 
 ---
 
@@ -59,6 +66,9 @@ that the idea works.
     deepNavy on the dark page is 1.22:1 and would disappear.
   - Both carve their white areas out of the shape, so the background shows through. The deck
     version painted them white because Google Slides has no masks.
+  - The carved shapes are solved as plain polygons, so there are no masks and no ids. The mark
+    can be inlined any number of times on one page. A render at 416 px differs from a masked
+    version by zero pixels.
 - **Lockup.** Mark + wordmark **Arch**​**Anchor** in Jost Bold, with no space between the two
   words.
   - Light background: "Arch" in deepNavy, "Anchor" in anchorBlue.
@@ -170,6 +180,7 @@ How the derived colours were made: each is the brand colour mixed toward black (
 | `surface` | `#FFFFFF` | | `#112749` (deepNavy) | | Panels, cards, nodes |
 | `sunken` | `#EAF3FE` (wash) | | `#0E2142` | | Wells, module containers, inputs |
 | `raised` | `#FFFFFF` + shadow | | `#17325C` | | Popovers, menus, the command palette |
+| `accent-soft` | `#E2EEFD` | | `#15305A` | | Selected rows and tiles. `text` and `link` pass on it; `text-muted` does not in light (4.30) |
 | `text` | `#22282E` (ink) | 13.29 | `#EAF3FE` (wash) | 11.38 | Body text |
 | `text-strong` | `#112749` (deepNavy) | 13.30 | `#FFFFFF` | 12.75 | Headings |
 | `text-muted` | `#677077` | 4.51 | `#9AA7B2` (muted) | 5.19 | Secondary text |
