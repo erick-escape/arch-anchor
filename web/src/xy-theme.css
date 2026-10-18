@@ -1,38 +1,24 @@
-/* xyflow theme files. Delete these to start from our base */
+/* React Flow, themed from the app's tokens (src/theme/palette.ts). Every colour here is a token, so
+   the graph follows the light and dark themes with the rest of the app. */
 
 .react-flow {
-    /* Custom Variables */
-    --xy-theme-selected: #F57DBD;
-    --xy-theme-hover: #C5C5C5;
-    --xy-theme-edge-hover: black;
-    --xy-theme-color-focus: #E8E8E8;
-
-    /* Built-in Variables see https://reactflow.dev/learn/customization/theming */
-    --xy-node-border-default: 1px solid #EDEDED;
-
-    --xy-node-boxshadow-default: 0px 3.54px 4.55px 0px #00000005,
-    0px 3.54px 4.55px 0px #0000000D,
-    0px 0.51px 1.01px 0px #0000001A;
-
-    --xy-node-border-radius-default: 8px;
-
-    --xy-handle-background-color-default: #ffffff;
-    --xy-handle-border-color-default: #AAAAAA;
-
-    --xy-edge-label-color-default: #505050;
+    --xy-node-border-default: 1px solid var(--aa-line);
+    --xy-node-boxshadow-default: var(--aa-shadow-sm);
+    --xy-node-border-radius-default: var(--aa-radius-lg);
+    --xy-handle-background-color-default: var(--aa-surface);
+    --xy-handle-border-color-default: var(--aa-line-strong);
+    --xy-edge-label-color-default: var(--aa-text-muted);
+    --xy-background-color-default: var(--aa-page);
+    --xy-controls-button-background-color-default: var(--aa-surface);
+    --xy-controls-button-color-default: var(--aa-text-strong);
 }
 
-.react-flow.dark {
-    --xy-node-boxshadow-default: 0px 3.54px 4.55px 0px rgba(255, 255, 255, 0.05), /* light shadow */ 0px 3.54px 4.55px 0px rgba(255, 255, 255, 0.13), /* medium shadow */ 0px 0.51px 1.01px 0px rgba(255, 255, 255, 0.2); /* smallest shadow */
-    --xy-theme-color-focus: #535353;
-}
-
-/* Customizing Default Theming */
-
+/* The node's background and text colour come from the same theme, so the text can never end up
+   dark on a dark node or light on a light one (#23). */
 .react-flow__node {
     box-shadow: var(--xy-node-boxshadow-default);
     border-radius: var(--xy-node-border-radius-default);
-    background-color: black;
+    background-color: var(--aa-surface);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -41,55 +27,35 @@
     font-size: 12px;
     flex-direction: column;
     border: var(--xy-node-border-default);
-    /* Fixed together with the background above. The themed value inherits the page's text
-       colour, which is dark in a light colour scheme: dark text on a black node (#23). */
-    color: white;
+    color: var(--aa-text);
 }
 
-.react-flow__node.selectable:focus {
-    box-shadow: 0px 0px 0px 4px var(--xy-theme-color-focus);
-    border-color: #d9d9d9;
+.react-flow__node.selectable:focus-visible {
+    box-shadow: var(--aa-focus-ring);
 }
-
-.react-flow__node.selectable:focus:active {
-    box-shadow: var(--xy-node-boxshadow-default);
-}
-
 
 .react-flow__node.selectable:hover,
 .react-flow__node.draggable:hover {
-    border-color: var(--xy-theme-hover);
+    border-color: var(--aa-line-strong);
 }
 
 .react-flow__node.selectable.selected {
-    border-color: var(--xy-theme-selected);
-    box-shadow: var(--xy-node-boxshadow-default);
+    border-color: var(--aa-accent);
 }
 
-.react-flow__node-group {
-    background-color: rgba(207, 182, 255, 0.4);
-    border-color: #9E86ED;
+/* A module another module is being dragged onto: it would be the merge target. */
+.react-flow__node.highlight {
+    border: 2px dashed var(--aa-accent);
+    box-shadow: var(--aa-glow);
 }
 
 .react-flow__edge.selectable:hover .react-flow__edge-path,
 .react-flow__edge.selectable.selected .react-flow__edge-path {
-    stroke: var(--xy-theme-edge-hover);
+    stroke: var(--aa-accent);
 }
 
 .react-flow__handle {
     background-color: var(--xy-handle-background-color-default);
-}
-
-.react-flow__handle.connectionindicator:hover {
-    pointer-events: all;
-    border-color: var(--xy-theme-edge-hover);
-    background-color: white;
-}
-
-.react-flow__handle.connectionindicator:focus,
-.react-flow__handle.connectingfrom,
-.react-flow__handle.connectingto {
-    border-color: var(--xy-theme-edge-hover);
 }
 
 .react-flow__node-resizer {
@@ -98,8 +64,8 @@
 }
 
 .react-flow__resize-control.handle {
-    background-color: #ffffff;
-    border-color: #9E86ED;
+    background-color: var(--aa-surface);
+    border-color: var(--aa-accent);
     border-radius: 0;
     width: 5px;
     height: 5px;

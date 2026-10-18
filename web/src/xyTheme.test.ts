@@ -15,12 +15,17 @@ function declarationsOf(css: string, selector: string): Record<string, string> {
 }
 
 describe('xy-theme.css', () => {
-  // The node's background is fixed, so a text colour that follows the page's colour scheme
-  // turns into dark text on a black node whenever the scheme is light (#23).
-  it('fixes the text colour of a module node together with its background', () => {
+  // A text colour that follows one theme over a background fixed in another gave dark text on
+  // a black node in the light colour scheme (#23). Both now come from the same theme's tokens.
+  it('takes a module node’s background and text colour from the same theme', () => {
     const node = declarationsOf(stylesheet, '.react-flow__node');
 
-    expect(node['background-color']).toBe('black');
-    expect(node['color']).toBe('white');
+    expect(node['background-color']).toBe('var(--aa-surface)');
+    expect(node['color']).toBe('var(--aa-text)');
+  });
+
+  it('uses no literal colours', () => {
+    const withoutComments = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(withoutComments).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(|\b(black|white)\b/);
   });
 });

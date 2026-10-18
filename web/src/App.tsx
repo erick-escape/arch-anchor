@@ -1,4 +1,3 @@
-import './App.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import ProjectsPage from './screens/Projects/index.tsx';
 import AnalyzePageWithProvider from './screens/Analyze';
