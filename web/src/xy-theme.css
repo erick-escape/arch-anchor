@@ -1,76 +1,79 @@
 /* React Flow, themed from the app's tokens (src/theme/palette.ts). Every colour here is a token, so
    the graph follows the light and dark themes with the rest of the app. */
 
-.react-flow {
-    --xy-node-border-default: 1px solid var(--aa-line);
-    --xy-node-boxshadow-default: var(--aa-shadow-sm);
-    --xy-node-border-radius-default: var(--aa-radius-lg);
-    --xy-handle-background-color-default: var(--aa-surface);
-    --xy-handle-border-color-default: var(--aa-line-strong);
-    --xy-edge-label-color-default: var(--aa-text-muted);
-    --xy-background-color-default: transparent;
-    --xy-background-pattern-dots-color-default: var(--aa-grid-dot);
+/* React Flow's dark mode redefines these under .react-flow.dark, in a stylesheet that loads after
+   this one; :root makes ours win in both modes. */
+:root .react-flow,
+:root .react-flow.dark {
+  --xy-node-border-default: 1px solid var(--aa-line);
+  --xy-node-boxshadow-default: var(--aa-shadow-sm);
+  --xy-node-border-radius-default: var(--aa-radius-lg);
+  --xy-handle-background-color-default: var(--aa-surface);
+  --xy-handle-border-color-default: var(--aa-line-strong);
+  --xy-edge-label-color-default: var(--aa-text-muted);
+  --xy-background-color-default: transparent;
+  --xy-background-pattern-dots-color-default: var(--aa-grid-dot);
 }
 
 /* Every node takes its text colour from the theme it is drawn in, so the text can never end up
    dark on a dark node or light on a light one (#23). Positions glide when the graph is laid out
    again after a split or a merge, but not under the pointer while dragging. */
 .react-flow__node {
-    color: var(--aa-text);
-    font-family: var(--aa-font-ui);
-    transition: transform 0.35s ease;
+  color: var(--aa-text);
+  font-family: var(--aa-font-ui);
+  transition: transform 0.35s ease;
 }
 
 .react-flow__node.dragging {
-    transition: none;
+  transition: none;
 }
 
 /* A node without a type of its own: the theme's surface. */
 .react-flow__node-default {
-    background-color: var(--aa-surface);
-    border: var(--xy-node-border-default);
-    border-radius: var(--xy-node-border-radius-default);
-    box-shadow: var(--xy-node-boxshadow-default);
-    padding: 10px;
+  background-color: var(--aa-surface);
+  border: var(--xy-node-border-default);
+  border-radius: var(--xy-node-border-radius-default);
+  box-shadow: var(--xy-node-boxshadow-default);
+  padding: 10px;
 }
 
 /* Modules and packages draw themselves: the vocabulary's module container and package chip. */
 .react-flow__node-module,
 .react-flow__node-package {
-    background: transparent;
-    border: 0;
-    padding: 0;
-    box-shadow: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .react-flow__node-module.selected > section {
-    border-color: var(--aa-accent);
+  border-color: var(--aa-accent);
 }
 
 .react-flow__node-module:focus-visible > section {
-    box-shadow: var(--aa-focus-ring);
+  box-shadow: var(--aa-focus-ring);
 }
 
 .react-flow__node-module.dragging > section {
-    box-shadow: var(--aa-shadow-lg);
+  box-shadow: var(--aa-shadow-lg);
 }
 
 /* A module another module is being dragged onto: it would be the merge target. */
 .react-flow__node-module.highlight > section {
-    border: 2px dashed var(--aa-accent);
-    box-shadow: var(--aa-glow);
+  border: 2px dashed var(--aa-accent);
+  box-shadow: var(--aa-glow);
 }
 
 .react-flow__node:focus-visible {
-    outline: none;
+  outline: none;
 }
 
 .react-flow__edge.selectable:hover .react-flow__edge-path,
 .react-flow__edge.selectable.selected .react-flow__edge-path {
-    stroke-width: 3;
+  stroke-width: 3;
 }
 
 .react-flow__attribution {
-    background: transparent;
-    color: var(--aa-text-muted);
+  background: transparent;
+  color: var(--aa-text-muted);
 }

@@ -12,11 +12,12 @@ export type GraphNode = ModuleNode | PackageNode;
 export type DependencyEdgeData = { kind: EdgeKind; packages: string[] };
 export type DependencyEdge = Edge<DependencyEdgeData, 'dependency'>;
 
-// A module node's geometry: up to six 28 px class tiles per row, 12 px apart, 20 px padding.
+// A module node's geometry: up to six 28 px class tiles per row, 16 px apart (the module body's
+// column gap, --aa-space-4), 20 px padding and a 1.25 px border either side.
 const TILE = 28;
-const TILE_GAP = 12;
+const TILE_GAP = 16;
 const TILES_PER_ROW = 6;
-const MODULE_PADDING = 40;
+const MODULE_PADDING = 44;
 const MODULE_HEIGHT = 128;
 const PACKAGE_WIDTH = 132;
 const PACKAGE_HEIGHT = 32;

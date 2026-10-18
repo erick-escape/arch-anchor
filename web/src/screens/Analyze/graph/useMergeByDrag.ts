@@ -1,16 +1,9 @@
 import { useReactFlow, type OnNodeDrag } from '@xyflow/react';
-import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { ModuleData } from '../../../interface/ModuleData';
 import { withHighlightedNodes, type GraphNode, type ModuleNode } from './graphElements';
 
-export interface MergeCandidate {
-  source: ModuleData;
-  target: ModuleData;
-}
-
 export interface MergeByDrag {
-  candidate: MergeCandidate | null;
-  clearCandidate: () => void;
   onNodeDrag: OnNodeDrag<GraphNode>;
   onNodeDragStop: OnNodeDrag<GraphNode>;
 }
@@ -21,13 +14,15 @@ function isModuleNode(node: GraphNode): node is ModuleNode {
 
 /**
  * Dropping a module onto another proposes their merge: while dragging, the module under the
- * pointer is highlighted; on drop it becomes the candidate the page asks to confirm.
+ * pointer is highlighted; on drop, `onDropOnto` hears which module landed on which.
  *
- * @example const merge = useMergeByDrag(setNodes);
+ * @example const merge = useMergeByDrag(setNodes, (source, target) => propose({ source, target }));
  */
-export function useMergeByDrag(setNodes: Dispatch<SetStateAction<GraphNode[]>>): MergeByDrag {
+export function useMergeByDrag(
+  setNodes: Dispatch<SetStateAction<GraphNode[]>>,
+  onDropOnto: (source: ModuleData, target: ModuleData) => void
+): MergeByDrag {
   const { getIntersectingNodes } = useReactFlow<GraphNode>();
-  const [candidate, setCandidate] = useState<MergeCandidate | null>(null);
   const targetsUnder = useCallback(
     (dragged: GraphNode) =>
       getIntersectingNodes(dragged).filter((node) => isModuleNode(node) && node.id !== dragged.id),
@@ -47,10 +42,9 @@ export function useMergeByDrag(setNodes: Dispatch<SetStateAction<GraphNode[]>>):
     (_event, dragged) => {
       setNodes((nodes) => withHighlightedNodes(nodes, []));
       const [target] = targetsUnder(dragged).filter(isModuleNode);
-      if (target && isModuleNode(dragged))
-        setCandidate({ source: dragged.data.module, target: target.data.module });
+      if (target && isModuleNode(dragged)) onDropOnto(dragged.data.module, target.data.module);
     },
-    [setNodes, targetsUnder]
+    [setNodes, targetsUnder, onDropOnto]
   );
-  return { candidate, clearCandidate: () => setCandidate(null), onNodeDrag, onNodeDragStop };
+  return { onNodeDrag, onNodeDragStop };
 }

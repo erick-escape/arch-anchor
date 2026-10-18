@@ -1,0 +1,349 @@
+/* The modules panel floats over the graph's left edge (brief, 6.4). */
+
+.panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  width: 300px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--aa-radius-lg);
+  background: var(--aa-raised);
+  border: 1px solid var(--aa-line);
+  box-shadow: var(--aa-shadow-lg);
+  overflow: hidden;
+}
+
+.listHead {
+  padding: 14px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--aa-line);
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panelTitle {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.count {
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+.list {
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-radius: 10px;
+}
+
+.row:hover {
+  background: var(--aa-accent-soft);
+}
+
+.rowButton {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 6px 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rowName {
+  font-weight: 600;
+  color: var(--aa-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.rowViolations {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aa-divergence-text);
+}
+
+.menuButton,
+.iconButton {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: var(--aa-radius-md);
+  background: transparent;
+  color: var(--aa-text-muted);
+  cursor: pointer;
+}
+
+.iconButton {
+  margin-top: 0;
+  color: var(--aa-text-strong);
+}
+
+.menuButton:hover,
+.iconButton:hover {
+  background: var(--aa-sunken);
+  color: var(--aa-text-strong);
+}
+
+.rename {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+}
+
+.renameHint {
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+/* one module */
+.detailHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--aa-line);
+}
+
+.detailHead .menuButton {
+  margin-top: 0;
+}
+
+.body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+}
+
+.stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--aa-sunken);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.statValue,
+.statViolations {
+  font-family: var(--aa-font-display);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 28px;
+  color: var(--aa-accent);
+}
+
+.statViolations {
+  color: var(--aa-divergence);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overline {
+  margin: 0;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--aa-text-muted);
+}
+
+.muted,
+.caption {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--aa-text-muted);
+}
+
+.reference {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.referenceHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.referenceName {
+  flex: 1;
+  font-weight: 600;
+  color: var(--aa-link);
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  color: var(--aa-text-strong);
+}
+
+.classRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.classRow:hover {
+  background: var(--aa-sunken);
+}
+
+.classRowSelected,
+.classRowSelected:hover {
+  background: var(--aa-accent-soft);
+}
+
+.classRow input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--aa-primary);
+}
+
+.classBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.classTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.className,
+.classReference,
+.classDivergent {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classReference {
+  font-weight: 600;
+  color: var(--aa-link);
+}
+
+.classDivergent {
+  font-weight: 600;
+  color: var(--aa-divergence-text);
+}
+
+.classBar {
+  height: 4px;
+  border-radius: var(--aa-radius-full);
+  background: var(--aa-line-brand);
+  overflow: hidden;
+}
+
+.classFill,
+.classFillDivergent {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--aa-accent);
+}
+
+.classFillDivergent {
+  background: var(--aa-divergence);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--aa-line);
+  background: var(--aa-accent-soft);
+}
+
+.toolbarCount {
+  flex: 1;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--aa-text-strong);
+}
+
+.targets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

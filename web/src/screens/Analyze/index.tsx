@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import RecommendationsSidebar from '../../components/RecommendationsSidebar/index.tsx';
 import SettingsModal from '../../components/SettingsModal/index.tsx';
-import Sidebar from '../../components/Sidebar/index.tsx';
 import type { ModuleData } from '../../interface/ModuleData';
 import { architecturalConstraintsOf, generateAcsPdf } from '../../utils/exportACs';
 import { AnalysisFailed, AnalyzingState } from './AnalysisStates';
@@ -11,7 +10,10 @@ import styles from './Analyze.module.css';
 import { AnalyzeTopBar } from './AnalyzeTopBar';
 import { GraphHeading } from './GraphOverlays';
 import { ModuleGraphCanvas } from './ModuleGraphCanvas';
+import { MergeModulesDialog, type MergeProposal } from './modules/ModuleDialogs';
+import { ModulesPanel } from './modules/ModulesPanel';
 import { useModuleChanges } from './useModuleChanges';
+import { useModuleOperations } from './useModuleOperations';
 import { useProjectAnalysis, type ProjectAnalysis } from './useProjectAnalysis';
 import { useSavedModulesReload } from './useSavedModulesReload';
 
@@ -24,7 +26,7 @@ import { useSavedModulesReload } from './useSavedModulesReload';
 const AnalyzePage = () => {
   const { projectName = '' } = useParams();
   const analysis = useProjectAnalysis(projectName);
-  const { reloads, reload } = useSavedModulesReload(analysis);
+  const reload = useSavedModulesReload(analysis);
   const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div className={styles.page}>
@@ -34,12 +36,7 @@ const AnalyzePage = () => {
         onExport={() => exportConstraints(projectName, analysis.modules)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
-      <AnalysisStage
-        projectName={projectName}
-        analysis={analysis}
-        reloads={reloads}
-        onReload={reload}
-      />
+      <AnalysisStage projectName={projectName} analysis={analysis} onReload={reload} />
       <SettingsModal
         projectName={projectName}
         open={settingsOpen}
@@ -60,11 +57,10 @@ function exportConstraints(projectName: string, modules: ModuleData[]): void {
 interface AnalysisStageProps {
   projectName: string;
   analysis: ProjectAnalysis;
-  reloads: number;
   onReload: () => void;
 }
 
-function AnalysisStage({ projectName, analysis, reloads, onReload }: AnalysisStageProps) {
+function AnalysisStage({ projectName, analysis, onReload }: AnalysisStageProps) {
   if (analysis.status === 'analyzing') return <AnalyzingState projectName={projectName} />;
   if (analysis.status === 'failed') {
     return (
@@ -75,27 +71,34 @@ function AnalysisStage({ projectName, analysis, reloads, onReload }: AnalysisSta
       />
     );
   }
-  return (
-    <Workspace
-      projectName={projectName}
-      analysis={analysis}
-      reloads={reloads}
-      onReload={onReload}
-    />
-  );
+  return <Workspace projectName={projectName} analysis={analysis} onReload={onReload} />;
 }
 
-function Workspace({ projectName, analysis, reloads, onReload }: AnalysisStageProps) {
-  const changes = useModuleChanges(analysis);
+function Workspace({ projectName, analysis, onReload }: AnalysisStageProps) {
+  const operations = useModuleOperations(useModuleChanges(analysis));
+  const [mergeProposal, setMergeProposal] = useState<MergeProposal | null>(null);
   return (
     <main className={styles.stage}>
-      <ModuleGraphCanvas modules={analysis.modules} changes={changes} />
+      <ModuleGraphCanvas
+        modules={analysis.modules}
+        onProposeMerge={(source, target) => setMergeProposal({ source, target })}
+      />
       <GraphHeading projectName={projectName} modules={analysis.modules} />
-      <Sidebar key={reloads} isOpen modules={analysis.modules} {...changes} />
+      <ModulesPanel
+        modules={analysis.modules}
+        operations={operations}
+        onProposeMerge={(source) => setMergeProposal({ source })}
+      />
       <RecommendationsSidebar
         projectName={projectName}
         analyzed
         onRecommendationApplied={onReload}
+      />
+      <MergeModulesDialog
+        proposal={mergeProposal}
+        modules={analysis.modules}
+        operations={operations}
+        onClose={() => setMergeProposal(null)}
       />
     </main>
   );

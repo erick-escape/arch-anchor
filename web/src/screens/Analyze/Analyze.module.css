@@ -182,18 +182,6 @@
   background: var(--aa-accent-soft);
 }
 
-/* the merge confirmation floats over the canvas */
-.mergeLayer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.mergeLayer > * {
-  pointer-events: auto;
-}
-
 /* analyzing and failed */
 .state {
   flex: 1;
