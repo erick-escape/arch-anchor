@@ -1,0 +1,61 @@
+/* The module graph: nodes are the vocabulary's module containers and package chips; edges the
+   vocabulary's dependency arrows. */
+
+.handle {
+  opacity: 0;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.moreClasses {
+  align-self: center;
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+.referenceNames {
+  flex-basis: 100%;
+  font-family: var(--aa-font-mono);
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--aa-link);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edgeAllowed {
+  stroke: var(--aa-accent);
+  stroke-width: 2;
+}
+
+.edgeDivergence {
+  stroke: var(--aa-divergence);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  animation: dependencyFlow 1.2s linear infinite;
+}
+
+.headAllowed {
+  fill: var(--aa-accent);
+  stroke: var(--aa-accent);
+}
+
+.headDivergence {
+  fill: var(--aa-divergence);
+  stroke: var(--aa-divergence);
+}
+
+@keyframes dependencyFlow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edgeDivergence {
+    animation: none;
+  }
+}

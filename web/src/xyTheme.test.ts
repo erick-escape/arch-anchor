@@ -16,12 +16,13 @@ function declarationsOf(css: string, selector: string): Record<string, string> {
 
 describe('xy-theme.css', () => {
   // A text colour that follows one theme over a background fixed in another gave dark text on
-  // a black node in the light colour scheme (#23). Both now come from the same theme's tokens.
-  it('takes a module node’s background and text colour from the same theme', () => {
-    const node = declarationsOf(stylesheet, '.react-flow__node');
-
-    expect(node['background-color']).toBe('var(--aa-surface)');
-    expect(node['color']).toBe('var(--aa-text)');
+  // a black node in the light colour scheme (#23). Text and backgrounds now come from the same
+  // theme's tokens.
+  it('takes every node’s text colour, and a plain node’s background, from the theme', () => {
+    expect(declarationsOf(stylesheet, '.react-flow__node')['color']).toBe('var(--aa-text)');
+    expect(declarationsOf(stylesheet, '.react-flow__node-default')['background-color']).toBe(
+      'var(--aa-surface)'
+    );
   });
 
   it('uses no literal colours', () => {

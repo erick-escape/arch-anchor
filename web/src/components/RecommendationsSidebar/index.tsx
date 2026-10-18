@@ -32,16 +32,21 @@ const TabLabel = ({ name, count }: { name: string; count: number }) => (
 );
 
 interface RecommendationsSidebarProps {
+  projectName: string;
+  /** The project's analysis has returned, so the API's recommendations are this project's. */
+  analyzed: boolean;
   onRecommendationApplied?: () => void;
 }
 
 const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
+  projectName,
+  analyzed,
   onRecommendationApplied,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
-  const { data: recommendations, isLoading, error } = useRecommendations();
+  const { data: recommendations, isPending, error } = useRecommendations(projectName, analyzed);
   const applySplit = useApplySplit();
   const applyMerge = useApplyMerge();
   const applyMove = useApplyMove();
@@ -241,7 +246,7 @@ const RecommendationsSidebar: React.FC<RecommendationsSidebarProps> = ({
       </div>
 
       <div style={contentStyle}>
-        {isLoading && (
+        {isPending && (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <Spin size="large" />
           </div>
