@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.archanchor.domains.analysis.InvalidAnalysisSettingsException;
 import com.archanchor.domains.rating.InvalidRatingWeightsException;
 import com.archanchor.dto.projects.AnalysisSettingsDTO;
+import com.archanchor.dto.projects.ImportSourceDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.projects.ProjectDetailDTO;
 import com.archanchor.dto.projects.ProjectsListResponseDTO;
@@ -16,6 +17,7 @@ import com.archanchor.services.InvalidProjectNameException;
 import com.archanchor.services.ProjectNotFoundException;
 import com.archanchor.services.ProjectService;
 import com.archanchor.services.ProjectsDirectory;
+import com.archanchor.services.repositoryImport.ImportSourceStore;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,16 +34,21 @@ public class ProjectController {
 
 	private final ProjectsDirectory projectsDirectory;
 
-	public ProjectController(ProjectService projectService, ProjectsDirectory projectsDirectory) {
+	private final ImportSourceStore importSourceStore;
+
+	public ProjectController(ProjectService projectService, ProjectsDirectory projectsDirectory,
+			ImportSourceStore importSourceStore) {
 		this.projectService = projectService;
 		this.projectsDirectory = projectsDirectory;
+		this.importSourceStore = importSourceStore;
 	}
 
 	@GetMapping("/projects")
 	public ProjectsListResponseDTO listProjects() throws IOException {
 		List<ProjectDetailDTO> projects = projectsDirectory.listProjectNames()
 			.stream()
-			.map(ProjectDetailDTO::new)
+			.map(name -> new ProjectDetailDTO(name,
+					importSourceStore.sourceOf(name).map(ImportSourceDTO::of).orElse(null)))
 			.toList();
 		return new ProjectsListResponseDTO(projects);
 	}
@@ -88,6 +95,7 @@ public class ProjectController {
 		try {
 			if (projectsDirectory.deleteProject(projectName)) {
 				projectService.forgetSettingsOf(projectName);
+				importSourceStore.forget(projectName);
 				return "Project " + projectName + " deleted successfully!";
 			}
 			else {

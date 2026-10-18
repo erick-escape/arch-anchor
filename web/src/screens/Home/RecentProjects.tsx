@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { listProjects } from '../../services/projectsApi';
+import { importSourceLabelOf } from '../../utils/importSourceLabel';
 import styles from './Home.module.css';
 
 // Enough to come back to recent work; the rest is one click away under All projects.
@@ -26,7 +27,7 @@ export function RecentProjects() {
         </Link>
       </div>
       <div className={styles.recentGrid}>
-        {projects.data.slice(0, SHOWN).map(({ name }) => (
+        {projects.data.slice(0, SHOWN).map(({ name, source }) => (
           <Link
             key={name}
             to={`/analyze/${encodeURIComponent(name)}`}
@@ -38,7 +39,10 @@ export function RecentProjects() {
               <span />
               <span />
             </span>
-            <span className={styles.recentName}>{name}</span>
+            <span className={styles.recentLabel}>
+              <span className={styles.recentName}>{name}</span>
+              <span className={styles.recentSource}>{importSourceLabelOf(source)}</span>
+            </span>
             <span className={styles.recentAction}>Analyze</span>
           </Link>
         ))}

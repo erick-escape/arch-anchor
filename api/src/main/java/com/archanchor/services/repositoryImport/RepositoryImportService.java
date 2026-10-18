@@ -2,6 +2,7 @@ package com.archanchor.services.repositoryImport;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.archanchor.domains.project.ImportSource;
 import com.archanchor.dto.projects.ImportedProjectDTO;
 import com.archanchor.dto.projects.RepositoryImportRequest;
 import com.archanchor.services.ProjectsDirectory;
@@ -27,12 +28,16 @@ public class RepositoryImportService {
 
 	private final AnalysisRootLocator analysisRootLocator;
 
+	private final ImportSourceStore importSourceStore;
+
 	public RepositoryImportService(ProjectsDirectory projectsDirectory, RepositoryCloner repositoryCloner,
-			ClonedTreeCleaner clonedTreeCleaner, AnalysisRootLocator analysisRootLocator) {
+			ClonedTreeCleaner clonedTreeCleaner, AnalysisRootLocator analysisRootLocator,
+			ImportSourceStore importSourceStore) {
 		this.projectsDirectory = projectsDirectory;
 		this.repositoryCloner = repositoryCloner;
 		this.clonedTreeCleaner = clonedTreeCleaner;
 		this.analysisRootLocator = analysisRootLocator;
+		this.importSourceStore = importSourceStore;
 	}
 
 	/**
@@ -66,8 +71,14 @@ public class RepositoryImportService {
 			.cloneShallow(new CloneRequest(url.cloneUri(), request.ref(), request.accessToken()), checkout);
 		clonedTreeCleaner.clean(checkout);
 		projectsDirectory.adopt(analysisRootLocator.locate(checkout, request.subdirectory()), projectName);
+		importSourceStore.save(projectName, new ImportSource(url.browseUrl(), blankAsNull(request.subdirectory()),
+				blankAsNull(request.ref()), commitSha));
 		log.info("Imported repository {} at commit {} as project {}", url.browseUrl(), commitSha, projectName);
 		return new ImportedProjectDTO(projectName, url.browseUrl(), commitSha);
+	}
+
+	private static String blankAsNull(String value) {
+		return value == null || value.isBlank() ? null : value.strip();
 	}
 
 	private static String projectNameFor(RepositoryImportRequest request, GitHubRepositoryUrl url) {

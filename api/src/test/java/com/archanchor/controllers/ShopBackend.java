@@ -20,6 +20,7 @@ import com.archanchor.services.architecturalAnalyses.SplitModule;
 import com.archanchor.services.parsers.ParserFactory;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.InMemoryRatingWeightsStore;
+import com.archanchor.services.repositoryImport.InMemoryImportSourceStore;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -54,6 +55,8 @@ final class ShopBackend {
 
 	final InMemoryAnalysisSettingsStore analysisSettingsStore = new InMemoryAnalysisSettingsStore();
 
+	final InMemoryImportSourceStore importSourceStore = new InMemoryImportSourceStore();
+
 	private final ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
 
 	private final InMemoryModuleService moduleService = new InMemoryModuleService(null, activeWeights);
@@ -83,7 +86,7 @@ final class ShopBackend {
 		RecommendationsController recommendationsController = new RecommendationsController(recommendationsService,
 				moduleController);
 		ProjectController projectController = new ProjectController(projectService,
-				new ProjectsDirectory(projectsRoot.toString()));
+				new ProjectsDirectory(projectsRoot.toString()), importSourceStore);
 		mockMvc = MockMvcBuilders.standaloneSetup(moduleController, recommendationsController, projectController)
 			.build();
 	}

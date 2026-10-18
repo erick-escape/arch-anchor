@@ -163,6 +163,10 @@ cd api
 - Minimum classes per split half, minimum classes a move leaves in its source, maximum move targets per class, minimum package dependencies of a class before it gets move or violation entries, minimum rate of a shown split, merge or move (violations are always shown), lowest similarity change of a recommended merge (#41)
 - Read through `ActiveAnalysisSettings`; changing them re-runs the analyses without re-electing
 
+**Import Source** (#66):
+- A project imported from GitHub keeps its `ImportSource` (repository URL, subdirectory, ref, commit SHA) in `import-source.json` through `ImportSourceStore`; written by `RepositoryImportService`, forgotten on delete
+- `GET /api/projects` items carry it as `source`, null for an uploaded folder; the project cards show it
+
 ### Important Implementation Constraints
 
 **CRITICAL**: When working on `JavaParserService` or any parser implementation, DO NOT use hardcoded solutions for specific libraries or dependencies. The parser must work generically with any Java project and any external libraries. The goal is a robust, generic solution for Spring Boot, plain Maven projects, and any Java frameworks.

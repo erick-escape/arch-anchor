@@ -2,7 +2,7 @@ import { faCheck, faChevronDown, faFolderOpen, faLink } from '@fortawesome/free-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRef, useState, type FormEvent } from 'react';
 import { folderFilesOf } from '../../../services/projectUploadApi';
-import { githubRepoOf } from './githubRepo';
+import { githubRepoOf } from '../../../utils/githubRepo';
 import { ImportFailure, ImportProgress } from './ImportFeedback';
 import styles from './ImportBar.module.css';
 import { ImportOptions } from './ImportOptions';

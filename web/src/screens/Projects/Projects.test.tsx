@@ -48,6 +48,32 @@ describe('ProjectsPage', () => {
     expect(screen.getByRole('heading', { name: 'Projects', level: 1 })).toBeInTheDocument();
   });
 
+  it('says where each project came from', async () => {
+    fakeApi.respondTo('GET', '/api/projects', {
+      projects: [
+        {
+          name: 'bookstore',
+          source: {
+            repositoryUrl: 'https://github.com/erick-escape/arch-anchor',
+            subdirectory: 'examples/bookstore',
+            ref: null,
+            commitSha: '3ab2e30',
+          },
+        },
+        { name: 'shop', source: null },
+      ],
+    });
+    renderPage();
+
+    const bookstore = within(await screen.findByRole('article', { name: 'bookstore' }));
+    expect(
+      bookstore.getByText('erick-escape/arch-anchor · examples/bookstore')
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('article', { name: 'shop' })).getByText('No repository recorded')
+    ).toBeInTheDocument();
+  });
+
   it('adds a project from the homepage’s import bar', async () => {
     renderPage();
 

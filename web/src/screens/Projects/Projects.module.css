@@ -150,3 +150,19 @@
   color: var(--aa-divergence-text);
   font-weight: 500;
 }
+
+.cardTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* where the project came from: the repository and folder, or "No repository recorded" */
+.cardSource {
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--aa-text-muted);
+  overflow-wrap: anywhere;
+}

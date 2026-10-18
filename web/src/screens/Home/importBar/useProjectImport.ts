@@ -4,7 +4,7 @@ import { useToast } from '../../../components/feedback/useToast';
 import type { RepositoryImportRequest } from '../../../interface/Project';
 import { describeImportFailure, importRepository } from '../../../services/projectImportApi';
 import { uploadProjectFolder, type FolderFile } from '../../../services/projectUploadApi';
-import { githubRepoOf } from './githubRepo';
+import { githubRepoOf } from '../../../utils/githubRepo';
 
 export type ImportSource =
   | { kind: 'repository'; request: RepositoryImportRequest }

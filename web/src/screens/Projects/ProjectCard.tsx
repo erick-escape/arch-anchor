@@ -1,8 +1,11 @@
 import { Button } from 'antd';
+import type { ImportSource } from '../../interface/Project';
+import { importSourceLabelOf } from '../../utils/importSourceLabel';
 import styles from './Projects.module.css';
 
 interface ProjectCardProps {
   name: string;
+  source?: ImportSource | null;
   onAnalyze: () => void;
   onDelete: () => void;
 }
@@ -10,15 +13,18 @@ interface ProjectCardProps {
 /**
  * One imported project. Analyze is the card's primary action; deleting asks first.
  *
- * @example <ProjectCard name="bookstore" onAnalyze={open} onDelete={confirmDelete} />
+ * @example <ProjectCard name="bookstore" source={source} onAnalyze={open} onDelete={confirmDelete} />
  */
-export function ProjectCard({ name, onAnalyze, onDelete }: ProjectCardProps) {
+export function ProjectCard({ name, source, onAnalyze, onDelete }: ProjectCardProps) {
   return (
     <article className={styles.card} aria-labelledby={`project-${name}`}>
       <ModuleSilhouette />
-      <h2 id={`project-${name}`} className={styles.cardName}>
-        {name}
-      </h2>
+      <div className={styles.cardTitle}>
+        <h2 id={`project-${name}`} className={styles.cardName}>
+          {name}
+        </h2>
+        <span className={styles.cardSource}>{importSourceLabelOf(source)}</span>
+      </div>
       <div className={styles.cardActions}>
         <Button type="primary" onClick={onAnalyze}>
           Analyze
