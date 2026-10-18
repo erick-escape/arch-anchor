@@ -1,0 +1,21 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 72px 24px;
+  text-align: center;
+}
+
+.illustration {
+  width: 220px;
+}
+
+.text {
+  margin: 0;
+  color: var(--aa-text-muted);
+}
+
+.home {
+  font-weight: 600;
+}

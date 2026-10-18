@@ -1,0 +1,15 @@
+.title {
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 28px;
+  color: var(--aa-text-strong);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aa-space-3);
+  color: var(--aa-text);
+  padding-block: var(--aa-space-2);
+}
