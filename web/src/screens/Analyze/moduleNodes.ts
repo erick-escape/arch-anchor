@@ -130,7 +130,7 @@ export function withSplitModuleNodes(
 }
 
 /**
- * Marks the given nodes as merge targets (the `highlight` class in App.css) and clears the rest.
+ * Marks the given nodes as merge targets (the `highlight` class in xy-theme.css) and clears the rest.
  *
  * @example
  * setNodes((nodes) => withHighlightedNodes(nodes, intersectingIds));

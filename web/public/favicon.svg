@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -4 104 110">
+  <!-- ArchAnchor mark, monochrome: the chevron alone, for favicons, badges and the reference-class tile; recolour by changing the one fill.
+       Geometry from graduation/ECSA/talk/preview/mark.svg (measured from the lockup on p.18 of
+       2026_talk_unibz_terra.pdf). That file paints its carves white because Google Slides has no
+       masks; here the carved shapes are solved as polygons, so the mark sits on any background
+       and needs no ids (safe to inline many times on one page). -->
+  <!-- chevron: outer triangle minus the inner one (a 14.5u stroke), arms extended to mitered tips, anchor-stock nubs -->
+  <g fill="#112749">
+    <polygon points="0,71 50,0 100,71 84.49,71 50,21 15.51,71"/>
+    <rect x="5.97" y="51.85" width="12.0" height="25" transform="rotate(34.6 11.97 64.35)"/>
+    <rect x="82.03" y="51.85" width="12.0" height="25" transform="rotate(-34.6 88.03 64.35)"/>
+    <rect x="19.78" y="35.75" width="8" height="4.5" transform="rotate(34.6 23.78 38)"/>
+    <rect x="72.22" y="35.75" width="8" height="4.5" transform="rotate(-34.6 76.22 38)"/>
+  </g>
+</svg>

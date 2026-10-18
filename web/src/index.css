@@ -1,88 +1,56 @@
-@import url('./xy-theme.css');
+@import './xy-theme.css';
 
-:root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
+/* The app's base. Colours, fonts and scales are the tokens of src/theme/palette.ts, written as
+   CSS variables by installThemeStylesheet() before the first paint. */
 
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
-
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
-a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
-}
-
-a:hover {
-    color: #535bf2;
-}
-
-html {
-    /* Height and width fallback for older browsers. */
+html,
+body {
     height: 100%;
-    /*width: 100%;*/
-
-    /*!* Set the height to match that of the viewport. *!*/
-    /*height: 100vh;*/
-
-    /*!* Set the width to match that of the viewport. *!*/
-    /*width: 100vw;*/
-
-    /* Remove any browser-default margins. */
     margin: 0;
 }
 
 body {
-    /* Height and width fallback for older browsers. */
+    background: var(--aa-page);
+    color: var(--aa-text);
+    font-family: var(--aa-font-ui);
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+}
+
+#root {
     height: 100%;
-    margin: 0;
 }
 
-h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
+h1,
+h2,
+h3 {
+    color: var(--aa-text-strong);
+    text-wrap: balance;
 }
 
-button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
+a {
+    color: var(--aa-link);
 }
 
-button:hover {
-    border-color: #646cff;
+:focus-visible {
+    outline: none;
+    box-shadow: var(--aa-focus-ring);
 }
 
-button:focus,
-button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-    :root {
-        color: #213547;
-        background-color: #ffffff;
-    }
-
-    a:hover {
-        color: #747bff;
-    }
-
-    button {
-        background-color: #f9f9f9;
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
