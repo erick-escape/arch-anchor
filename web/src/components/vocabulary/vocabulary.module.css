@@ -105,7 +105,8 @@
   color: var(--aa-text);
   max-width: 12ch;
   text-align: center;
-  overflow-wrap: anywhere;
+  /* between words first (withCamelBreaks); inside one only when a single word is too long */
+  overflow-wrap: break-word;
 }
 .tileNameReference {
   color: var(--aa-link);

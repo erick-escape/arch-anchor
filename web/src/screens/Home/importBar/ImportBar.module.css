@@ -1,0 +1,265 @@
+/* The homepage's import bar, after the canvas's Home artboard. */
+
+.bar {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--aa-radius-xl);
+  background: var(--aa-surface);
+  border: 1px solid var(--aa-line);
+  box-shadow: var(--aa-shadow-lg);
+  text-align: left;
+}
+
+.barFailed {
+  composes: bar;
+  border-color: var(--aa-divergence);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* the URL field: a sunken well that rings as a whole when its input has focus */
+.well {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 6px 0 14px;
+  border-radius: 12px;
+  background: var(--aa-sunken);
+}
+
+.well:focus-within {
+  box-shadow: var(--aa-focus-ring);
+}
+
+.wellIcon {
+  color: var(--aa-text-muted);
+}
+
+.url {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--aa-text);
+  font-family: var(--aa-font-mono);
+  font-size: 14px;
+}
+
+/* the well shows the focus; the input itself must not draw a second ring inside it */
+.url:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.url::placeholder {
+  color: var(--aa-text-muted);
+}
+
+.repoChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--aa-radius-full);
+  background: var(--aa-surface);
+  border: 1.5px solid var(--aa-accent);
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--aa-text-strong);
+  white-space: nowrap;
+}
+
+.repoCheck {
+  color: var(--aa-accent);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  border-radius: var(--aa-radius-md);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.options {
+  composes: button;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--aa-link);
+}
+
+.chevron {
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  composes: chevron;
+  transform: rotate(180deg);
+}
+
+.upload {
+  composes: button;
+  padding: 0 16px;
+  border: 1px solid var(--aa-line-strong);
+  background: var(--aa-surface);
+  color: var(--aa-text-strong);
+}
+
+.analyze {
+  composes: button;
+  padding: 0 22px;
+  border: 1px solid var(--aa-primary);
+  background: var(--aa-primary);
+  color: var(--aa-on-primary);
+  font-size: 15px;
+}
+
+.analyze:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* the folder picker opens from the Upload folder button */
+.folderInput {
+  display: none;
+}
+
+.panel {
+  margin-top: 14px;
+  padding: 18px 6px 4px;
+  border-top: 1px solid var(--aa-line);
+}
+
+.optionGrid {
+  composes: panel;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.optionLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--aa-text-strong);
+}
+
+.optionHelp {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--aa-text-muted);
+}
+
+.mono,
+.mono input {
+  font-family: var(--aa-font-mono);
+}
+
+.progress {
+  composes: panel;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scanTrack {
+  position: relative;
+  height: 4px;
+  border-radius: var(--aa-radius-full);
+  background: var(--aa-line-brand);
+  overflow: hidden;
+}
+
+/* no progress to report, so a segment sweeps the track instead of filling it */
+.scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  border-radius: inherit;
+  background: var(--aa-accent);
+  animation: scan 1.4s ease-in-out infinite;
+}
+
+@keyframes scan {
+  from {
+    left: -38%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan {
+    animation: none;
+    left: 0;
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  font-size: 13px;
+}
+
+.stepCurrent {
+  font-weight: 600;
+  color: var(--aa-text-strong);
+}
+
+.stepNext {
+  color: var(--aa-text-muted);
+}
+
+.note {
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+.failure {
+  composes: panel;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 14px;
+  color: var(--aa-divergence-text);
+  font-size: 13px;
+}
+
+.failureIcon {
+  flex: none;
+  margin-top: 3px;
+}
+
+@media (max-width: 639px) {
+  .options,
+  .upload,
+  .analyze {
+    flex: 1 1 auto;
+  }
+}
