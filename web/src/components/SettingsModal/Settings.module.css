@@ -1,0 +1,48 @@
+/* The Settings dialog: the rating weights and the analysis filters of one project. */
+
+.title {
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 28px;
+  color: var(--aa-text-strong);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pair {
+  margin-bottom: 24px;
+}
+
+/* the pair's two weights side by side, under the slider that sets them */
+.weights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+/* the filters outgrow a laptop screen: the body scrolls, the title and tabs stay */
+.body {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
+.setting {
+  margin-bottom: 16px;
+}
+
+.explanation {
+  margin-bottom: 4px;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

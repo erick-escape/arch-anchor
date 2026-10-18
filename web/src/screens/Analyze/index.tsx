@@ -2,11 +2,10 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import SettingsModal from '../../components/SettingsModal/index.tsx';
-import type { ModuleData } from '../../interface/ModuleData';
-import { architecturalConstraintsOf, generateAcsPdf } from '../../utils/exportACs';
 import { AnalysisFailed, AnalyzingState } from './AnalysisStates';
 import styles from './Analyze.module.css';
 import { AnalyzeTopBar } from './AnalyzeTopBar';
+import { ExportDialog } from './ExportDialog';
 import { GraphEmphasisProvider } from './graphEmphasis';
 import { GraphHeading } from './GraphOverlays';
 import { ModuleGraphCanvas } from './ModuleGraphCanvas';
@@ -29,12 +28,13 @@ const AnalyzePage = () => {
   const analysis = useProjectAnalysis(projectName);
   const reload = useSavedModulesReload(analysis);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   return (
     <div className={styles.page}>
       <AnalyzeTopBar
         projectName={projectName}
         canExport={analysis.status === 'ready' && analysis.modules.length > 0}
-        onExport={() => exportConstraints(projectName, analysis.modules)}
+        onExport={() => setExportOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
       <AnalysisStage projectName={projectName} analysis={analysis} onReload={reload} />
@@ -44,16 +44,15 @@ const AnalyzePage = () => {
         onClose={() => setSettingsOpen(false)}
         onSaved={reload}
       />
+      <ExportDialog
+        open={exportOpen}
+        projectName={projectName}
+        modules={analysis.modules}
+        onClose={() => setExportOpen(false)}
+      />
     </div>
   );
 };
-
-// Exported from the modules on screen, so the PDF follows every split, merge and move.
-function exportConstraints(projectName: string, modules: ModuleData[]): void {
-  generateAcsPdf(projectName, architecturalConstraintsOf(modules)).save(
-    `architectural-constraints-${projectName}.pdf`
-  );
-}
 
 interface AnalysisStageProps {
   projectName: string;

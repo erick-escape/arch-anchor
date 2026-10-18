@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Checkbox, Spin, message } from 'antd';
+import { Alert, Button, Checkbox, Spin } from 'antd';
+import { useToast } from '../feedback/useToast';
+import styles from '../SettingsModal/Settings.module.css';
 import { AnalysisSettings } from '../../interface/AnalysisSettings';
 import {
   describeAnalysisSettingsFailure,
@@ -18,6 +20,7 @@ interface AnalysisSettingsFormProps {
 // What the analyses recommend and show for the project (#36). The defaults filter nothing.
 const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettingsFormProps) => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const queryKey = ['analysisSettings', projectName];
   const saved = useQuery({ queryKey, queryFn: () => getAnalysisSettings(projectName) });
   // Null until a value changes; the form shows the saved settings until then.
@@ -26,7 +29,7 @@ const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettin
     mutationFn: (settings: AnalysisSettings) => updateAnalysisSettings(projectName, settings),
     onSuccess: (settings) => {
       queryClient.setQueryData(queryKey, settings);
-      message.success('Settings saved: recommendations refreshed');
+      toast.success('Settings saved: recommendations refreshed');
       onSaved();
     },
   });
@@ -117,7 +120,7 @@ const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettin
       {save.isError && (
         <Alert type="error" showIcon message={describeAnalysisSettingsFailure(save.error)} />
       )}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+      <div className={styles.actions}>
         <Button onClick={onCancel}>Cancel</Button>
         <Button type="primary" loading={save.isPending} onClick={() => save.mutate(shown)}>
           Save

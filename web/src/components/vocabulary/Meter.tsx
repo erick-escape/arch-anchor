@@ -7,6 +7,8 @@ interface MeterProps {
   label?: string;
   /** "percent" (default) for a similarity, "rate" for a recommendation rate. */
   format?: 'percent' | 'rate';
+  /** The accessible name when the visible label is not enough on its own, e.g. two pairs of weights. */
+  name?: string;
 }
 
 /**
@@ -14,7 +16,7 @@ interface MeterProps {
  *
  * @example <Meter label="Similarity" value={0.75} />
  */
-export function Meter({ value, label, format = 'percent' }: MeterProps) {
+export function Meter({ value, label, format = 'percent', name = label }: MeterProps) {
   const clamped = Math.max(0, Math.min(1, value));
   return (
     <div
@@ -23,7 +25,7 @@ export function Meter({ value, label, format = 'percent' }: MeterProps) {
       aria-valuemin={0}
       aria-valuemax={1}
       aria-valuenow={clamped}
-      aria-label={label}
+      aria-label={name}
     >
       <div className={styles.meterHead}>
         {label && <span className={styles.meterLabel}>{label}</span>}

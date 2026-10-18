@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeWeightPair, pairFromSimilarityWeight } from './weightPairs';
+import { pairFromSimilarityWeight } from './weightPairs';
 
 describe('pairFromSimilarityWeight', () => {
   it('gives violations the rest of 1', () => {
@@ -14,13 +14,5 @@ describe('pairFromSimilarityWeight', () => {
   it('accepts the ends of the range', () => {
     expect(pairFromSimilarityWeight(0)).toEqual({ similarity: 0, violation: 1 });
     expect(pairFromSimilarityWeight(1)).toEqual({ similarity: 1, violation: 0 });
-  });
-});
-
-describe('describeWeightPair', () => {
-  it('names both weights with two decimals', () => {
-    expect(describeWeightPair({ similarity: 0.6, violation: 0.4 })).toBe(
-      'Similarity 0.60 · Violations 0.40'
-    );
   });
 });
