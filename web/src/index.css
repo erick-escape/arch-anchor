@@ -6,51 +6,51 @@
 *,
 *::before,
 *::after {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html,
 body {
-    height: 100%;
-    margin: 0;
+  height: 100%;
+  margin: 0;
 }
 
 body {
-    background: var(--aa-page);
-    color: var(--aa-text);
-    font-family: var(--aa-font-ui);
-    font-size: 14px;
-    line-height: 20px;
-    font-variant-numeric: tabular-nums;
-    -webkit-font-smoothing: antialiased;
+  background: var(--aa-page);
+  color: var(--aa-text);
+  font-family: var(--aa-font-ui);
+  font-size: 14px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
-    height: 100%;
+  height: 100%;
 }
 
 h1,
 h2,
 h3 {
-    color: var(--aa-text-strong);
-    text-wrap: balance;
+  color: var(--aa-text-strong);
+  text-wrap: balance;
 }
 
 a {
-    color: var(--aa-link);
+  color: var(--aa-link);
 }
 
 :focus-visible {
-    outline: none;
-    box-shadow: var(--aa-focus-ring);
+  outline: none;
+  box-shadow: var(--aa-focus-ring);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

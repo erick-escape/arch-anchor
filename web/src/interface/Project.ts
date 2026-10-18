@@ -2,6 +2,16 @@
 
 export interface ProjectSummary {
   name: string;
+  /** Where it was imported from (#66); null for a folder upload. Absent from an older API. */
+  source?: ImportSource | null;
+}
+
+// Mirrors ImportSourceDTO in api/.
+export interface ImportSource {
+  repositoryUrl: string;
+  subdirectory: string | null;
+  ref: string | null;
+  commitSha: string;
 }
 
 export interface ProjectsListResponse {

@@ -44,10 +44,11 @@ function ProjectList({ onAdd }: { onAdd: () => void }) {
   if (projects.data.length === 0) return <NoProjects onAdd={onAdd} />;
   return (
     <div className={styles.grid}>
-      {projects.data.map(({ name }) => (
+      {projects.data.map(({ name, source }) => (
         <ProjectCard
           key={name}
           name={name}
+          source={source}
           onAnalyze={() => navigate(`/analyze/${encodeURIComponent(name)}`)}
           onDelete={() => setToDelete(name)}
         />

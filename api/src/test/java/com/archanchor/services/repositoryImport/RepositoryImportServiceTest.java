@@ -3,6 +3,7 @@ package com.archanchor.services.repositoryImport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import com.archanchor.domains.project.ImportSource;
 import com.archanchor.dto.projects.ImportedProjectDTO;
 import com.archanchor.dto.projects.RepositoryImportRequest;
 import com.archanchor.services.ProjectAlreadyExistsException;
@@ -30,11 +31,40 @@ class RepositoryImportServiceTest {
 
 	private FakeRepositoryCloner cloner;
 
+	private InMemoryImportSourceStore importSources;
+
 	@BeforeEach
 	void setUp() {
 		root = workspace.resolve("uploads");
 		projectsDirectory = new ProjectsDirectory(root.toString());
 		cloner = new FakeRepositoryCloner();
+		importSources = new InMemoryImportSourceStore();
+	}
+
+	@Test
+	void remembersWhereTheProjectCameFrom() throws IOException {
+		service().importRepository(
+				new RepositoryImportRequest(PETCLINIC + ".git", " v3.2 ", " examples/demo ", "petclinic", "secret"));
+
+		assertThat(importSources.sourceOf("petclinic"))
+			.contains(new ImportSource(PETCLINIC, "examples/demo", "v3.2", FakeRepositoryCloner.COMMIT_SHA));
+	}
+
+	@Test
+	void recordsNoBranchOrSubdirectoryThatWasLeftBlank() throws IOException {
+		service().importRepository(new RepositoryImportRequest(PETCLINIC, "", " ", null, null));
+
+		assertThat(importSources.sourceOf("spring-petclinic"))
+			.contains(new ImportSource(PETCLINIC, null, null, FakeRepositoryCloner.COMMIT_SHA));
+	}
+
+	@Test
+	void remembersNothingOfAFailedImport() {
+		cloner.failingWith(new RepositoryNotAccessibleException("Repository was not found", null));
+
+		assertThatThrownBy(() -> service().importRepository(request(PETCLINIC)))
+			.isInstanceOf(RepositoryNotAccessibleException.class);
+		assertThat(importSources.sourceOf("spring-petclinic")).isEmpty();
 	}
 
 	@Test
@@ -135,7 +165,7 @@ class RepositoryImportServiceTest {
 
 	private RepositoryImportService service() {
 		return new RepositoryImportService(projectsDirectory, cloner, new ClonedTreeCleaner(),
-				new AnalysisRootLocator());
+				new AnalysisRootLocator(), importSources);
 	}
 
 	private static RepositoryImportRequest request(String repositoryUrl) {

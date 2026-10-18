@@ -224,15 +224,25 @@ describe('HomePage', () => {
 
   it('lists the projects already imported, each a click from its analysis', async () => {
     fakeApi.respondTo('GET', '/api/projects', {
-      projects: [{ name: 'bookstore' }, { name: 'leona' }],
+      projects: [
+        {
+          name: 'bookstore',
+          source: {
+            repositoryUrl: BOOKSTORE_URL,
+            subdirectory: 'examples/bookstore',
+            ref: null,
+            commitSha: '3ab2e30',
+          },
+        },
+        { name: 'leona', source: null },
+      ],
     });
     renderHome();
 
     const recent = within(await screen.findByRole('region', { name: 'Your projects' }));
-    expect(await recent.findByRole('link', { name: /bookstore/ })).toHaveAttribute(
-      'href',
-      '/analyze/bookstore'
-    );
+    const bookstore = await recent.findByRole('link', { name: /bookstore/ });
+    expect(bookstore).toHaveAttribute('href', '/analyze/bookstore');
+    expect(bookstore).toHaveTextContent('erick-escape/arch-anchor · examples/bookstore');
     expect(recent.getByRole('link', { name: 'All projects' })).toHaveAttribute('href', '/projects');
   });
 

@@ -11,6 +11,7 @@ import com.archanchor.services.ProjectsDirectory;
 import com.archanchor.services.repositoryImport.AnalysisRootLocator;
 import com.archanchor.services.repositoryImport.ClonedTreeCleaner;
 import com.archanchor.services.repositoryImport.FakeRepositoryCloner;
+import com.archanchor.services.repositoryImport.InMemoryImportSourceStore;
 import com.archanchor.services.repositoryImport.RepositoryCloneFailedException;
 import com.archanchor.services.repositoryImport.RepositoryImportService;
 import com.archanchor.services.repositoryImport.RepositoryNotAccessibleException;
@@ -104,7 +105,7 @@ class RepositoryImportControllerTest {
 
 	private ResultActions importing(String body, FakeRepositoryCloner cloner) throws Exception {
 		RepositoryImportService service = new RepositoryImportService(new ProjectsDirectory(root.toString()), cloner,
-				new ClonedTreeCleaner(), new AnalysisRootLocator());
+				new ClonedTreeCleaner(), new AnalysisRootLocator(), new InMemoryImportSourceStore());
 		MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new RepositoryImportController(service)).build();
 		return mockMvc.perform(post("/api/projects/import").contentType(MediaType.APPLICATION_JSON).content(body));
 	}
