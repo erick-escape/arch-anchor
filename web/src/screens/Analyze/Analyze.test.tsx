@@ -111,6 +111,18 @@ describe('AnalyzePage', () => {
   });
 
   // Re-analysing reads the sources again and discards the module operation (#19).
+  it('previews the constraints of the modules on screen before exporting them', async () => {
+    renderPage();
+    await moduleNode('orders');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Export ACs' }));
+
+    const dialog = within(await screen.findByRole('dialog'));
+    expect(dialog.getByRole('region', { name: 'orders' })).toBeInTheDocument();
+    expect(dialog.getByRole('region', { name: 'billing' })).toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument();
+  });
+
   it('shows the saved modules after a recommendation is applied, without analyzing again', async () => {
     fakeApi
       .respondTo(

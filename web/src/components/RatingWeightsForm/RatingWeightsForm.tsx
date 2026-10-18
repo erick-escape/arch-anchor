@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Spin, message } from 'antd';
+import { Alert, Button, Spin } from 'antd';
+import { useToast } from '../feedback/useToast';
+import styles from '../SettingsModal/Settings.module.css';
 import { RatingWeights } from '../../interface/RatingWeights';
 import {
   describeRatingWeightsFailure,
@@ -25,6 +27,7 @@ const RECOMMENDATION_EXPLANATION =
 
 const RatingWeightsForm = ({ projectName, onSaved, onCancel }: RatingWeightsFormProps) => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const queryKey = ['ratingWeights', projectName];
   const saved = useQuery({ queryKey, queryFn: () => getRatingWeights(projectName) });
   // Null until a slider moves; the form shows the saved weights until then.
@@ -33,7 +36,7 @@ const RatingWeightsForm = ({ projectName, onSaved, onCancel }: RatingWeightsForm
     mutationFn: (weights: RatingWeights) => updateRatingWeights(projectName, weights),
     onSuccess: (weights) => {
       queryClient.setQueryData(queryKey, weights);
-      message.success('Weights saved: modules re-elected and recommendations re-rated');
+      toast.success('Weights saved: modules re-elected and recommendations re-rated');
       onSaved();
     },
   });
@@ -63,7 +66,7 @@ const RatingWeightsForm = ({ projectName, onSaved, onCancel }: RatingWeightsForm
       {save.isError && (
         <Alert type="error" showIcon message={describeRatingWeightsFailure(save.error)} />
       )}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+      <div className={styles.actions}>
         <Button onClick={onCancel}>Cancel</Button>
         <Button type="primary" loading={save.isPending} onClick={() => save.mutate(shown)}>
           Save

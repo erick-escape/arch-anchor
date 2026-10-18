@@ -1,5 +1,6 @@
 import { InputNumber, Typography } from 'antd';
 import { ReactNode } from 'react';
+import styles from '../SettingsModal/Settings.module.css';
 
 interface SettingNumberProps {
   // Also the input's accessible name.
@@ -31,12 +32,12 @@ const SettingNumber = ({
   onChange,
   children,
 }: SettingNumberProps) => (
-  <section aria-label={label} style={{ marginBottom: 16 }}>
+  <section aria-label={label} className={styles.setting}>
     <Typography.Text strong>{label}</Typography.Text>
-    <Typography.Paragraph type="secondary" style={{ marginBottom: 4 }}>
+    <Typography.Paragraph type="secondary" className={styles.explanation}>
       {explanation}
     </Typography.Paragraph>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div className={styles.inputRow}>
       <InputNumber
         aria-label={label}
         min={min}

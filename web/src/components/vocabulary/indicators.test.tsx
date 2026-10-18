@@ -32,6 +32,24 @@ describe('Meter', () => {
 
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '1');
   });
+
+  it('is named by its label, or by the name given when the label is shared', () => {
+    render(
+      <>
+        <Meter label="Similarity" value={0.5} />
+        <Meter label="Similarity" value={0.8} name="Election: similarity weight" />
+      </>
+    );
+
+    expect(screen.getByRole('meter', { name: 'Similarity' })).toHaveAttribute(
+      'aria-valuenow',
+      '0.5'
+    );
+    expect(screen.getByRole('meter', { name: 'Election: similarity weight' })).toHaveAttribute(
+      'aria-valuenow',
+      '0.8'
+    );
+  });
 });
 
 describe('StatTile', () => {

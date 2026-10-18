@@ -16,11 +16,3 @@ export function pairFromSimilarityWeight(similarity: number): WeightPair {
     violation: roundToSliderPrecision(1 - similarity),
   };
 }
-
-/**
- * @example
- * describeWeightPair({ similarity: 0.6, violation: 0.4 }); // 'Similarity 0.60 · Violations 0.40'
- */
-export function describeWeightPair(pair: WeightPair): string {
-  return `Similarity ${pair.similarity.toFixed(2)} · Violations ${pair.violation.toFixed(2)}`;
-}

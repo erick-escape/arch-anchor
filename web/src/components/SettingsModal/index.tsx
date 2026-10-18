@@ -1,6 +1,7 @@
 import { Modal, Tabs } from 'antd';
 import RatingWeightsForm from '../RatingWeightsForm/RatingWeightsForm';
 import AnalysisSettingsForm from '../AnalysisSettingsForm/AnalysisSettingsForm';
+import styles from './Settings.module.css';
 
 interface SettingsModalProps {
   projectName: string;
@@ -19,7 +20,16 @@ const SettingsModal = ({ projectName, open, onClose, onSaved }: SettingsModalPro
     onClose();
   };
   return (
-    <Modal open={open} title="Settings" onCancel={onClose} footer={null} destroyOnClose>
+    <Modal
+      open={open}
+      title={<span className={styles.title}>Settings for {projectName}</span>}
+      onCancel={onClose}
+      footer={null}
+      width={640}
+      centered
+      classNames={{ body: styles.body }}
+      destroyOnClose
+    >
       <Tabs
         items={[
           {
@@ -34,8 +44,10 @@ const SettingsModal = ({ projectName, open, onClose, onSaved }: SettingsModalPro
             ),
           },
           {
-            key: 'recommendations',
-            label: 'Recommendations',
+            // The analysis settings filter what is recommended; the tab used to be called
+            // "Recommendations", which named the result rather than the settings.
+            key: 'analysis-filters',
+            label: 'Analysis filters',
             children: (
               <AnalysisSettingsForm
                 projectName={projectName}

@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios, { AxiosRequestConfig } from 'axios';
-import { message } from 'antd';
 import SettingsModal from './index';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
+import { renderWithProviders } from '../../test/renderWithProviders';
 import { RatingWeights } from '../../interface/RatingWeights';
 import { AnalysisSettings } from '../../interface/AnalysisSettings';
 
@@ -44,14 +43,11 @@ describe('SettingsModal', () => {
 
   afterEach(() => {
     axios.defaults.adapter = realAdapter;
-    message.destroy();
   });
 
   function renderModal(onSaved = vi.fn(), onClose = vi.fn()) {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <SettingsModal projectName="shop" open onClose={onClose} onSaved={onSaved} />
-      </QueryClientProvider>
+    renderWithProviders(
+      <SettingsModal projectName="shop" open onClose={onClose} onSaved={onSaved} />
     );
   }
 
@@ -59,12 +55,22 @@ describe('SettingsModal', () => {
     return fakeApi.requestsTo('PUT', url).map((request) => JSON.parse(String(request.body)));
   }
 
-  async function openRecommendationsTab(): Promise<void> {
-    await userEvent.click(await screen.findByRole('tab', { name: 'Recommendations' }));
+  async function openFiltersTab(): Promise<void> {
+    await userEvent.click(await screen.findByRole('tab', { name: 'Analysis filters' }));
   }
 
   function settingInput(label: string): Promise<HTMLElement> {
     return screen.findByRole('spinbutton', { name: label });
+  }
+
+  // The pair's two weights as its meters show them: similarity, then violations.
+  function shownWeights(pair: string): string[] {
+    return ['similarity', 'violations'].map(
+      (weight) =>
+        screen
+          .getByRole('meter', { name: `${pair}: ${weight} weight` })
+          .getAttribute('aria-valuenow') ?? ''
+    );
   }
 
   function electionSlider(): Promise<HTMLElement> {
@@ -79,11 +85,11 @@ describe('SettingsModal', () => {
     renderModal();
 
     expect(await electionSlider()).toHaveAttribute('aria-valuenow', '0.8');
-    expect(screen.getByText('Similarity 0.80 · Violations 0.20')).toBeInTheDocument();
+    expect(shownWeights('Election')).toEqual(['0.8', '0.2']);
     expect(
       screen.getByRole('slider', { name: 'Recommendation rate: similarity weight' })
     ).toHaveAttribute('aria-valuenow', '0.5');
-    expect(screen.getByText('Similarity 0.50 · Violations 0.50')).toBeInTheDocument();
+    expect(shownWeights('Recommendation rate')).toEqual(['0.5', '0.5']);
   });
 
   // Changing the election replaces reference classes, so the architect is told which ones.
@@ -104,7 +110,7 @@ describe('SettingsModal', () => {
     renderModal(onSaved, onClose);
 
     fireEvent.keyDown(await electionSlider(), { key: 'ArrowRight', keyCode: 39, which: 39 });
-    expect(screen.getByText('Similarity 0.55 · Violations 0.45')).toBeInTheDocument();
+    expect(shownWeights('Election')).toEqual(['0.55', '0.45']);
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -141,7 +147,7 @@ describe('SettingsModal', () => {
       });
       renderModal();
 
-      await openRecommendationsTab();
+      await openFiltersTab();
 
       expect(await settingInput('Fewest classes in each half of a split')).toHaveValue('2');
       expect(await settingInput('Fewest classes a move leaves in its module')).toHaveValue('3');
@@ -159,7 +165,7 @@ describe('SettingsModal', () => {
     it('says that violations are always shown', async () => {
       renderModal();
 
-      await openRecommendationsTab();
+      await openFiltersTab();
       await settingInput('Lowest rate of a shown split, merge or move');
 
       expect(screen.getByText(/Violations have no rate and are always shown/)).toBeInTheDocument();
@@ -169,7 +175,7 @@ describe('SettingsModal', () => {
       const onSaved = vi.fn();
       const onClose = vi.fn();
       renderModal(onSaved, onClose);
-      await openRecommendationsTab();
+      await openFiltersTab();
 
       const splitHalf = await settingInput('Fewest classes in each half of a split');
       await userEvent.clear(splitHalf);
@@ -197,7 +203,7 @@ describe('SettingsModal', () => {
       const onSaved = vi.fn();
       const onClose = vi.fn();
       renderModal(onSaved, onClose);
-      await openRecommendationsTab();
+      await openFiltersTab();
 
       await settingInput('Fewest classes in each half of a split');
       await userEvent.click(screen.getByRole('button', { name: 'Save' }));

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { architecturalConstraintsOf, generateAcsPdf } from './exportACs';
+import { architecturalConstraintsOf, constraintLinesOf, generateAcsPdf } from './exportACs';
 import { ArchitecturalConstraint } from '../interface/ProjectAnalyses';
 import { clazzFixture, moduleFixture } from '../test/fixtures/moduleFixtures';
 
@@ -119,5 +119,62 @@ describe('architecturalConstraintsOf', () => {
     const [constraint] = architecturalConstraintsOf([persistence]);
 
     expect(constraint.refClassConstraints[0].enforceMode).toBe('ALLOW');
+  });
+});
+
+describe('constraintLinesOf', () => {
+  it('numbers the constraints across modules, in the words the PDF and the README use', () => {
+    const lines = constraintLinesOf(
+      architecturalConstraintsOf([
+        moduleFixture({
+          name: 'bookstore/model',
+          refClazzes: [clazzFixture({ dependencies: [{ packageName: 'java.time', types: [] }] })],
+        }),
+        moduleFixture({
+          name: 'bookstore/persistence',
+          refClazzes: [
+            clazzFixture({
+              enforceMode: 'MUST',
+              dependencies: [
+                { packageName: 'bookstore.model', types: [] },
+                { packageName: 'java.sql', types: [] },
+              ],
+            }),
+          ],
+        }),
+      ])
+    );
+
+    expect(lines.map((line) => line.text)).toEqual([
+      'AC1 - bookstore/model CAN-DEPEND java.time',
+      'AC2 - bookstore/persistence MUST-DEPEND bookstore.model',
+      'AC3 - bookstore/persistence MUST-DEPEND java.sql',
+    ]);
+    expect(lines[1]).toMatchObject({
+      id: 'AC2',
+      moduleName: 'bookstore/persistence',
+      keyword: 'MUST-DEPEND',
+    });
+  });
+});
+
+describe('generateAcsPdf wrapping', () => {
+  // Counts the text runs the PDF draws: the title, then one per printed line.
+  function textRunsOf(packageName: string): number {
+    const constraints = architecturalConstraintsOf([
+      moduleFixture({
+        name: 'shop/web',
+        refClazzes: [clazzFixture({ dependencies: [{ packageName, types: [] }] })],
+      }),
+    ]);
+    return (generateAcsPdf('shop', constraints).output().match(/\) Tj/g) ?? []).length;
+  }
+
+  it('prints a short constraint on one line', () => {
+    expect(textRunsOf('java.sql')).toBe(2);
+  });
+
+  it('wraps a constraint too long for the page instead of running off it', () => {
+    expect(textRunsOf(`org.example.${'deeply.nested.'.repeat(12)}pkg`)).toBeGreaterThan(2);
   });
 });

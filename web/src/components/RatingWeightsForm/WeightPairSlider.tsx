@@ -1,6 +1,8 @@
 import { Slider, Typography } from 'antd';
 import { WeightPair } from '../../interface/RatingWeights';
-import { describeWeightPair, pairFromSimilarityWeight } from './weightPairs';
+import styles from '../SettingsModal/Settings.module.css';
+import { Meter } from '../vocabulary/Meter';
+import { pairFromSimilarityWeight } from './weightPairs';
 
 interface WeightPairSliderProps {
   // Also names the slider handle: "<name>: similarity weight".
@@ -18,7 +20,7 @@ const SLIDER_MARKS = { 0: 'Violations', 0.5: 'Equal', 1: 'Similarity' };
 const SLIDER_STYLE = { marginInline: 36 };
 
 const WeightPairSlider = ({ name, explanation, pair, onChange }: WeightPairSliderProps) => (
-  <section aria-label={name} style={{ marginBottom: 24 }}>
+  <section aria-label={name} className={styles.pair}>
     <Typography.Title level={5}>{name}</Typography.Title>
     <Typography.Paragraph type="secondary">{explanation}</Typography.Paragraph>
     <Slider
@@ -32,7 +34,20 @@ const WeightPairSlider = ({ name, explanation, pair, onChange }: WeightPairSlide
       ariaLabelForHandle={`${name}: similarity weight`}
       tooltip={{ open: false }}
     />
-    <Typography.Text strong>{describeWeightPair(pair)}</Typography.Text>
+    <div className={styles.weights}>
+      <Meter
+        label="Similarity"
+        value={pair.similarity}
+        format="rate"
+        name={`${name}: similarity weight`}
+      />
+      <Meter
+        label="Violations"
+        value={pair.violation}
+        format="rate"
+        name={`${name}: violations weight`}
+      />
+    </div>
   </section>
 );
 
