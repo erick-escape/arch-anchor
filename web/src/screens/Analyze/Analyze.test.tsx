@@ -8,7 +8,6 @@ import { api } from '../../services/api';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
 import { installReactFlowJsdomShims } from '../../test/reactFlowJsdom';
 import { renderWithProviders } from '../../test/renderWithProviders';
-import { fontAwesomeIcon } from '../../test/fontAwesomeIcon';
 import { clazzFixture, moduleFixture } from '../../test/fixtures/moduleFixtures';
 import {
   moveRecommendationFixture,
@@ -128,7 +127,9 @@ describe('AnalyzePage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Apply Recommendation' }));
 
-    expect(await screen.findByText(/100\.00%/)).toBeInTheDocument();
+    await vi.waitFor(async () =>
+      expect(within(await moduleNode('orders')).getByText('100.00%')).toBeInTheDocument()
+    );
     expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(1);
   });
 
@@ -177,7 +178,7 @@ describe('AnalyzePage', () => {
   // A change made by hand left the recommendations of the previous structure on screen,
   // ready to be applied to modules that no longer exist (#28). Each test shows a card,
   // makes the change, and expects the page to ask for the recommendations again.
-  describe('after a change made by hand in the sidebar', () => {
+  describe('after a change made by hand in the modules panel', () => {
     beforeEach(() => {
       fakeApi.respondTo(
         'GET',
@@ -202,14 +203,19 @@ describe('AnalyzePage', () => {
       return screen.getByRole('complementary', { name: 'Modules' });
     }
 
+    async function openOrders() {
+      await userEvent.click(within(sidebar()).getByRole('button', { name: /^orders/ }));
+    }
+
     it('asks for the recommendations again after a rename', async () => {
       fakeApi.respondTo('POST', '/api/module/rename', null);
       await renderPageWithACard();
 
-      await userEvent.click(fontAwesomeIcon(sidebar(), 'ellipsis-vertical', 0));
-      await userEvent.click(screen.getByText('Rename'));
-      await userEvent.clear(within(sidebar()).getByDisplayValue('orders'));
-      await userEvent.type(within(sidebar()).getByRole('textbox'), 'checkout{Enter}');
+      await userEvent.click(within(sidebar()).getByRole('button', { name: 'Actions for orders' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }));
+      const field = within(sidebar()).getByRole('textbox', { name: 'New name for orders' });
+      await userEvent.clear(field);
+      await userEvent.type(field, 'checkout{Enter}');
 
       await expectTheCardGone();
     });
@@ -218,9 +224,9 @@ describe('AnalyzePage', () => {
       fakeApi.respondTo('DELETE', '/api/module/delete', null);
       await renderPageWithACard();
 
-      await userEvent.click(fontAwesomeIcon(sidebar(), 'ellipsis-vertical', 1));
-      await userEvent.click(screen.getByText('Delete'));
-      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      await userEvent.click(within(sidebar()).getByRole('button', { name: 'Actions for billing' }));
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete…' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Delete module' }));
 
       await expectTheCardGone();
     });
@@ -234,9 +240,11 @@ describe('AnalyzePage', () => {
       });
       await renderPageWithACard();
 
-      await userEvent.click(within(sidebar()).getByText('orders'));
-      fireEvent.contextMenu(within(sidebar()).getByText('OrderRepository'));
-      await userEvent.click(screen.getByText('Split'));
+      await openOrders();
+      await userEvent.click(
+        within(sidebar()).getByRole('checkbox', { name: 'Select OrderRepository' })
+      );
+      await userEvent.click(within(sidebar()).getByRole('button', { name: 'Split' }));
 
       await expectTheCardGone();
     });
@@ -250,9 +258,11 @@ describe('AnalyzePage', () => {
       );
       await renderPageWithACard();
 
-      await userEvent.click(within(sidebar()).getByText('orders'));
-      fireEvent.contextMenu(within(sidebar()).getByText('OrderRepository'));
-      await userEvent.click(screen.getByText('Set as Ref Classes'));
+      await openOrders();
+      await userEvent.click(
+        within(sidebar()).getByRole('checkbox', { name: 'Select OrderRepository' })
+      );
+      await userEvent.click(within(sidebar()).getByRole('button', { name: 'Set as reference' }));
 
       await expectTheCardGone();
       expect(within(await moduleNode('orders')).getByText('OrderRepository')).toBeInTheDocument();

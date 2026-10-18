@@ -155,11 +155,12 @@
 }
 .moduleFoot {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--aa-space-4);
+  gap: var(--aa-space-2) var(--aa-space-4);
 }
 .moduleFoot > .meter {
-  flex: 1;
+  flex: 1 1 120px;
 }
 .moduleViolations {
   font-size: 12px;
