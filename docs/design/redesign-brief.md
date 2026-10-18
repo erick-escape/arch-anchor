@@ -816,14 +816,15 @@ is empty.
 
 ---
 
-## 8. Constraints for the implementation (later)
+## 8. Constraints for the implementation
 
 - **Stack stays.** React 18 + antd 5 + @xyflow/react 12.
   - The tokens of section 3 map onto antd's `ConfigProvider` theme tokens, with
     `theme.darkAlgorithm` for dark.
   - ReactFlow takes `colorMode` from the same switch.
   - Custom components (nodes, tiles, chips, meters) read the same CSS custom properties.
-- Fonts from Google Fonts: Jost, Inter, Roboto Mono.
+- Fonts: Jost, Inter and Roboto Mono, self-hosted from the Fontsource packages so an offline run
+  (a reviewer's, say) looks the same.
 - WCAG 2.2 AA:
   - the contrast of section 3;
   - visible focus;
@@ -834,18 +835,22 @@ is empty.
 - The homepage is responsive down to 390 px. Analyze is desktop-first; below 1024 px its panels
   become drawers.
 - Timing:
-  - The ICSE 2027 demo paper's figures, walkthrough and video show the current UI and quote its
-    strings. Implement the redesign only after that submission (23 Oct 2026).
-  - Tag the commit the paper cites first, so the reviewers' artifact still matches its
-    screenshots.
+  - The redesign ships before the ICSE 2027 demo submission (23 Oct 2026), and the paper's
+    figures, walkthrough and video are retaken from it.
+  - Tag the commit the figures were captured at (`icse27-demo`), so the reviewers' artifact
+    matches the paper.
+  - Keep the Refactorings order (splits, merges and moves, stable-sorted by rate, highest
+    first) and the 50-card pages: the paper's evaluation harness copies both.
 
-## 9. Open decisions
+## 9. Decisions
 
-To settle on the canvas, then record here:
+Settled on the canvas, 18 Oct 2026:
 
-- [ ] The label above the import bar (6.2)
-- [ ] The set of claims in the carousel (6.2)
-- [ ] The header navigation items (6.2)
-- [ ] Projects as cards or a table (6.3)
-- [ ] The name of the second Settings tab (6.6)
-- [ ] Which optional opportunities (6.7) make it in
+- [x] The label above the import bar: "Find the architecture already in your Java code."
+- [x] The claims in the carousel: the five of 6.2.
+- [x] The header: Projects · How it works · Research · GitHub, then the theme switch and ⌘K.
+- [x] Projects as cards.
+- [x] The second Settings tab is "Analysis filters".
+- [x] Optional opportunities in: a module's contract as status chips, a violation's offending types
+      and alternative targets, and the Export preview grouped by module. Out for now: manual
+      "Move class to…" and a class's first module.
