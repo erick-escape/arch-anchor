@@ -1,5 +1,7 @@
 import { api } from './api';
 import { RecommendationsResponse } from '../interface/Recommendations';
+import type { ApplyAction } from '../screens/Analyze/recommendations/recommendationCards';
+import { problemDetailOf } from './problemDetail';
 
 export const getRecommendations = async (): Promise<RecommendationsResponse> => {
   const response = await api.get<RecommendationsResponse>('/api/recommendations');
@@ -30,3 +32,24 @@ export const applyMove = async (
     params: { classId, sourceModuleId, targetModuleId },
   });
 };
+
+/**
+ * Applies a recommendation as the split, merge or move it describes. A failure becomes an Error
+ * written for the user; it used to surface axios's "Request failed with status code 500".
+ *
+ * @example await applyRecommendation({ kind: 'move', classId, sourceModuleId, targetModuleId });
+ */
+export async function applyRecommendation(action: ApplyAction): Promise<void> {
+  try {
+    if (action.kind === 'split')
+      await applySplit({ moduleId: action.moduleId, classIds: action.classIds });
+    if (action.kind === 'merge') await applyMerge(action.sourceId, action.targetId);
+    if (action.kind === 'move')
+      await applyMove(action.classId, action.sourceModuleId, action.targetModuleId);
+  } catch (error) {
+    throw new Error(
+      problemDetailOf(error) ??
+        `Could not apply the ${action.kind}. Check that the API is running, then try again.`
+    );
+  }
+}

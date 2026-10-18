@@ -5,7 +5,7 @@ import type { DependencyEdgeSpec, DependencyGraph, EdgeKind } from './moduleEdge
 
 // Type aliases, not interfaces: React Flow requires node and edge data to be Record<string, unknown>.
 export type ModuleNodeData = { module: ModuleData; highlighted: boolean };
-export type PackageNodeData = { name: string; violated: boolean };
+export type PackageNodeData = { name: string; violated: boolean; highlighted: boolean };
 export type ModuleNode = Node<ModuleNodeData, 'module'>;
 export type PackageNode = Node<PackageNodeData, 'package'>;
 export type GraphNode = ModuleNode | PackageNode;
@@ -46,7 +46,7 @@ function packageNode(name: string, violated: boolean, id: string): PackageNode {
   return {
     id,
     type: 'package',
-    data: { name, violated },
+    data: { name, violated, highlighted: false },
     position: { x: 0, y: 0 },
     width: PACKAGE_WIDTH,
   };
@@ -132,4 +132,24 @@ function edgeLabelOf(spec: DependencyEdgeSpec, names: Map<string, string>): stri
  */
 export function withHighlightedNodes(nodes: GraphNode[], ids: string[]): GraphNode[] {
   return nodes.map((node) => ({ ...node, className: ids.includes(node.id) ? 'highlight' : '' }));
+}
+
+/**
+ * The nodes as the recommendations panel wants them seen: those the hovered card touches lit,
+ * those a change just reached pulsing (the `flash` class in xy-theme.css). Other nodes are
+ * returned as they were, so React Flow does not redraw them.
+ *
+ * @example withEmphasis(nodes, new Set(['web', 'persistence']), new Set())
+ */
+export function withEmphasis(
+  nodes: GraphNode[],
+  highlighted: ReadonlySet<string>,
+  flashing: ReadonlySet<string>
+): GraphNode[] {
+  return nodes.map((node) => {
+    const lit = highlighted.has(node.id) || flashing.has(node.id);
+    if (!lit && !node.data.highlighted) return node;
+    const className = [node.className, flashing.has(node.id) && 'flash'].filter(Boolean).join(' ');
+    return { ...node, className, data: { ...node.data, highlighted: lit } } as GraphNode;
+  });
 }

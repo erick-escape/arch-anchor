@@ -125,7 +125,8 @@ describe('AnalyzePage', () => {
       ]);
     renderPage();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Apply Recommendation' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Apply move…' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Apply move' }));
 
     await vi.waitFor(async () =>
       expect(within(await moduleNode('orders')).getByText('100.00%')).toBeInTheDocument()
@@ -154,7 +155,7 @@ describe('AnalyzePage', () => {
         moduleFixture({ id: 'm2', name: 'billing' }),
       ]);
     renderPage();
-    await screen.findByRole('button', { name: 'Apply Recommendation' });
+    await screen.findByRole('button', { name: 'Apply move…' });
     fakeApi.respondTo('GET', '/api/recommendations', noRecommendations);
 
     await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
@@ -169,7 +170,7 @@ describe('AnalyzePage', () => {
       await within(await moduleNode('orders')).findByText('OrderRepository')
     ).toBeInTheDocument();
     await vi.waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Apply Recommendation' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Apply move…' })).toBeNull()
     );
     expect(fakeApi.requestsTo('PUT', '/api/projects/shop/rating-weights')).toHaveLength(1);
     expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(1);
@@ -189,13 +190,13 @@ describe('AnalyzePage', () => {
 
     async function renderPageWithACard() {
       renderPage();
-      await screen.findByRole('button', { name: 'Apply Recommendation' });
+      await screen.findByRole('button', { name: 'Apply move…' });
       fakeApi.respondTo('GET', '/api/recommendations', noRecommendations);
     }
 
     async function expectTheCardGone() {
       await vi.waitFor(() =>
-        expect(screen.queryByRole('button', { name: 'Apply Recommendation' })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Apply move…' })).toBeNull()
       );
     }
 

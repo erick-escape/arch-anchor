@@ -77,3 +77,14 @@
   background: transparent;
   color: var(--aa-text-muted);
 }
+
+/* A module a change just reached pulses for a moment. */
+.react-flow__node-module.flash > section {
+  animation: landed 0.8s ease-out 2;
+}
+
+@keyframes landed {
+  50% {
+    box-shadow: 0 0 0 10px var(--aa-accent-soft);
+  }
+}

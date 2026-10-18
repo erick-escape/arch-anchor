@@ -59,3 +59,23 @@
     animation: none;
   }
 }
+
+/* The tile of an applied move, flying between modules in screen coordinates; invisible at rest. */
+.flight {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--aa-radius-md);
+  background: var(--aa-accent);
+  box-shadow: var(--aa-glow);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.packageLit {
+  border-radius: var(--aa-radius-full);
+  box-shadow: var(--aa-glow);
+}

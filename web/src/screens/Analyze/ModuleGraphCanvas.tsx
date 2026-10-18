@@ -1,14 +1,17 @@
 import { ReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ModuleData } from '../../interface/ModuleData';
 import { useTheme } from '../../theme/themeContext';
 import styles from './Analyze.module.css';
 import { DependencyEdgeView } from './graph/DependencyEdgeView';
+import { withEmphasis } from './graph/graphElements';
 import { ModuleNodeView } from './graph/ModuleNodeView';
 import { PackageNodeView } from './graph/PackageNodeView';
+import { TileFlight } from './graph/TileFlight';
 import { useMergeByDrag } from './graph/useMergeByDrag';
 import { useModuleGraph } from './graph/useModuleGraph';
+import { useGraphEmphasisState } from './graphEmphasisContext';
 import { GraphLegend, ZoomControls } from './GraphOverlays';
 
 const nodeTypes = { module: ModuleNodeView, package: PackageNodeView };
@@ -30,11 +33,16 @@ export function ModuleGraphCanvas({ modules, onProposeMerge }: ModuleGraphCanvas
   const { mode } = useTheme();
   const graph = useModuleGraph(modules, showExternal);
   const merge = useMergeByDrag(graph.setNodes, onProposeMerge);
+  const { highlighted, flashing, flight } = useGraphEmphasisState();
+  const nodes = useMemo(
+    () => withEmphasis(graph.nodes, highlighted, flashing),
+    [graph.nodes, highlighted, flashing]
+  );
   return (
     <>
       <div className={styles.canvas}>
         <ReactFlow
-          nodes={graph.nodes}
+          nodes={nodes}
           edges={graph.edges}
           onNodesChange={graph.onNodesChange}
           onNodeDrag={merge.onNodeDrag}
@@ -50,6 +58,7 @@ export function ModuleGraphCanvas({ modules, onProposeMerge }: ModuleGraphCanvas
       </div>
       <GraphLegend showExternal={showExternal} onShowExternalChange={setShowExternal} />
       <ZoomControls />
+      <TileFlight flight={flight} />
     </>
   );
 }

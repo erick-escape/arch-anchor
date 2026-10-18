@@ -1,17 +1,18 @@
 import { ReactFlowProvider } from '@xyflow/react';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import RecommendationsSidebar from '../../components/RecommendationsSidebar/index.tsx';
 import SettingsModal from '../../components/SettingsModal/index.tsx';
 import type { ModuleData } from '../../interface/ModuleData';
 import { architecturalConstraintsOf, generateAcsPdf } from '../../utils/exportACs';
 import { AnalysisFailed, AnalyzingState } from './AnalysisStates';
 import styles from './Analyze.module.css';
 import { AnalyzeTopBar } from './AnalyzeTopBar';
+import { GraphEmphasisProvider } from './graphEmphasis';
 import { GraphHeading } from './GraphOverlays';
 import { ModuleGraphCanvas } from './ModuleGraphCanvas';
 import { MergeModulesDialog, type MergeProposal } from './modules/ModuleDialogs';
 import { ModulesPanel } from './modules/ModulesPanel';
+import { RecommendationsPanel } from './recommendations/RecommendationsPanel';
 import { useModuleChanges } from './useModuleChanges';
 import { useModuleOperations } from './useModuleOperations';
 import { useProjectAnalysis, type ProjectAnalysis } from './useProjectAnalysis';
@@ -78,29 +79,27 @@ function Workspace({ projectName, analysis, onReload }: AnalysisStageProps) {
   const operations = useModuleOperations(useModuleChanges(analysis));
   const [mergeProposal, setMergeProposal] = useState<MergeProposal | null>(null);
   return (
-    <main className={styles.stage}>
-      <ModuleGraphCanvas
-        modules={analysis.modules}
-        onProposeMerge={(source, target) => setMergeProposal({ source, target })}
-      />
-      <GraphHeading projectName={projectName} modules={analysis.modules} />
-      <ModulesPanel
-        modules={analysis.modules}
-        operations={operations}
-        onProposeMerge={(source) => setMergeProposal({ source })}
-      />
-      <RecommendationsSidebar
-        projectName={projectName}
-        analyzed
-        onRecommendationApplied={onReload}
-      />
-      <MergeModulesDialog
-        proposal={mergeProposal}
-        modules={analysis.modules}
-        operations={operations}
-        onClose={() => setMergeProposal(null)}
-      />
-    </main>
+    <GraphEmphasisProvider>
+      <main className={styles.stage}>
+        <ModuleGraphCanvas
+          modules={analysis.modules}
+          onProposeMerge={(source, target) => setMergeProposal({ source, target })}
+        />
+        <GraphHeading projectName={projectName} modules={analysis.modules} />
+        <ModulesPanel
+          modules={analysis.modules}
+          operations={operations}
+          onProposeMerge={(source) => setMergeProposal({ source })}
+        />
+        <RecommendationsPanel projectName={projectName} analyzed onApplied={onReload} />
+        <MergeModulesDialog
+          proposal={mergeProposal}
+          modules={analysis.modules}
+          operations={operations}
+          onClose={() => setMergeProposal(null)}
+        />
+      </main>
+    </GraphEmphasisProvider>
   );
 }
 
