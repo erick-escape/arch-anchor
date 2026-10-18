@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios, { AxiosRequestConfig } from 'axios';
 import AnalyzePageWithProvider from './index';
 import { api } from '../../services/api';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
 import { installReactFlowJsdomShims } from '../../test/reactFlowJsdom';
+import { renderWithProviders } from '../../test/renderWithProviders';
 import { fontAwesomeIcon } from '../../test/fontAwesomeIcon';
 import { clazzFixture, moduleFixture } from '../../test/fixtures/moduleFixtures';
 import {
@@ -57,32 +56,59 @@ describe('AnalyzePage', () => {
   });
 
   function renderPage() {
-    return render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter initialEntries={['/analyze/shop']}>
-          <Routes>
-            <Route path="/analyze/:projectName" element={<AnalyzePageWithProvider />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>
-    );
+    return renderWithProviders(<AnalyzePageWithProvider />, {
+      route: '/analyze/shop',
+      path: '/analyze/:projectName',
+    });
   }
 
-  it('analyzes the project named in the URL', async () => {
+  // The module of `name` on the graph.
+  function moduleNode(name: string): Promise<HTMLElement> {
+    return screen.findByRole('region', { name: `Module ${name}` });
+  }
+
+  it('analyzes the project named in the URL and states what it found', async () => {
     renderPage();
 
-    expect(await screen.findAllByText('Ref Class:')).toHaveLength(2);
+    expect(
+      await screen.findByRole('heading', { name: 'shop · 2 modules · no violations' })
+    ).toBeInTheDocument();
     expect(fakeApi.requestsTo('POST', '/api/analyze')[0].params).toEqual({ projectName: 'shop' });
-    expect(screen.getByText(/Analyzed Modules for Project: shop/)).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Projects/shop'
+    );
   });
 
   it('draws a node and lists a sidebar card for every module', async () => {
     renderPage();
 
-    await screen.findAllByText('Ref Class:');
+    await moduleNode('orders');
 
     expect(screen.getAllByText('orders')).toHaveLength(2);
     expect(screen.getAllByText('billing')).toHaveLength(2);
+  });
+
+  // The API answers GET /api/recommendations for the project analysed last, so asking before
+  // this project's analysis returns showed the previous project's cards first (#53).
+  it('asks for the recommendations only once the analysis has returned', async () => {
+    renderPage();
+
+    await moduleNode('orders');
+
+    const urls = fakeApi.requests.map((request) => `${request.method} ${request.url}`);
+    expect(urls.indexOf('GET /api/recommendations')).toBeGreaterThan(
+      urls.indexOf('POST /api/analyze')
+    );
+  });
+
+  it('says why when the analysis fails, and analyzes again on request', async () => {
+    fakeApi.failWith('POST', '/api/analyze', 500, { detail: 'The project has no Java sources' });
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The project has no Java sources');
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    await vi.waitFor(() => expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(2));
   });
 
   // Re-analysing reads the sources again and discards the module operation (#19).
@@ -126,12 +152,11 @@ describe('AnalyzePage', () => {
         moduleFixture({ id: 'm1', name: 'orders', refClazzes: [repository] }),
         moduleFixture({ id: 'm2', name: 'billing' }),
       ]);
-    const { container } = renderPage();
+    renderPage();
     await screen.findByRole('button', { name: 'Apply Recommendation' });
     fakeApi.respondTo('GET', '/api/recommendations', noRecommendations);
 
-    await userEvent.click(fontAwesomeIcon(container, 'ellipsis-vertical', 0));
-    await userEvent.click(screen.getByText('Settings'));
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
     fireEvent.keyDown(await screen.findByRole('slider', { name: 'Election: similarity weight' }), {
       key: 'ArrowRight',
       keyCode: 39,
@@ -140,7 +165,7 @@ describe('AnalyzePage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(
-      await screen.findByText((_, element) => element?.textContent === 'Ref Class: OrderRepository')
+      await within(await moduleNode('orders')).findByText('OrderRepository')
     ).toBeInTheDocument();
     await vi.waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Apply Recommendation' })).toBeNull()
@@ -230,9 +255,7 @@ describe('AnalyzePage', () => {
       await userEvent.click(screen.getByText('Set as Ref Classes'));
 
       await expectTheCardGone();
-      expect(
-        screen.getByText((_, element) => element?.textContent === 'Ref Class: OrderRepository')
-      ).toBeInTheDocument();
+      expect(within(await moduleNode('orders')).getByText('OrderRepository')).toBeInTheDocument();
     });
   });
 });

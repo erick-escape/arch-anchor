@@ -11,6 +11,7 @@ export function clazzFixture(overrides: Partial<ClazzData> = {}): ClazzData {
   return {
     id: 'c1',
     name: 'OrderService',
+    packageName: 'shop.orders',
     dependencies: [],
     similarity: 0.75,
     avgSimilarityWithRefClazzes: 0.75,

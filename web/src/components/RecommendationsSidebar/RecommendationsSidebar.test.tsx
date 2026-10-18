@@ -35,7 +35,11 @@ describe('RecommendationsSidebar', () => {
   function renderSidebar(onRecommendationApplied: () => void = () => {}) {
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <RecommendationsSidebar onRecommendationApplied={onRecommendationApplied} />
+        <RecommendationsSidebar
+          projectName="shop"
+          analyzed
+          onRecommendationApplied={onRecommendationApplied}
+        />
       </QueryClientProvider>
     );
   }
