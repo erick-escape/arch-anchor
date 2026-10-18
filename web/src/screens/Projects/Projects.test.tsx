@@ -18,6 +18,7 @@ function renderPage() {
     <Routes>
       <Route path="/projects" element={<ProjectsPage />} />
       <Route path="/analyze/:projectName" element={<AnalyzeStub />} />
+      <Route path="/" element={<p>the import bar</p>} />
     </Routes>,
     { route: '/projects' }
   );
@@ -45,6 +46,14 @@ describe('ProjectsPage', () => {
     expect(await screen.findByRole('article', { name: 'shop' })).toBeInTheDocument();
     expect(screen.getByRole('article', { name: 'bank' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Projects', level: 1 })).toBeInTheDocument();
+  });
+
+  it('adds a project from the homepage’s import bar', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a project' }));
+
+    expect(screen.getByText('the import bar')).toBeInTheDocument();
   });
 
   it('opens a project for analysis', async () => {

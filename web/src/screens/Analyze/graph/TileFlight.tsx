@@ -1,5 +1,6 @@
 import { useReactFlow, type InternalNode } from '@xyflow/react';
 import { useEffect, useRef } from 'react';
+import { prefersReducedMotion } from '../../../utils/prefersReducedMotion';
 import type { Flight } from '../graphEmphasisContext';
 import type { GraphNode } from './graphElements';
 import styles from './graph.module.css';
@@ -10,10 +11,6 @@ function centreOf(node: InternalNode<GraphNode> | undefined): { x: number; y: nu
   if (!node) return null;
   const { x, y } = node.internals.positionAbsolute;
   return { x: x + (node.measured.width ?? 0) / 2, y: y + (node.measured.height ?? 0) / 2 };
-}
-
-function stillMotion(): boolean {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
 /**
@@ -29,7 +26,8 @@ export function TileFlight({ flight }: { flight: Flight | null }) {
     const element = tile.current;
     const from = centreOf(flight ? getInternalNode(flight.from) : undefined);
     const to = centreOf(flight ? getInternalNode(flight.to) : undefined);
-    if (!element || !from || !to || stillMotion() || typeof element.animate !== 'function') return;
+    if (!element || !from || !to || prefersReducedMotion() || typeof element.animate !== 'function')
+      return;
     const [start, end] = [flowToScreenPosition(from), flowToScreenPosition(to)];
     const frames = [start, end].map(({ x, y }) => ({
       transform: `translate(${x - 12}px, ${y - 12}px)`,

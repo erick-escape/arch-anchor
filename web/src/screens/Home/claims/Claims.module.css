@@ -1,0 +1,265 @@
+/* The claims carousel of the homepage, after the canvas's Home artboard. */
+
+.band {
+  background: var(--aa-surface);
+  border-top: 1px solid var(--aa-line);
+  border-bottom: 1px solid var(--aa-line);
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 72px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 48px;
+}
+
+.copy {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.counter {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--aa-text-muted);
+}
+
+/* three lines of the claim's own size, so the controls do not jump between claims */
+.claimBox {
+  font-size: clamp(32px, 3.6vw, 48px);
+  min-height: 3.3em;
+}
+
+.claim {
+  margin: 0;
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: inherit;
+  line-height: 1.08;
+  color: var(--aa-text-strong);
+  text-wrap: balance;
+  animation: rise 0.45s ease both;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.step {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--aa-line-strong);
+  border-radius: var(--aa-radius-full);
+  background: var(--aa-surface);
+  color: var(--aa-text-strong);
+  cursor: pointer;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--aa-radius-full);
+  background: var(--aa-line-brand);
+  cursor: pointer;
+  transition: width 0.3s ease;
+}
+
+.dotCurrent {
+  composes: dot;
+  width: 28px;
+  background: var(--aa-accent);
+}
+
+.stage {
+  flex: 1 1 460px;
+  min-width: 0;
+  min-height: 340px;
+  display: grid;
+  place-items: center;
+  padding: 36px 24px;
+  border-radius: var(--aa-radius-xl);
+  background: var(--aa-page);
+  border: 1px solid var(--aa-line);
+}
+
+.rise {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  animation: rise 0.45s ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claim,
+  .rise,
+  .elected {
+    animation: none;
+  }
+}
+
+/* the vignettes */
+
+.modules {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px 20px;
+}
+
+.election {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 420px);
+}
+
+.candidate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+/* the winner turns into the reference class as the vignette appears */
+.elected {
+  display: inline-flex;
+  border-radius: var(--aa-radius-md);
+  animation: elect 1.2s ease 0.3s both;
+}
+
+@keyframes elect {
+  from {
+    transform: scale(0.85);
+    box-shadow: none;
+  }
+  60% {
+    transform: scale(1.08);
+    box-shadow: var(--aa-glow);
+  }
+  to {
+    transform: none;
+    box-shadow: var(--aa-glow);
+  }
+}
+
+.noModel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.repo {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--aa-radius-full);
+  border: 1.5px solid var(--aa-accent);
+  background: var(--aa-surface);
+  font-family: var(--aa-font-mono);
+  font-size: 13px;
+  color: var(--aa-text-strong);
+}
+
+.anchors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rules {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.ruleList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ruleText {
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  color: var(--aa-text);
+}
+
+.ruleBroken {
+  composes: ruleText;
+  color: var(--aa-divergence-text);
+}
+
+.document {
+  width: min(100%, 440px);
+  padding: 20px 22px;
+  border-radius: 12px;
+  background: var(--aa-surface);
+  border: 1px solid var(--aa-line);
+  box-shadow: var(--aa-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.documentTitle {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--aa-text-strong);
+}
+
+.documentLine {
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.documentMore {
+  composes: documentLine;
+  color: var(--aa-text-muted);
+}

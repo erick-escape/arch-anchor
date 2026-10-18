@@ -1,4 +1,5 @@
 import { CLASS_STATUS_WORDS, type DependencyStatus } from './dependencyStatus';
+import { withCamelBreaks } from '../../utils/camelBreaks';
 import { Mark } from './Mark';
 import styles from './vocabulary.module.css';
 
@@ -49,7 +50,7 @@ export function ClassTile({
       </span>
       {name && (
         <figcaption className={reference ? styles.tileNameReference : styles.tileName}>
-          {name}
+          {withCamelBreaks(name)}
         </figcaption>
       )}
       {reference && <span className={styles.visuallyHidden}>reference class</span>}

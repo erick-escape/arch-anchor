@@ -1,0 +1,506 @@
+/* The homepage, after the canvas's Home artboard (light, dark and 390 px). */
+
+/* hero */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.drift {
+  position: absolute;
+  inset: -40px;
+  animation: drift 24s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-24px, 16px, 0);
+  }
+}
+
+.shape {
+  position: absolute;
+  border: 1px solid var(--aa-line-brand);
+}
+
+.tileA {
+  composes: shape;
+  left: 6%;
+  top: 18%;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.tileB {
+  composes: shape;
+  left: 11%;
+  top: 52%;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.tileC {
+  position: absolute;
+  left: 4%;
+  top: 74%;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--aa-accent);
+  opacity: 0.35;
+}
+
+.edgeA {
+  position: absolute;
+  left: 15%;
+  top: 30%;
+  width: 120px;
+  border-top: 1.5px dashed var(--aa-line-brand);
+}
+
+.tileD {
+  composes: shape;
+  left: 86%;
+  top: 14%;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.tileE {
+  position: absolute;
+  left: 91%;
+  top: 40%;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--aa-accent);
+  opacity: 0.45;
+}
+
+.tileF {
+  composes: shape;
+  left: 82%;
+  top: 66%;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.edgeB {
+  position: absolute;
+  left: 74%;
+  top: 46%;
+  width: 150px;
+  border-top: 1.5px solid var(--aa-line-brand);
+}
+
+.tileG {
+  composes: shape;
+  left: 95%;
+  top: 78%;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.tileH {
+  composes: shape;
+  left: 22%;
+  top: 86%;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.heroInner {
+  position: relative;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 96px 16px 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: clamp(34px, 4vw, 54px);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  color: var(--aa-text-strong);
+  text-wrap: balance;
+}
+
+.lead {
+  margin: 0;
+  max-width: 620px;
+  font-size: 17px;
+  line-height: 26px;
+  color: var(--aa-text-muted);
+  text-wrap: pretty;
+}
+
+.tryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 16px;
+}
+
+.tryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px dashed var(--aa-line-strong);
+  border-radius: var(--aa-radius-full);
+  background: var(--aa-surface);
+  color: var(--aa-text-strong);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.trySwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--aa-accent);
+}
+
+.tryHint {
+  font-size: 13px;
+  color: var(--aa-text-muted);
+}
+
+/* sections */
+
+.how {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 88px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 40px;
+  color: var(--aa-text-strong);
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 20px;
+}
+
+.card {
+  border-radius: var(--aa-radius-lg);
+  background: var(--aa-surface);
+  border: 1px solid var(--aa-line);
+  box-shadow: var(--aa-shadow-sm);
+}
+
+.stepCard {
+  composes: card;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.stepNumber {
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--aa-link);
+}
+
+.stepPicture {
+  height: 96px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  color: var(--aa-text-strong);
+}
+
+.stepText {
+  margin: 0;
+  color: var(--aa-text-muted);
+}
+
+.repoPill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--aa-radius-full);
+  border: 1.5px solid var(--aa-accent);
+  background: var(--aa-surface);
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  color: var(--aa-text-strong);
+}
+
+.or {
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+.folder {
+  font-size: 28px;
+  color: var(--aa-line-strong);
+}
+
+.recent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.recentHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+.recentTitle {
+  margin: 0;
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 32px;
+  color: var(--aa-text-strong);
+}
+
+.textLink {
+  color: var(--aa-link);
+  font-weight: 600;
+}
+
+.recentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 360px));
+  gap: 16px;
+}
+
+.recentCard {
+  composes: card;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.recentCard:hover {
+  border-color: var(--aa-accent);
+  transform: translateY(-1px);
+}
+
+/* the mark's four tiles in miniature; it says nothing about the project's state */
+.recentMark {
+  display: grid;
+  grid-template-columns: repeat(2, 14px);
+  gap: 4px;
+}
+
+.recentMark span {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--aa-accent);
+}
+
+.recentMark span:last-child {
+  background: transparent;
+  border: 1.5px solid var(--aa-line-brand);
+}
+
+.recentName {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--aa-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.recentAction {
+  font-weight: 600;
+  color: var(--aa-link);
+}
+
+.research {
+  border-top: 1px solid var(--aa-line);
+  background: var(--aa-surface);
+}
+
+.researchInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 32px 64px;
+}
+
+.citation {
+  flex: 1 1 520px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--aa-text-muted);
+}
+
+.paper {
+  margin: 0;
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--aa-text-strong);
+  text-wrap: pretty;
+}
+
+.result {
+  margin: 0;
+  color: var(--aa-text-muted);
+}
+
+.researchLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.signature {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.affiliations {
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+/* the folder drop */
+
+.dropScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--aa-scrim);
+  pointer-events: none;
+}
+
+.dropCard {
+  width: min(100%, 640px);
+  padding: 64px 32px;
+  border-radius: var(--aa-radius-xl);
+  border: 2px dashed var(--aa-accent);
+  background: var(--aa-raised);
+  box-shadow: var(--aa-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.dropIcon {
+  font-size: 36px;
+  color: var(--aa-accent);
+}
+
+.dropTitle {
+  font-family: var(--aa-font-display);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 34px;
+  color: var(--aa-text-strong);
+}
+
+.dropText {
+  color: var(--aa-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drift {
+    animation: none;
+  }
+}
+
+/* on a phone the drifting shapes would cross the headline, and the buttons share the row */
+@media (max-width: 639px) {
+  .backdrop {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .heroInner,
+  .how,
+  .recent,
+  .researchInner {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}

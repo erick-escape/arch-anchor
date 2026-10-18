@@ -1,8 +1,7 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Button, Spin } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AddProjectModal from '../../components/AddProjectModal';
 import shell from '../../components/AppShell/AppShell.module.css';
 import { listProjects } from '../../services/projectsApi';
 import { DeleteProjectDialog } from './DeleteProjectDialog';
@@ -11,28 +10,23 @@ import styles from './Projects.module.css';
 import { NoProjects, ProjectsUnavailable } from './ProjectsStates';
 
 /**
- * The imported projects as cards: open one for analysis, delete one, or add a project.
+ * The imported projects as cards: open one for analysis or delete one. A project is added from
+ * the homepage's import bar, which replaced the Add Project dialog.
  *
  * @example <Route path="/projects" element={<ProjectsPage />} />
  */
 const ProjectsPage = () => {
-  const [adding, setAdding] = useState(false);
-  const queryClient = useQueryClient();
-  const closeAdd = () => setAdding(false);
-  const added = () => {
-    closeAdd();
-    void queryClient.invalidateQueries({ queryKey: ['projects'] });
-  };
+  const navigate = useNavigate();
+  const addProject = () => navigate('/');
   return (
     <div className={shell.page}>
       <div className={styles.titleRow}>
         <h1 className={shell.heading}>Projects</h1>
-        <Button type="primary" onClick={() => setAdding(true)}>
+        <Button type="primary" onClick={addProject}>
           Add a project
         </Button>
       </div>
-      <ProjectList onAdd={() => setAdding(true)} />
-      <AddProjectModal open={adding} onClose={closeAdd} onSuccess={added} />
+      <ProjectList onAdd={addProject} />
     </div>
   );
 };
