@@ -1,127 +1,66 @@
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button, Spin } from 'antd';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, message, Popconfirm, Spin, Table } from 'antd';
 import AddProjectModal from '../../components/AddProjectModal';
-import axios from 'axios';
-import { ProjectSummary, ProjectsListResponse } from '../../interface/Project';
+import shell from '../../components/AppShell/AppShell.module.css';
+import { listProjects } from '../../services/projectsApi';
+import { DeleteProjectDialog } from './DeleteProjectDialog';
+import { ProjectCard } from './ProjectCard';
+import styles from './Projects.module.css';
+import { NoProjects, ProjectsUnavailable } from './ProjectsStates';
 
+/**
+ * The imported projects as cards: open one for analysis, delete one, or add a project.
+ *
+ * @example <Route path="/projects" element={<ProjectsPage />} />
+ */
 const ProjectsPage = () => {
-  const navigate = useNavigate();
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [addProjectModalOpen, setAddProjectModalOpen] = useState(false);
-
-  const fetchProjects = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get<ProjectsListResponse>('/api/projects');
-      setProjects(response.data.projects);
-    } catch {
-      message.error('Failed to fetch projects');
-    } finally {
-      setLoading(false);
-    }
+  const [adding, setAdding] = useState(false);
+  const queryClient = useQueryClient();
+  const closeAdd = () => setAdding(false);
+  const added = () => {
+    closeAdd();
+    void queryClient.invalidateQueries({ queryKey: ['projects'] });
   };
-
-  const analyzeProject = async (projectName: string) => {
-    navigate(`/analyze/${projectName}`);
-  };
-
-  const deleteProject = async (projectName: string) => {
-    setLoading(true);
-    try {
-      await axios.delete(`/api/projects/${projectName}`);
-      message.success(`Project "${projectName}" deleted successfully!`);
-      fetchProjects(); // Refresh project list after deletion
-    } catch {
-      message.error('Failed to delete project');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const openAddProjectModal = () => setAddProjectModalOpen(true);
-  const closeAddProjectModal = () => setAddProjectModalOpen(false);
-
-  const handleProjectAdded = () => {
-    closeAddProjectModal();
-    fetchProjects();
-  };
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
   return (
-    <div
-      style={{
-        padding: 40,
-        minHeight: '80vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 20,
-          width: '100%',
-        }}
-      >
-        <h1>Projects</h1>
-        <Button type="primary" onClick={openAddProjectModal}>
-          Add Project
+    <div className={shell.page}>
+      <div className={styles.titleRow}>
+        <h1 className={shell.heading}>Projects</h1>
+        <Button type="primary" onClick={() => setAdding(true)}>
+          Add a project
         </Button>
       </div>
-
-      {loading ? (
-        <Spin size="large" />
-      ) : (
-        <Table
-          dataSource={projects}
-          rowKey={(record) => record.name} // Use project name as unique key
-          style={{ width: '100%' }} // Adjusts the table width
-          columns={[
-            {
-              title: 'Project Name',
-              dataIndex: 'name',
-              key: 'name',
-            },
-            {
-              title: 'Actions',
-              key: 'actions',
-              render: (_, record) => (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button type="primary" onClick={() => analyzeProject(record.name)}>
-                    Analyze
-                  </Button>
-                  <Popconfirm
-                    title={`Are you sure you want to delete ${record.name}?`}
-                    onConfirm={() => deleteProject(record.name)}
-                    okText="Yes"
-                    cancelText="No"
-                  >
-                    <Button type="primary" danger>
-                      Delete
-                    </Button>
-                  </Popconfirm>
-                </div>
-              ),
-            },
-          ]}
-        />
-      )}
-
-      <AddProjectModal
-        open={addProjectModalOpen}
-        onClose={closeAddProjectModal}
-        onSuccess={handleProjectAdded}
-      />
+      <ProjectList onAdd={() => setAdding(true)} />
+      <AddProjectModal open={adding} onClose={closeAdd} onSuccess={added} />
     </div>
   );
 };
+
+function ProjectList({ onAdd }: { onAdd: () => void }) {
+  const navigate = useNavigate();
+  const [toDelete, setToDelete] = useState<string | null>(null);
+  const projects = useQuery({ queryKey: ['projects'], queryFn: listProjects });
+  if (projects.isPending) return <Spin size="large" className={styles.loading} />;
+  if (projects.isError) {
+    return (
+      <ProjectsUnavailable reason={projects.error.message} onRetry={() => projects.refetch()} />
+    );
+  }
+  if (projects.data.length === 0) return <NoProjects onAdd={onAdd} />;
+  return (
+    <div className={styles.grid}>
+      {projects.data.map(({ name }) => (
+        <ProjectCard
+          key={name}
+          name={name}
+          onAnalyze={() => navigate(`/analyze/${encodeURIComponent(name)}`)}
+          onDelete={() => setToDelete(name)}
+        />
+      ))}
+      <DeleteProjectDialog name={toDelete} onClose={() => setToDelete(null)} />
+    </div>
+  );
+}
 
 export default ProjectsPage;

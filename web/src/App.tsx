@@ -1,15 +1,11 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import ProjectsPage from './screens/Projects/index.tsx';
-import AnalyzePageWithProvider from './screens/Analyze';
+import { BrowserRouter } from 'react-router-dom';
+import { AppRoutes } from './AppRoutes';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<ProjectsPage />} />
-        <Route path="/analyze/:projectName" element={<AnalyzePageWithProvider />} />
-      </Routes>
-    </Router>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
 

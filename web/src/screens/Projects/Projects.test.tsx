@@ -1,11 +1,27 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import axios, { AxiosRequestConfig } from 'axios';
-import ProjectsPage from './index';
+import axios, { type AxiosRequestConfig } from 'axios';
+import { Route, Routes, useParams } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
+import { renderWithProviders } from '../../test/renderWithProviders';
+import ProjectsPage from './index';
+
+function AnalyzeStub() {
+  const { projectName } = useParams();
+  return <p>analyzing {projectName}</p>;
+}
+
+function renderPage() {
+  renderWithProviders(
+    <Routes>
+      <Route path="/projects" element={<ProjectsPage />} />
+      <Route path="/analyze/:projectName" element={<AnalyzeStub />} />
+    </Routes>,
+    { route: '/projects' }
+  );
+}
 
 describe('ProjectsPage', () => {
   let fakeApi: FakeAxiosAdapter;
@@ -23,29 +39,47 @@ describe('ProjectsPage', () => {
     axios.defaults.adapter = realAdapter;
   });
 
-  function renderPage() {
-    render(
-      <MemoryRouter>
-        <ProjectsPage />
-      </MemoryRouter>
-    );
-  }
-
-  it('lists the projects the API returns', async () => {
+  it('shows each project as a card', async () => {
     renderPage();
 
-    expect(await screen.findByText('shop')).toBeInTheDocument();
-    expect(screen.getByText('bank')).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'shop' })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'bank' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Projects', level: 1 })).toBeInTheDocument();
   });
 
-  it('deletes a project after confirmation', async () => {
+  it('opens a project for analysis', async () => {
     renderPage();
 
-    const shopRow = (await screen.findByText('shop')).closest('tr');
-    if (!shopRow) throw new Error('Expected the "shop" cell to sit inside a table row');
-    await userEvent.click(within(shopRow).getByRole('button', { name: 'Delete' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Yes' }));
+    const shop = await screen.findByRole('article', { name: 'shop' });
+    await userEvent.click(within(shop).getByRole('button', { name: 'Analyze' }));
+
+    expect(await screen.findByText('analyzing shop')).toBeInTheDocument();
+  });
+
+  it('deletes a project after a confirmation that names it', async () => {
+    renderPage();
+
+    const shop = await screen.findByRole('article', { name: 'shop' });
+    await userEvent.click(within(shop).getByRole('button', { name: 'Delete…' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Delete shop?');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     expect(fakeApi.requestsTo('DELETE', '/api/projects/shop')).toHaveLength(1);
+  });
+
+  it('invites the first import when there are no projects', async () => {
+    fakeApi.respondTo('GET', '/api/projects', { projects: [] });
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'No projects yet' })).toBeInTheDocument();
+  });
+
+  it('says why the list is missing and offers to try again', async () => {
+    fakeApi.failWith('GET', '/api/projects', 500, {});
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not load the projects/);
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 });
