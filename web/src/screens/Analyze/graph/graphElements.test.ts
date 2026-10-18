@@ -6,6 +6,7 @@ import {
   graphNodesOf,
   moduleNodeWidth,
   nextGraphNodes,
+  withEmphasis,
   withHighlightedNodes,
 } from './graphElements';
 import { dependencyGraphOf } from './moduleEdges';
@@ -105,5 +106,25 @@ describe('withHighlightedNodes', () => {
 
     expect(marked.find((node) => node.id === 'web')?.className).toBe('highlight');
     expect(marked.find((node) => node.id === 'model')?.className).toBe('');
+  });
+});
+
+describe('withEmphasis', () => {
+  const nodes = graphNodesOf(modules, graph);
+
+  it('lights the nodes a hovered recommendation touches and leaves the rest as they were', () => {
+    const lit = withEmphasis(nodes, new Set(['web', 'package:java.sql']), new Set());
+
+    expect(lit.find((node) => node.id === 'web')?.data.highlighted).toBe(true);
+    expect(lit.find((node) => node.id === 'package:java.sql')?.data.highlighted).toBe(true);
+    expect(lit.find((node) => node.id === 'model')).toBe(nodes.find((node) => node.id === 'model'));
+  });
+
+  it('pulses the nodes a change just reached, keeping a merge highlight', () => {
+    const merging = withHighlightedNodes(nodes, ['persistence']);
+
+    const landed = withEmphasis(merging, new Set(), new Set(['persistence']));
+
+    expect(landed.find((node) => node.id === 'persistence')?.className).toBe('highlight flash');
   });
 });

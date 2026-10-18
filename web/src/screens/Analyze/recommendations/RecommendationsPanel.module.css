@@ -1,0 +1,323 @@
+/* The recommendations panel floats over the graph's right edge (brief, 6.5). */
+
+.panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: 360px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--aa-radius-lg);
+  background: var(--aa-raised);
+  border: 1px solid var(--aa-line);
+  box-shadow: var(--aa-shadow-lg);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.total {
+  font-size: 12px;
+  color: var(--aa-text-muted);
+}
+
+/* antd's tabs fill the rest of the panel; their content scrolls */
+.tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin: 0;
+  padding: 0 16px;
+}
+
+.tabs :global(.ant-tabs-content-holder) {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* only the active pane: antd hides the others with display: none, which this must not undo */
+.tabs :global(.ant-tabs-tabpane-active) {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.summaryItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--aa-font-mono);
+  font-size: 12px;
+  color: var(--aa-text-strong);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--aa-radius-lg);
+  background: var(--aa-surface);
+  border: 1px solid var(--aa-line);
+  box-shadow: var(--aa-shadow-sm);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card:hover,
+.card:focus-within {
+  border-color: var(--aa-accent);
+  box-shadow: var(--aa-glow);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cardText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.cardDescription {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--aa-text-muted);
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.unavailable {
+  flex: 1;
+  text-align: right;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--aa-text-muted);
+}
+
+/* a small drawing of each kind of change, in the vocabulary */
+.glyph {
+  flex: none;
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--aa-radius-md);
+  background: var(--aa-sunken);
+}
+
+.glyph::before,
+.glyph::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  border-radius: 3px;
+}
+
+.split::before {
+  left: 7px;
+  width: 9px;
+  height: 16px;
+  background: var(--aa-accent);
+}
+
+.split::after {
+  left: 19px;
+  width: 9px;
+  height: 16px;
+  border: 1.5px dashed var(--aa-line-strong);
+}
+
+.merge::before {
+  left: 7px;
+  width: 12px;
+  height: 16px;
+  background: var(--aa-accent);
+  z-index: 1;
+}
+
+.merge::after {
+  left: 15px;
+  width: 12px;
+  height: 16px;
+  background: var(--aa-line-brand);
+}
+
+.move::before {
+  top: 12px;
+  left: 6px;
+  width: 10px;
+  height: 10px;
+  background: var(--aa-accent);
+}
+
+.move::after {
+  top: 16px;
+  left: 18px;
+  width: 11px;
+  height: 0;
+  border-radius: 0;
+  border-top: 2px solid var(--aa-accent);
+}
+
+.violation::before {
+  top: 16px;
+  left: 7px;
+  width: 20px;
+  height: 0;
+  border-radius: 0;
+  border-top: 2px dashed var(--aa-divergence);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--aa-sunken);
+}
+
+.violating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--aa-sunken);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.violatingCount {
+  color: var(--aa-text-muted);
+}
+
+.violatingTypes {
+  font-family: var(--aa-font-mono);
+  color: var(--aa-text-strong);
+}
+
+.rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.row dt {
+  color: var(--aa-text-muted);
+}
+
+.row dd {
+  margin: 0;
+  text-align: right;
+  font-family: var(--aa-font-mono);
+  color: var(--aa-text-strong);
+}
+
+.empty,
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 12px;
+  text-align: center;
+  color: var(--aa-text-muted);
+}
+
+.emptyTitle {
+  font-weight: 600;
+  color: var(--aa-text-strong);
+}
+
+.emptyText {
+  font-size: 13px;
+}
+
+.failure {
+  margin: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--aa-radius-lg);
+  border: 1px solid var(--aa-divergence);
+  background: var(--aa-surface);
+  font-size: 13px;
+}
+
+.failureTitle {
+  font-weight: 600;
+  color: var(--aa-divergence-text);
+}

@@ -11,7 +11,9 @@ export function PackageNodeView({ data }: NodeProps<PackageNode>) {
   return (
     <>
       <Handle type="target" position={Position.Top} className={styles.handle} />
-      <PackageChip name={data.name} status={data.violated ? 'divergence' : 'allowed'} />
+      <span className={data.highlighted ? styles.packageLit : undefined}>
+        <PackageChip name={data.name} status={data.violated ? 'divergence' : 'allowed'} />
+      </span>
     </>
   );
 }

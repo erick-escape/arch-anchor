@@ -296,6 +296,7 @@
 
 /* priority badge */
 .priority {
+  font-family: var(--aa-font-ui);
   display: inline-flex;
   align-items: center;
   gap: var(--aa-space-2);
