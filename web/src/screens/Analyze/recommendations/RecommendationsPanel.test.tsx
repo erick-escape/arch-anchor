@@ -2,6 +2,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios, { type AxiosRequestConfig } from 'axios';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../../../services/api';
 import { FakeAxiosAdapter } from '../../../test/fakes/FakeAxiosAdapter';
@@ -17,7 +18,21 @@ import { GraphEmphasisProvider } from '../graphEmphasis';
 import { useGraphEmphasisState } from '../graphEmphasisContext';
 import { CardList } from './CardList';
 import { refactoringCardsOf } from './recommendationCards';
-import { RecommendationsPanel } from './RecommendationsPanel';
+import { RecommendationsPanel, type RecommendationsTab } from './RecommendationsPanel';
+
+// The page holds the tab shown, so the command palette can open a card.
+function PanelWithTabs({ onApplied }: { onApplied: () => void }) {
+  const [tab, setTab] = useState<RecommendationsTab>('refactorings');
+  return (
+    <RecommendationsPanel
+      projectName="shop"
+      analyzed
+      onApplied={onApplied}
+      tab={tab}
+      onTabChange={setTab}
+    />
+  );
+}
 
 // Shows what the graph is asked to highlight, as the canvas would draw it.
 function HighlightProbe() {
@@ -46,7 +61,7 @@ describe('RecommendationsPanel', () => {
   function renderPanel() {
     return renderWithProviders(
       <GraphEmphasisProvider>
-        <RecommendationsPanel projectName="shop" analyzed onApplied={onApplied} />
+        <PanelWithTabs onApplied={onApplied} />
         <HighlightProbe />
       </GraphEmphasisProvider>
     );

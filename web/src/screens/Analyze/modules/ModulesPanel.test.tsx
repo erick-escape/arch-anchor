@@ -2,6 +2,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios, { type AxiosRequestConfig } from 'axios';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { ModuleData } from '../../../interface/ModuleData';
 import { FakeAxiosAdapter } from '../../../test/fakes/FakeAxiosAdapter';
@@ -27,11 +28,15 @@ function Harness(props: {
   onProposeMerge: (module: ModuleData) => void;
 }) {
   const operations = useModuleOperations(props.changes);
+  // The page holds the module shown, so the command palette can open one.
+  const [shownId, setShownId] = useState<string | null>(null);
   return (
     <ModulesPanel
       modules={props.modules}
       operations={operations}
       onProposeMerge={props.onProposeMerge}
+      shownId={shownId}
+      onShow={setShownId}
     />
   );
 }

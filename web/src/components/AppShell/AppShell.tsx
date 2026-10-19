@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { AppHeader } from '../AppHeader/AppHeader';
+import { PaletteTrigger } from '../CommandPalette/PaletteTrigger';
 import styles from './AppShell.module.css';
 
 /**
@@ -10,7 +11,7 @@ import styles from './AppShell.module.css';
 export function AppShell() {
   return (
     <div className={styles.shell}>
-      <AppHeader />
+      <AppHeader actions={<PaletteTrigger />} />
       <main className={styles.main}>
         <Outlet />
       </main>

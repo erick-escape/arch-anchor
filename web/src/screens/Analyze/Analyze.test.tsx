@@ -12,7 +12,9 @@ import { clazzFixture, moduleFixture } from '../../test/fixtures/moduleFixtures'
 import {
   moveRecommendationFixture,
   recommendationsFixture,
+  violationRecommendationFixture,
 } from '../../test/fixtures/recommendationFixtures';
+import { CommandPaletteProvider } from '../../components/CommandPalette/CommandPaletteProvider';
 import { ProjectAnalyses } from '../../interface/ProjectAnalyses';
 
 const analyses: ProjectAnalyses = {
@@ -110,7 +112,6 @@ describe('AnalyzePage', () => {
     await vi.waitFor(() => expect(fakeApi.requestsTo('POST', '/api/analyze')).toHaveLength(2));
   });
 
-  // Re-analysing reads the sources again and discards the module operation (#19).
   it('previews the constraints of the modules on screen before exporting them', async () => {
     renderPage();
     await moduleNode('orders');
@@ -123,6 +124,7 @@ describe('AnalyzePage', () => {
     expect(dialog.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument();
   });
 
+  // Re-analysing reads the sources again and discards the module operation (#19).
   it('shows the saved modules after a recommendation is applied, without analyzing again', async () => {
     fakeApi
       .respondTo(
@@ -279,6 +281,66 @@ describe('AnalyzePage', () => {
 
       await expectTheCardGone();
       expect(within(await moduleNode('orders')).getByText('OrderRepository')).toBeInTheDocument();
+    });
+  });
+
+  it('folds a panel from the top bar, giving its room to the graph', async () => {
+    renderPage();
+    await moduleNode('orders');
+    const toggle = screen.getByRole('button', { name: 'Modules' });
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('complementary', { name: 'Modules' })).toBeNull();
+    expect(screen.getByRole('complementary', { name: 'Recommendations' })).toBeVisible();
+  });
+
+  describe('with the command palette', () => {
+    function renderWithPalette() {
+      return renderWithProviders(
+        <CommandPaletteProvider>
+          <AnalyzePageWithProvider />
+        </CommandPaletteProvider>,
+        { route: '/analyze/shop', path: '/analyze/:projectName' }
+      );
+    }
+
+    async function runCommand(query: string) {
+      fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+      await userEvent.type(await screen.findByRole('combobox', { name: 'Search commands' }), query);
+      await userEvent.keyboard('{Enter}');
+    }
+
+    it('opens a module from its name', async () => {
+      renderWithPalette();
+      await moduleNode('billing');
+
+      await runCommand('billing');
+
+      const panel = within(screen.getByRole('complementary', { name: 'Modules' }));
+      expect(await panel.findByRole('heading', { name: 'billing' })).toBeInTheDocument();
+    });
+
+    it('opens a violation in its own tab', async () => {
+      fakeApi.respondTo(
+        'GET',
+        '/api/recommendations',
+        recommendationsFixture({ violations: [violationRecommendationFixture()] })
+      );
+      renderWithPalette();
+      await screen.findByRole('tab', { name: /Violations/ });
+
+      await runCommand('fix violation');
+
+      expect(screen.getByRole('tab', { name: /Violations/ })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      await vi.waitFor(() =>
+        expect(screen.getByRole('article', { name: /Fix violation/ })).toHaveFocus()
+      );
     });
   });
 });

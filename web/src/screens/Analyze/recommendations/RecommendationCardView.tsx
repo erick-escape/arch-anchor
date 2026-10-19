@@ -6,6 +6,7 @@ import { PriorityBadge } from '../../../components/vocabulary/PriorityBadge';
 import { priorityOf } from '../../../utils/priority';
 import { useGraphEmphasisActions } from '../graphEmphasisContext';
 import type { RecommendationCardModel } from './recommendationCards';
+import { cardDomIdOf } from './cardDomId';
 import styles from './RecommendationsPanel.module.css';
 import type { CardToApply } from './useApplyRecommendation';
 
@@ -27,6 +28,8 @@ export const RecommendationCardView = memo(function RecommendationCardView({
   const { highlight } = useGraphEmphasisActions();
   return (
     <article
+      id={cardDomIdOf(card.id)}
+      tabIndex={-1}
       aria-label={card.title}
       className={styles.card}
       onMouseEnter={() => highlight(card.touched)}

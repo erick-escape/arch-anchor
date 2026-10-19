@@ -321,3 +321,16 @@
   font-weight: 600;
   color: var(--aa-divergence-text);
 }
+
+/* folded from the top bar; the class's display: flex would otherwise win over [hidden] */
+.panel[hidden] {
+  display: none;
+}
+
+/* below 1024 px the panel is a drawer over the graph */
+@media (max-width: 1023px) {
+  .panel {
+    width: min(360px, calc(100% - 32px));
+    z-index: 6;
+  }
+}
