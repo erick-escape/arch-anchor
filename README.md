@@ -23,7 +23,8 @@ Point it at a Java project and it will:
 2. **Group** classes into modules by package structure.
 3. **Elect a reference class** per module automatically, by rating each candidate on how well its
    dependency set represents the module and how few violations it implies, weighted as you
-   choose. You can override the choice — or pick several reference classes — from the sidebar.
+   choose. You can override the choice — or pick several reference classes — from the modules
+   panel.
 4. **Measure** each module: similarity between its classes, and violations (dependencies the
    module uses that the reference class does not sanction).
 5. **Recommend** structural refactorings — split a module, merge two, move a class — but only
@@ -82,7 +83,8 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. If the project list renders, both halves are talking to each
+Open **http://localhost:5173**. If the home page lists your projects under **Your projects**
+(or shows only the import bar, before your first import), both halves are talking to each
 other. (The frontend reaches the backend through the Vite dev-server proxy — see
 [Limitations](#limitations).)
 
@@ -92,14 +94,16 @@ Use the bundled example to see what the tool reports before you point it at your
 is a small bookstore in four layers, `web`, `service`, `persistence` and `model`, with one
 mistake: `SalesReport` sits in the web layer and queries the database itself.
 
-1. Click **Add Project**. On the **GitHub repository** tab, paste
-   `https://github.com/erick-escape/arch-anchor`, open **Options**, set **Subdirectory** to
-   `examples/bookstore` and **Project name** to `bookstore`, and click **Import**. (From a
-   clone, the **Local directory** tab uploads the same directory instead.)
-2. Click **Analyze**. Four modules appear, each with its reference class. `bookstore/web`
-   elects `CatalogController` and stands at 75.00 % similarity; the other three are at 100 %.
-3. Open the recommendations panel. The controllers depend on the service layer and the model,
-   so `java.sql` in `SalesReport` is a violation, and the tool ranks three ways to remove it:
+1. On the home page, click **Try it on the bookstore example**. It fills in
+   `https://github.com/erick-escape/arch-anchor` with **Subdirectory** `examples/bookstore` and
+   **Project name** `bookstore`. Click **Analyze**. (From a clone, **Upload folder** takes
+   `examples/bookstore` instead, or drop the folder anywhere on the page.)
+2. The analysis opens once the import is done. Four modules appear on the graph, each with its
+   reference class. `bookstore/web` elects `CatalogController` and stands at 75.00 %
+   similarity; the other three are at 100 %. A dashed red arrow runs to `java.sql`.
+3. The recommendations panel is on the right. The controllers depend on the service layer and
+   the model, so `java.sql` in `SalesReport` is a violation, and the tool ranks three ways to
+   remove it:
 
    | Recommendation | Rate | Why |
    |---|---|---|
@@ -108,45 +112,57 @@ mistake: `SalesReport` sits in the web layer and queries the database itself.
    | Merge `bookstore/persistence` + `bookstore/web` | 0.42 | `persistence` may use `java.sql`; rated last because it costs cohesion |
    | Fix violation in `SalesReport` | | Names the forbidden package and suggests `bookstore/persistence` |
 
-4. Click **Apply Recommendation** on the move. Every module is now at 100 %, with no
-   violations and nothing left to recommend.
+4. Click **Apply move…** on the move and confirm. `SalesReport` travels to
+   `bookstore/persistence`; every module is now at 100 %, with no violations and nothing left
+   to recommend.
 
 [`examples/bookstore/README.md`](examples/bookstore/README.md) has the full output, including
 how the reference class of `web` is elected and the constraints the tool exports.
 
 ## Running it on your own project
 
-1. **Add it.** Click **Add Project**. The project needs a `src/` directory directly under its
-   root; it does not need to compile, and dependencies do not need to be installed.
-   - *From GitHub:* paste the repository URL and click **Import**. The backend clones the latest
+1. **Add it** from the home page's import bar. The project needs a `src/` directory directly
+   under its root; it does not need to compile, and dependencies do not need to be installed.
+   - *From GitHub:* paste the repository URL and click **Analyze**. The backend clones the latest
      commit of the default branch, or of the branch or tag you name under **Options**, and reports
      which commit it took. If the repository keeps its code deeper, for example one Maven module
      per directory, set **Subdirectory** to the module to analyze; when it is missing, the error
      lists the directories that would work. A private repository needs a personal access token
      that can read its contents. The token is used for that one clone and is never stored.
-   - *From disk:* on the **Local directory** tab, select your project's root directory. The
-     browser uploads the whole tree; only `.java` files are parsed, so extra resources and
-     configuration files are harmless.
-2. **Analyze it.** Modules are derived from your package structure — one module per package that
+   - *From disk:* click **Upload folder** and select your project's root directory, or drop the
+     folder anywhere on the home page. The browser uploads the whole tree; only `.java` files
+     are parsed, so extra resources and configuration files are harmless.
+
+   **Projects** lists everything imported, with the repository each came from.
+2. **Analyze it.** The analysis opens after the import, and **Analyze** on a project card opens
+   it again later. Modules are derived from your package structure — one module per package that
    holds classes. Expect the module names to mirror your package names.
-3. **Check the reference classes.** Open the sidebar and review the class the tool elected for
-   each module. This is the one judgement call worth your attention: the reference class defines
+3. **Check the reference classes.** Open each module in the modules panel on the left and review
+   the class the tool elected for it. This is the one judgement call worth your attention: the reference class defines
    what the module is *allowed* to depend on, so every constraint and every violation downstream
-   follows from it. Override it, or select several, when you disagree.
-4. **Weigh similarity against violations, if you want.** The three-dot menu → **Settings** sets
+   follows from it. Override it, or select several, when you disagree: tick the classes and
+   choose **Set as reference**.
+4. **Weigh similarity against violations, if you want.** **Settings** in the top bar sets
    two pairs of weights for the project, each on one slider: the **election**, which decides the
    reference classes, and the **recommendation rate**, which ranks the refactorings. Both start
    at 0.5 / 0.5. Saving re-elects every module except those whose reference classes you chose by
-   hand, and re-rates the recommendations, without discarding your module operations.
+   hand, and re-rates the recommendations, without discarding your module operations. Its
+   **Analysis filters** tab hides recommendations you do not want, such as splits that leave a
+   one-class module.
 5. **Set enforcement per reference class.** `ALLOW` (the default) exports as `CAN-DEPEND`; switch
    to `MUST` for dependencies the module is required to have, which exports as `MUST-DEPEND`.
-6. **Reshape modules if you want.** Rename, delete, split, merge (drag one module node onto
-   another), or move individual classes between modules. Metrics recompute after each operation.
-   **Apply Recommendation** on a card in the recommendations panel performs that split, merge or
-   move for you, and the panel then lists the recommendations for the new structure. None of
-   this touches your source files: analyzing the project again starts over from them.
-7. **Export.** The three-dot menu in the top-right corner → **Export ACs** downloads a PDF of
-   every constraint the tool recovered, for the modules as they are on screen.
+6. **Reshape modules if you want.** A module's **⋮** menu renames, merges or deletes it;
+   dragging one module onto another on the graph also merges them, and ticking classes in a
+   module splits them off. Metrics recompute after each operation. **Apply…** on a card in the
+   recommendations panel performs that split, merge or move for you once you confirm, and the
+   panel then lists the recommendations for the new structure. None of this touches your source
+   files: analyzing the project again starts over from them.
+7. **Export.** **Export ACs** in the top bar previews every constraint the tool recovered,
+   grouped by module, for the modules as they are on screen, then downloads them as a PDF.
+
+**⌘K** (Ctrl K) opens a command palette on every page: jump to a module, a class or a
+recommendation, open any project, or switch between the light and dark themes. Below 1024 px
+the two panels of the analysis become drawers, opened from the top bar.
 
 ## Concepts
 
@@ -157,7 +173,7 @@ how the reference class of `web` is elected and the constraints the tool exports
 | **Violation** | A dependency a module uses that its reference classes do not sanction. |
 | **Election** | Each class of a module is rated `w_sim × similarity_normalized + w_viol × violations_normalized`, the violations being those the module would have with that class as its reference; the best-rated class is elected. |
 | **Rate** | `w_sim × Δ_similarity + w_viol × Δ_violations_normalized`. Split, merge, and move are each scored this way, and only positive-rate changes are ever suggested — a refactoring has to improve cohesion *and* not cost more violations than it saves. |
-| **Rating weights** | Two `(w_sim, w_viol)` pairs per project, one for the election and one for the rate, each non-negative and summing to 1. Both default to 0.5 / 0.5. Set them from **Settings** in the three-dot menu or through `/api/projects/{projectName}/rating-weights`. |
+| **Rating weights** | Two `(w_sim, w_viol)` pairs per project, one for the election and one for the rate, each non-negative and summing to 1. Both default to 0.5 / 0.5. Set them from **Settings** on the analysis page or through `/api/projects/{projectName}/rating-weights`. |
 
 ## API reference
 
@@ -215,8 +231,10 @@ All endpoints are under `http://localhost:8080`.
 | `api/modules.bin` | The current module graph |
 | `api/project-analyses.bin` | Cached analysis results |
 | `api/rating-weights.json` | Each project's rating weights; a project without an entry has equal weights |
+| `api/analysis-settings.json` | Each project's analysis filters; a project without an entry filters nothing |
+| `api/import-source.json` | The repository, subdirectory, ref and commit each imported project came from |
 
-Delete all four to reset the tool to a blank slate. The `.bin` files are Java-serialized, so
+Delete them all to reset the tool to a blank slate. The `.bin` files are Java-serialized, so
 they are also tied to the current class names — a stale file from an older version of the code
 will fail to load, and deleting it is the fix.
 
@@ -262,3 +280,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and pull requests are welcom
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The module graph is drawn with [React Flow](https://reactflow.dev) (MIT), whose attribution
+badge the tool hides on the canvas; this is where it is credited.
