@@ -20,7 +20,13 @@ interface RecommendationsPanelProps {
   analyzed: boolean;
   /** Reloads the modules the API saved after applying a change. */
   onApplied: () => void;
+  /** The tab shown, held by the page so the palette can open a card. */
+  tab: RecommendationsTab;
+  onTabChange: (tab: RecommendationsTab) => void;
+  hidden?: boolean;
 }
+
+export type RecommendationsTab = 'refactorings' | 'violations';
 
 /**
  * The recommendations, floating over the graph's right edge: the refactorings by rate and the
@@ -28,20 +34,29 @@ interface RecommendationsPanelProps {
  *
  * @example <RecommendationsPanel projectName="bookstore" analyzed onApplied={reload} />
  */
-export function RecommendationsPanel({
-  projectName,
-  analyzed,
-  onApplied,
-}: RecommendationsPanelProps) {
+export function RecommendationsPanel(props: RecommendationsPanelProps) {
+  const { projectName, analyzed, onApplied, tab, onTabChange, hidden } = props;
   const query = useRecommendations(projectName, analyzed);
   const [toApply, setToApply] = useState<CardToApply | null>(null);
   const apply = useApplyRecommendation(onApplied);
   const confirm = () => toApply && apply.mutate(toApply, { onSettled: () => setToApply(null) });
   return (
-    <aside aria-label="Recommendations" className={styles.panel}>
+    <aside
+      id="recommendations-panel"
+      aria-label="Recommendations"
+      className={styles.panel}
+      hidden={hidden}
+    >
       {query.isPending && <Rating />}
       {query.isError && <LoadFailed onRetry={() => query.refetch()} />}
-      {query.data && <RecommendationTabs response={query.data} onApply={setToApply} />}
+      {query.data && (
+        <RecommendationTabs
+          response={query.data}
+          onApply={setToApply}
+          tab={tab}
+          onTabChange={onTabChange}
+        />
+      )}
       <ConfirmDialog
         open={toApply !== null}
         title={toApply?.applicable.confirmTitle ?? ''}
@@ -56,13 +71,14 @@ export function RecommendationsPanel({
   );
 }
 
-function RecommendationTabs({
-  response,
-  onApply,
-}: {
+interface RecommendationTabsProps {
   response: RecommendationsResponse;
   onApply: (toApply: CardToApply) => void;
-}) {
+  tab: RecommendationsTab;
+  onTabChange: (tab: RecommendationsTab) => void;
+}
+
+function RecommendationTabs({ response, onApply, tab, onTabChange }: RecommendationTabsProps) {
   const refactorings = useMemo(() => refactoringCardsOf(response), [response]);
   const violations = useMemo(() => violationCardsOf(response), [response]);
   const items = [
@@ -104,7 +120,12 @@ function RecommendationTabs({
         <h2 className={styles.title}>Recommendations</h2>
         <span className={styles.total}>{refactorings.length + violations.length} in total</span>
       </div>
-      <Tabs className={styles.tabs} items={items} />
+      <Tabs
+        className={styles.tabs}
+        items={items}
+        activeKey={tab}
+        onChange={(key) => onTabChange(key as RecommendationsTab)}
+      />
     </>
   );
 }

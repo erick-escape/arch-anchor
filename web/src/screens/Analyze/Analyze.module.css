@@ -256,3 +256,44 @@
   align-items: center;
   gap: 16px;
 }
+
+/* a folded panel gives its room back to the graph */
+.page[data-modules='closed'] {
+  --panel-left: 16px;
+}
+
+.page[data-recommendations='closed'] {
+  --panel-right: 16px;
+}
+
+/* below 1024 px the panels are drawers over the graph, which keeps the whole width; the
+   top bar's buttons keep their names for assistive technology but show only their icons */
+@media (max-width: 1023px) {
+  .page {
+    --panel-left: 16px;
+    --panel-right: 16px;
+  }
+
+  .barLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* on a phone the bar keeps the project, its actions and the palette; the way to the projects
+   and the theme are one ⌘K away */
+@media (max-width: 639px) {
+  .topBar {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .parentCrumb,
+  .themeSlot {
+    display: none;
+  }
+}

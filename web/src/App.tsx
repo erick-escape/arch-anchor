@@ -1,10 +1,13 @@
 import { BrowserRouter } from 'react-router-dom';
 import { AppRoutes } from './AppRoutes';
+import { CommandPaletteProvider } from './components/CommandPalette/CommandPaletteProvider';
 
 function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <CommandPaletteProvider>
+        <AppRoutes />
+      </CommandPaletteProvider>
     </BrowserRouter>
   );
 }
