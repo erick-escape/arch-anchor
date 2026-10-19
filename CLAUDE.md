@@ -197,47 +197,38 @@ npm run preview                     # Preview production build
 
 ### Architecture Overview
 
-**Routing** (`src/App.tsx`)
-- `/` - Projects list page
-- `/analyze/:projectName` - Interactive analysis visualization
+The UI follows the redesign of #58 (brief: `docs/design/redesign-brief.md`).
+
+**Routing** (`src/AppRoutes.tsx`)
+- `/` - Homepage: import bar (GitHub URL with Options, folder upload, page-wide folder drop, "Try it on the bookstore example"), claims carousel, how it works, your projects, research
+- `/projects` - Project cards, each with the repository it came from (#66)
+- `/analyze/:projectName` - The analysis, outside the shell so the graph gets the whole screen
+- `*` - Not found
+- `CommandPaletteProvider` (`src/App.tsx`) gives every page the ⌘K / Ctrl K palette
+
+**Theme** (`src/theme/`)
+- `palette.ts` is the one source of every colour: `cssVariables.ts` turns it into `--aa-*` CSS variables, `antdTheme.ts` into the antd theme; `contrast.test.ts` checks WCAG contrast in both themes
+- System / Light / Dark through `useThemePreference` (`ThemePreferenceStore`, `ColorSchemeQuery`); `index.html` sets `data-theme` before first paint
+- Styles are CSS modules reading `--aa-*` variables; no literal colours in components
 
 **Screens** (`src/screens/`)
-- `Projects/` - Project management (upload, list, delete, analyze)
-- `Analyze/` - ReactFlow-based graph visualization with drag-and-drop module merging
+- `Home/` - `importBar/` (`useProjectImport`, `droppedFolder.ts`, `usePageFolderDrop`), `claims/` (`useCarousel`, vignettes of the bookstore)
+- `Projects/` - cards, delete behind a named confirmation
+- `Analyze/` - `graph/` (module→module edges from `clazz.packageName`, layered layout with dagre, nodes and edges), `modules/` (list, detail, class selection toolbar, module menu), `recommendations/` (`recommendationCards.ts` keeps the Refactorings order and `CardList` the 50-card pages that `ICSE/evaluation/harness/panel.py` copies), `graphEmphasis` (hover highlight, applied-change motion), `usePanelLayout` (foldable panels, drawers below 1024 px), `useAnalyzeCommands`
 
 **Components** (`src/components/`)
-- `Header/` - Application header with navigation
-- `Sidebar/` - Module/class details and operations panel
-- `AddProjectModal/` - Add a project: import from a GitHub URL (default tab) or upload a local directory
-- `Popup/` - Merge confirmation dialog
+- `vocabulary/` - Logo, ClassTile, ModuleContainer, PackageChip, Meter, StatTile, PriorityBadge, DependencyArrow, ModeToggle, ThemeSwitch
+- `AppShell/`, `AppHeader/`, `CommandPalette/`, `ConfirmDialog/`, `feedback/useToast`, `SettingsModal/` (Rating weights, Analysis filters)
 
 **Services & Hooks**
-- `services/api.tsx` - Axios instance (baseURL: localhost:8080)
-- `hooks/apiHooks.tsx` - TanStack Query mutations for file uploads
+- `services/*Api.ts` - one module per API resource, relative `/api` paths through the Vite proxy; failures become sentences (`problemDetail.ts`)
+- `hooks/useRecommendations.ts` - keyed by project, enabled once that project's analysis returns (#53)
 
 **Data Models** (`src/interface/`)
-- `ModuleData` - Module with id, name, refClass, clazzes[], dependencies[], similarity
-- `ClazzData` - Class with id, name, dependencies[], similarity, firstModule, currentModule
-- `Dependency` - Dependency relationships
-- `MethodData`, `AttributeData` - Class members
+- `ModuleData`, `ClazzData` (with `packageName`), `Dependency`, `Project` (`ProjectSummary` with its `ImportSource`), `Recommendations`, `RatingWeights`, `AnalysisSettings`
 
-### Key Features
-
-**Interactive Visualization:**
-- ReactFlow graph with custom nodes for modules
-- Concentric circle layout (first module centered, others in rings)
-- Drag-and-drop nodes onto each other to trigger merge confirmation
-- Real-time updates after operations (split, merge, move)
-
-**API Integration:**
-- Proxied through Vite dev server: `/api` → `http://localhost:8080`
-- Automatic analysis trigger on project page load
-- Polling-based or event-based updates for module changes
-
-**UI Framework:**
-- Ant Design (antd) for forms, tables, buttons, modals
-- FontAwesome icons
-- Custom styling with TypeScript style objects
+**Tests**
+- vitest + jsdom + Testing Library; `src/test/renderWithProviders.tsx` mounts screens like `main.tsx`, `src/test/fakes/` holds the named fakes (`FakeAxiosAdapter`, theme fakes), `src/test/fixtures/` the bookstore and recommendation fixtures
 
 ---
 
@@ -246,8 +237,8 @@ npm run preview                     # Preview production build
 1. **Start Backend**: `cd api && ./mvnw spring-boot:run`
 2. **Start Frontend**: `cd web && npm run dev`
 3. **Access Application**: http://localhost:5173
-4. **Add Project**: Click "Add Project" and import a GitHub repository or upload a local directory - `examples/bookstore` is the fixture: one misplaced class (`web.SalesReport`, which uses `java.sql`) triggers a violation and all three analyses, and its README records the tool's actual output (import `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/bookstore` and project name `bookstore`)
-5. **Analyze**: Click "Analyze" on a project - backend parses, runs analyses, frontend visualizes
+4. **Add Project**: On the homepage, paste a GitHub repository or upload a folder - `examples/bookstore` is the fixture: one misplaced class (`web.SalesReport`, which uses `java.sql`) triggers a violation and all three analyses, and its README records the tool's actual output (**Try it on the bookstore example** fills in `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/bookstore` and project name `bookstore`)
+5. **Analyze**: The analysis opens after the import, or from **Analyze** on a project card - backend parses, runs analyses, frontend visualizes
 
 ## API Proxy Configuration
 

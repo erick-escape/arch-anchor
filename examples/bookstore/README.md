@@ -163,16 +163,16 @@ obligations. Here both hold for every class in the module, `SalesReport` include
 ## Try it
 
 1. Start the tool (see the [root README](../../README.md#quick-start)).
-2. **Add Project**. Either import `https://github.com/erick-escape/arch-anchor` with
-   **Subdirectory** `examples/bookstore` and **Project name** `bookstore`, or upload this
-   directory from the **Local directory** tab.
-3. **Analyze**. Four modules appear, each with the reference class and similarity listed above.
-4. Open `bookstore/web` in the sidebar to see its classes, and expand **Dependencies** to find
-   `java.sql` among them.
-5. In the recommendations panel, open **Fix violation in "SalesReport"**, then apply
-   **Move "SalesReport"**.
+2. On the home page, click **Try it on the bookstore example**, then **Analyze**. It imports
+   `https://github.com/erick-escape/arch-anchor` with **Subdirectory** `examples/bookstore` and
+   **Project name** `bookstore`. From a clone, **Upload folder** takes this directory instead.
+3. The analysis opens: four modules, each with the reference class and similarity listed above.
+4. Open `bookstore/web` in the modules panel to see its classes. Among its dependencies,
+   `java.sql` is dashed in red: the violation.
+5. In the recommendations panel's **Violations** tab, open the details of **Fix violation in
+   "SalesReport"**; then, under **Refactorings**, apply **Move "SalesReport"** and confirm.
 6. Open `bookstore/persistence`, switch `BookRepository` to **MUST**, and choose **Export ACs**
-   from the three-dot menu.
+   in the top bar.
 
 ## Why it looks the way it does
 
