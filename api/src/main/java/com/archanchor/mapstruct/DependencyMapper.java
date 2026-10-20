@@ -6,7 +6,7 @@ import com.archanchor.domains.dependency.Dependency;
 import com.archanchor.domains.dependency.Type;
 import com.archanchor.dto.dependencies.DependencyDTO;
 
-@Mapper(componentModel = "spring")
+@Mapper(config = StrictMapperConfig.class)
 public interface DependencyMapper {
 
 	Dependency toEntity(DependencyDTO dto);

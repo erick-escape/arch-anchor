@@ -2,13 +2,10 @@ package com.archanchor.mapstruct;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
 import com.archanchor.domains.module.Module;
 import com.archanchor.dto.module.ModuleDTO;
 
-// ERROR, not the default WARN: an unmapped field here silently nulled
-// ModuleDTO.allDependencies in every API response (#8).
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(config = StrictMapperConfig.class)
 public interface ModuleMapper {
 
 	@Mapping(source = "allDependencies", target = "moduleDependencies")
