@@ -137,6 +137,9 @@ cd api
 - `Dependency` - Dependency on an external package: `packageName`, `types` (List<Type>)
 - `Type` - Specific type within a dependency: `fullyQualifiedName`, `className`
 
+**Mappers** (`src/main/java/com/archanchor/mapstruct/`)
+- MapStruct, every mapper through `StrictMapperConfig`: an unmapped target property fails the build instead of warning (#8, #10). A field the other side does not carry gets `ignore = true` with the reason, as `ModuleMapper` does for `violations`
+
 ### Key Concepts
 
 **Reference Classes:**
