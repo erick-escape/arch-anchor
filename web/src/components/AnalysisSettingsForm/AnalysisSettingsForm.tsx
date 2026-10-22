@@ -10,6 +10,7 @@ import {
   updateAnalysisSettings,
 } from '../../services/analysisSettingsApi';
 import SettingNumber from './SettingNumber';
+import SimilarityChangeLimit from './SimilarityChangeLimit';
 
 interface AnalysisSettingsFormProps {
   projectName: string;
@@ -44,7 +45,6 @@ const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettin
   const shown = draft ?? saved.data;
   const change = (changed: Partial<AnalysisSettings>) => setDraft({ ...shown, ...changed });
   const unlimitedTargets = shown.maxMoveTargetsPerClass === null;
-  const unlimitedMergeLoss = shown.minMergeSimilarityChange === null;
   return (
     <>
       <SettingNumber
@@ -97,26 +97,24 @@ const AnalysisSettingsForm = ({ projectName, onSaved, onCancel }: AnalysisSettin
         precision={2}
         onChange={(minRecommendationRate) => change({ minRecommendationRate })}
       />
-      <SettingNumber
+      <SimilarityChangeLimit
         label="Lowest similarity change of a recommended merge"
         explanation="0 keeps out merges that lower similarity, recommended only for the violations they remove."
         value={shown.minMergeSimilarityChange}
-        min={-1}
-        max={1}
-        step={0.05}
-        precision={2}
-        disabled={unlimitedMergeLoss}
         onChange={(minMergeSimilarityChange) => change({ minMergeSimilarityChange })}
-      >
-        <Checkbox
-          checked={unlimitedMergeLoss}
-          onChange={(event) =>
-            change({ minMergeSimilarityChange: event.target.checked ? null : 0 })
-          }
-        >
-          No limit
-        </Checkbox>
-      </SettingNumber>
+      />
+      <SimilarityChangeLimit
+        label="Lowest similarity change of a recommended move"
+        explanation="0 keeps out moves that lower similarity. A class whose best target is kept out gets its best target that is not."
+        value={shown.minMoveSimilarityChange}
+        onChange={(minMoveSimilarityChange) => change({ minMoveSimilarityChange })}
+      />
+      <SimilarityChangeLimit
+        label="Lowest similarity change of a recommended split"
+        explanation="0 keeps out splits that lower similarity."
+        value={shown.minSplitSimilarityChange}
+        onChange={(minSplitSimilarityChange) => change({ minSplitSimilarityChange })}
+      />
       {save.isError && (
         <Alert type="error" showIcon message={describeAnalysisSettingsFailure(save.error)} />
       )}

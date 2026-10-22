@@ -14,7 +14,7 @@ import java.nio.file.Path;
  *
  * <pre>
  * AnalysisSettingsStore store = new JsonFileAnalysisSettingsStore("analysis-settings.json");
- * store.save("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2));
+ * store.save("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2, 0.0, 0.0, null));
  * </pre>
  */
 @Component
@@ -26,7 +26,8 @@ public class JsonFileAnalysisSettingsStore implements AnalysisSettingsStore {
 			@Value("${archanchor.analysis-settings-file:analysis-settings.json}") String file) {
 		this.file = new PerProjectJsonFile<>(Path.of(file), AnalysisSettings.class, "analysis settings",
 				"a JSON object from project name to {minSplitModuleClasses, minSourceClassesAfterMove, "
-						+ "maxMoveTargetsPerClass, minClassDependencies, minRecommendationRate, minMergeSimilarityChange}");
+						+ "maxMoveTargetsPerClass, minClassDependencies, minRecommendationRate, minMergeSimilarityChange, "
+						+ "minMoveSimilarityChange, minSplitSimilarityChange}");
 	}
 
 	@Override

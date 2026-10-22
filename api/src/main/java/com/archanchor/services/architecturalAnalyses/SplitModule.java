@@ -330,8 +330,10 @@ public class SplitModule extends ArchitecturalAnalysis {
 					() -> calculateSplitRate(module, module1, module2));
 
 			// Only recommend split if rate is positive (considering both similarity and
-			// violations)
-			if (rateResult.rate > 0) {
+			// violations), and if it costs no more similarity than the architect accepts
+			// (#73)
+			if (rateResult.rate > 0
+					&& activeSettings.current().allowsSplitChangingSimilarityBy(rateResult.similarityImprovement)) {
 				List<String> module1ClassNames = module1Classes.stream()
 					.map(Clazz::getName)
 					.collect(Collectors.toList());

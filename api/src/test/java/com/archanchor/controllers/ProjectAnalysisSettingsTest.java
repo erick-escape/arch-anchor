@@ -54,7 +54,9 @@ class ProjectAnalysisSettingsTest {
 			.andExpect(jsonPath("$.maxMoveTargetsPerClass").value(nullValue()))
 			.andExpect(jsonPath("$.minClassDependencies").value(0))
 			.andExpect(jsonPath("$.minRecommendationRate").value(0.0))
-			.andExpect(jsonPath("$.minMergeSimilarityChange").value(nullValue()));
+			.andExpect(jsonPath("$.minMergeSimilarityChange").value(nullValue()))
+			.andExpect(jsonPath("$.minMoveSimilarityChange").value(nullValue()))
+			.andExpect(jsonPath("$.minSplitSimilarityChange").value(nullValue()));
 		recommendations(backend).andExpect(jsonPath("$.splits", hasSize(1)))
 			.andExpect(jsonPath("$.moves", hasSize(1)))
 			.andExpect(jsonPath("$.merges", hasSize(1)))
@@ -144,6 +146,45 @@ class ProjectAnalysisSettingsTest {
 
 		setSettings(backend, PROJECT, settings(1, 1, null, 0, 0.0, -0.2)).andExpect(status().isOk());
 		recommendations(backend).andExpect(jsonPath("$.merges", hasSize(1)));
+	}
+
+	// #73: the shop's split separates SalesReport and raises similarity by 0.125; its
+	// move
+	// raises it too, so a limit of 0 keeps it.
+	@Test
+	void aSplitThatChangesSimilarityByLessThanTheMinimumIsNotRecommended() throws Exception {
+		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
+
+		setSettings(backend, PROJECT, withSimilarityLimits(settings(1, 1, null, 0, 0.0, null), 0.0, 0.3))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.minMoveSimilarityChange").value(0.0))
+			.andExpect(jsonPath("$.minSplitSimilarityChange").value(0.3));
+		recommendations(backend).andExpect(jsonPath("$.splits", empty())).andExpect(jsonPath("$.moves", hasSize(1)));
+
+		setSettings(backend, PROJECT, withSimilarityLimits(settings(1, 1, null, 0, 0.0, null), 0.0, 0.25))
+			.andExpect(status().isOk());
+		recommendations(backend).andExpect(jsonPath("$.splits", hasSize(1)));
+	}
+
+	// Settings saved before #73, or sent without the new limits, mean no limit.
+	@Test
+	void aMissingMoveOrSplitLimitMeansNoLimit() throws Exception {
+		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
+
+		setSettings(backend, PROJECT, settings(2, 1, null, 0, 0.0, 0.0)).andExpect(status().isOk());
+
+		settingsOf(backend, PROJECT).andExpect(jsonPath("$.minMoveSimilarityChange").value(nullValue()))
+			.andExpect(jsonPath("$.minSplitSimilarityChange").value(nullValue()));
+	}
+
+	@Test
+	void aMoveLimitOutsideMinusOneToOneIsRejectedNamingIt() throws Exception {
+		ShopBackend backend = analysed(AnalysedShopFixture::webAndPersistence);
+
+		setSettings(backend, PROJECT, withSimilarityLimits(settings(1, 1, null, 0, 0.0, null), 2.0, null))
+			.andExpect(status().isBadRequest())
+			.andExpect(
+					jsonPath("$.detail", allOf(containsString("minMoveSimilarityChange"), containsString("[-1, 1]"))));
 	}
 
 	// The settings do not affect the election, so nothing is re-elected.
@@ -247,6 +288,12 @@ class ProjectAnalysisSettingsTest {
 				+ minSourceClassesAfterMove + ",\"maxMoveTargetsPerClass\":" + maxMoveTargetsPerClass
 				+ ",\"minClassDependencies\":" + minClassDependencies + ",\"minRecommendationRate\":"
 				+ minRecommendationRate + ",\"minMergeSimilarityChange\":" + minMergeSimilarityChange + "}";
+	}
+
+	private static String withSimilarityLimits(String settings, Double minMoveSimilarityChange,
+			Double minSplitSimilarityChange) {
+		return settings.substring(0, settings.length() - 1) + ",\"minMoveSimilarityChange\":" + minMoveSimilarityChange
+				+ ",\"minSplitSimilarityChange\":" + minSplitSimilarityChange + "}";
 	}
 
 }

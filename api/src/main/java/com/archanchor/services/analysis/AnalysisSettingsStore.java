@@ -6,7 +6,7 @@ import com.archanchor.domains.analysis.AnalysisSettings;
  * Where each project's analysis settings are kept between analyses and restarts (#36).
  *
  * <pre>
- * analysisSettingsStore.save("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2));
+ * analysisSettingsStore.save("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2, 0.0, 0.0, null));
  * AnalysisSettings settings = analysisSettingsStore.settingsOf("mybatis-3");
  * </pre>
  */
