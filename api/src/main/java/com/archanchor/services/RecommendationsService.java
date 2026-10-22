@@ -11,15 +11,13 @@ import com.archanchor.services.architecturalAnalyses.SplitModule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
 public class RecommendationsService {
-
-	private static final double HIGH_PRIORITY_THRESHOLD = 0.5;
-
-	private static final double MEDIUM_PRIORITY_THRESHOLD = 0.2;
 
 	private final SplitModule splitModule;
 
@@ -141,56 +139,21 @@ public class RecommendationsService {
 	private RecommendationsSummaryDTO calculateSummary(List<SplitModuleRecommendationDTO> splits,
 			List<MergeModuleRecommendationDTO> merges, List<MoveClassRecommendationDTO> moves,
 			List<ArchitectureViolationRecommendationDTO> violations) {
-
-		int highPriority = 0;
-		int mediumPriority = 0;
-		int lowPriority = 0;
-
-		// Count priorities for split recommendations
-		for (SplitModuleRecommendationDTO split : splits) {
-			if (split.metrics().rate() > HIGH_PRIORITY_THRESHOLD) {
-				highPriority++;
-			}
-			else if (split.metrics().rate() > MEDIUM_PRIORITY_THRESHOLD) {
-				mediumPriority++;
-			}
-			else {
-				lowPriority++;
-			}
-		}
-
-		// Count priorities for merge recommendations
-		for (MergeModuleRecommendationDTO merge : merges) {
-			if (merge.metrics().rate() > HIGH_PRIORITY_THRESHOLD) {
-				highPriority++;
-			}
-			else if (merge.metrics().rate() > MEDIUM_PRIORITY_THRESHOLD) {
-				mediumPriority++;
-			}
-			else {
-				lowPriority++;
-			}
-		}
-
-		// Count priorities for move recommendations
-		for (MoveClassRecommendationDTO move : moves) {
-			if (move.metrics().rate() > HIGH_PRIORITY_THRESHOLD) {
-				highPriority++;
-			}
-			else if (move.metrics().rate() > MEDIUM_PRIORITY_THRESHOLD) {
-				mediumPriority++;
-			}
-			else {
-				lowPriority++;
-			}
-		}
+		Map<RecommendationPriority, Long> byPriority = Stream.of(splits.stream().map(split -> split.metrics().rate()),
+				merges.stream().map(merge -> merge.metrics().rate()), moves.stream().map(move -> move.metrics().rate()))
+			.flatMap(rates -> rates)
+			.collect(Collectors.groupingBy(RecommendationPriority::of, Collectors.counting()));
 
 		// Violations don't have a rate, consider them all medium priority
-		mediumPriority += violations.size();
-
+		int mediumPriority = count(byPriority, RecommendationPriority.MEDIUM) + violations.size();
 		int totalRecommendations = splits.size() + merges.size() + moves.size() + violations.size();
 
-		return new RecommendationsSummaryDTO(totalRecommendations, highPriority, mediumPriority, lowPriority);
+		return new RecommendationsSummaryDTO(totalRecommendations, count(byPriority, RecommendationPriority.HIGH),
+				mediumPriority, count(byPriority, RecommendationPriority.LOW));
+	}
+
+	private static int count(Map<RecommendationPriority, Long> byPriority, RecommendationPriority priority) {
+		return byPriority.getOrDefault(priority, 0L).intValue();
 	}
 
 }

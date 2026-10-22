@@ -178,6 +178,7 @@ the two panels of the analysis become drawers, opened from the top bar.
 ## API reference
 
 All endpoints are under `http://localhost:8080`.
+Every number in a response has at most four decimal places, rounded half up.
 
 | Method | Path | Purpose |
 |---|---|---|
