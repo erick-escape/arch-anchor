@@ -113,6 +113,13 @@ public class MoveClass extends ArchitecturalAnalysis {
 
 		public int targetViolationsAfter;
 
+		// The class's similarity with its module's reference classes and with the
+		// target's: a move is only considered if the second is higher, and the card shows
+		// both (#72).
+		public double classCurrentSimilarity;
+
+		public double classTargetSimilarity;
+
 		public double similarityImprovement;
 
 		public double violationsImprovement;
@@ -316,6 +323,8 @@ public class MoveClass extends ArchitecturalAnalysis {
 								evaluation.violationsImprovement, evaluation.rate);
 						move.sourceModuleName = sourceModule.getName();
 						move.targetModuleName = targetModule.getName();
+						move.classCurrentSimilarity = evaluation.classCurrentAvgSimilarity;
+						move.classTargetSimilarity = evaluation.classTargetAvgSimilarity;
 						potentialMoves.add(move);
 
 						log.debug(

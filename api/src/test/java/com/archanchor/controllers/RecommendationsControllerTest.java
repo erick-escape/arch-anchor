@@ -51,6 +51,15 @@ class RecommendationsControllerTest {
 			.andExpect(jsonPath("$.moves[0].targetModuleName").value(PERSISTENCE));
 	}
 
+	// #72: both were written as 0.0, although the analysis compares them to consider the
+	// move at all. SalesReport shares one of two dependencies with the web's reference
+	// class and both with the persistence's.
+	@Test
+	void moveRecommendationCarriesTheClassSimilarityWithBothModulesReferenceClasses() throws Exception {
+		recommendations().andExpect(jsonPath("$.moves[0].metrics.classCurrentSimilarity").value(0.5))
+			.andExpect(jsonPath("$.moves[0].metrics.classTargetSimilarity").value(1.0));
+	}
+
 	@Test
 	void applyingTheMoveLeavesNothingToRecommend() throws Exception {
 		recommendations().andExpect(jsonPath("$.violations", hasSize(1))).andExpect(jsonPath("$.moves", hasSize(1)));
