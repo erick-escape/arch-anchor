@@ -403,6 +403,10 @@ The architectural analysis framework relies on three core metrics:
   `suggestionReason`
 - `SplitMetricsDTO`, `MergeMetricsDTO`, `MoveMetricsDTO` - Detailed metrics for each operation type
 - `RecommendationsSummaryDTO` - `totalRecommendations`, `highPriority`, `mediumPriority`, `lowPriority`
+- Every number the API writes has at most four decimal places, rounded half up (#71): `util/FourDecimalPlaces`,
+  registered on Spring Boot's `ObjectMapper` by `config/JsonNumberPrecisionConfig`. The analyses, filters, `modules.bin` and
+  the per-project JSON files keep full precision. The summary's priorities (`RecommendationPriority`) classify the rounded
+  rate, as the web's badge does; the panel sorts by it, so rates equal to four places keep the API's order
 
 ### Key Configuration
 
