@@ -92,10 +92,8 @@ public class RecommendationsService {
 			.stream()
 			.filter(result -> isShown(result.rate))
 			.map(result -> new MoveClassRecommendationDTO(result.classId, result.className, result.sourceModuleId,
-					result.sourceModuleName, result.targetModuleId, result.targetModuleName, new MoveMetricsDTO(0.0, // classCurrentSimilarity
-																														// not
-																														// available
-							0.0, // classTargetSimilarity not available
+					result.sourceModuleName, result.targetModuleId, result.targetModuleName,
+					new MoveMetricsDTO(result.classCurrentSimilarity, result.classTargetSimilarity,
 							result.sourceViolationsBefore, result.sourceViolationsAfter, result.targetViolationsBefore,
 							result.targetViolationsAfter, result.similarityImprovement, result.violationsImprovement,
 							result.rate)))
