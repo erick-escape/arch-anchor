@@ -148,7 +148,7 @@ how the reference class of `web` is elected and the constraints the tool exports
    at 0.5 / 0.5. Saving re-elects every module except those whose reference classes you chose by
    hand, and re-rates the recommendations, without discarding your module operations. Its
    **Analysis filters** tab hides recommendations you do not want, such as splits that leave a
-   one-class module.
+   one-class module, or merges, moves and splits that lower similarity.
 5. **Set enforcement per reference class.** `ALLOW` (the default) exports as `CAN-DEPEND`; switch
    to `MUST` for dependencies the module is required to have, which exports as `MUST-DEPEND`.
 6. **Reshape modules if you want.** A module's **⋮** menu renames, merges or deletes it;

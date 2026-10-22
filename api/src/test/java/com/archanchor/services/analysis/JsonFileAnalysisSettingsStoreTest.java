@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JsonFileAnalysisSettingsStoreTest {
 
-	private static final AnalysisSettings STRICT = new AnalysisSettings(2, 2, 1, 5, 0.2, null);
+	private static final AnalysisSettings STRICT = new AnalysisSettings(2, 2, 1, 5, 0.2, null, null, null);
 
 	@TempDir
 	Path workspace;

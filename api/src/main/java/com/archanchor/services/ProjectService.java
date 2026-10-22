@@ -118,7 +118,7 @@ public class ProjectService {
 	 * election. Any other project picks the settings up when it is next analysed (#36).
 	 *
 	 * <pre>
-	 * projectService.updateAnalysisSettings("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2));
+	 * projectService.updateAnalysisSettings("mybatis-3", new AnalysisSettings(2, 2, 1, 5, 0.2, 0.0, 0.0, null));
 	 * </pre>
 	 */
 	public AnalysisSettings updateAnalysisSettings(String projectName, AnalysisSettings settings) {

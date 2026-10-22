@@ -17,6 +17,8 @@ const DEFAULTS: AnalysisSettings = {
   minClassDependencies: 0,
   minRecommendationRate: 0,
   minMergeSimilarityChange: null,
+  minMoveSimilarityChange: null,
+  minSplitSimilarityChange: null,
 };
 
 const STRICT: AnalysisSettings = {
@@ -26,6 +28,8 @@ const STRICT: AnalysisSettings = {
   minClassDependencies: 5,
   minRecommendationRate: 0.2,
   minMergeSimilarityChange: 0,
+  minMoveSimilarityChange: 0,
+  minSplitSimilarityChange: null,
 };
 
 describe('analysisSettingsApi', () => {

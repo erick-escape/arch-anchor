@@ -313,9 +313,13 @@ public class MoveClass extends ArchitecturalAnalysis {
 					MoveEvaluationResult evaluation = simulateOn(List.of(sourceModule, targetModule),
 							() -> evaluateMoveClassBenefit(classToMove, sourceModule, targetModule));
 
-					// Only consider moves with positive rate (considering both similarity
-					// and violations)
-					if (evaluation.rate > 0) {
+					// Only consider moves with positive rate (considering both
+					// similarity and violations) that cost no more similarity than
+					// the architect accepts (#73). Applied before each class's best
+					// targets are kept, so a class whose best target costs similarity
+					// keeps its best target that does not.
+					if (evaluation.rate > 0 && activeSettings.current()
+						.allowsMoveChangingSimilarityBy(evaluation.similarityImprovement)) {
 						MoveClassResult move = new MoveClassResult(sourceModule.getId(), targetModule.getId(),
 								classToMove.getId(), classToMove.getName(), evaluation.sourceViolationsBefore,
 								evaluation.sourceViolationsAfter, evaluation.targetViolationsBefore,

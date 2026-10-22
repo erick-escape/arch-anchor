@@ -142,6 +142,10 @@ Where:
       violation entries have no rate and are always shown
     - `minMergeSimilarityChange` (null, no limit; #41): `MergeModule` does not recommend a merge that changes similarity by
       less; 0 keeps out merges that only remove violations at a cost in similarity
+    - `minMoveSimilarityChange` (null, no limit; #73): the same for a move, in `MoveClass` before `bestTargetsOfEachClass`,
+      so a class whose best target costs more similarity keeps its best target that does not
+    - `minSplitSimilarityChange` (null, no limit; #73): the same for a split, in `SplitModule`
+    - A similarity-change limit missing from a stored file or a PUT reads as null, so settings saved before it keep no limit
 - Invalid values throw `InvalidAnalysisSettingsException`, naming the setting, the value and the range
 - Stored per project in `analysis-settings.json` by `JsonFileAnalysisSettingsStore` (`AnalysisSettingsStore`; the JSON file
   handling is shared with the weights in `util/PerProjectJsonFile`); deleting a project forgets them

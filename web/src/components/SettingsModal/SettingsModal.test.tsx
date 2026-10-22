@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios, { AxiosRequestConfig } from 'axios';
 import SettingsModal from './index';
@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS: AnalysisSettings = {
   minClassDependencies: 0,
   minRecommendationRate: 0,
   minMergeSimilarityChange: null,
+  minMoveSimilarityChange: null,
+  minSplitSimilarityChange: null,
 };
 
 const EQUAL: RatingWeights = {
@@ -61,6 +63,13 @@ describe('SettingsModal', () => {
 
   function settingInput(label: string): Promise<HTMLElement> {
     return screen.findByRole('spinbutton', { name: label });
+  }
+
+  // The "No limit" switch of the setting with that label.
+  function noLimitOf(label: string): HTMLElement {
+    return within(screen.getByRole('region', { name: label })).getByRole('checkbox', {
+      name: 'No limit',
+    });
   }
 
   // The pair's two weights as its meters show them: similarity, then violations.
@@ -144,6 +153,8 @@ describe('SettingsModal', () => {
         minClassDependencies: 5,
         minRecommendationRate: 0.2,
         minMergeSimilarityChange: -0.1,
+        minMoveSimilarityChange: 0,
+        minSplitSimilarityChange: -0.05,
       });
       renderModal();
 
@@ -160,6 +171,32 @@ describe('SettingsModal', () => {
       expect(await settingInput('Lowest similarity change of a recommended merge')).toHaveValue(
         '-0.10'
       );
+      expect(await settingInput('Lowest similarity change of a recommended move')).toHaveValue(
+        '0.00'
+      );
+      expect(await settingInput('Lowest similarity change of a recommended split')).toHaveValue(
+        '-0.05'
+      );
+    });
+
+    it('limits the similarity a move or a split may cost (#73)', async () => {
+      const onSaved = vi.fn();
+      renderModal(onSaved);
+      await openFiltersTab();
+
+      const moveLimit = 'Lowest similarity change of a recommended move';
+      expect(await settingInput(moveLimit)).toBeDisabled();
+      await userEvent.click(noLimitOf(moveLimit));
+      await userEvent.click(noLimitOf('Lowest similarity change of a recommended split'));
+      const split = await settingInput('Lowest similarity change of a recommended split');
+      await userEvent.clear(split);
+      await userEvent.type(split, '-0.1');
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await vi.waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+      expect(sentBodies(SETTINGS_URL)).toEqual([
+        { ...DEFAULT_SETTINGS, minMoveSimilarityChange: 0, minSplitSimilarityChange: -0.1 },
+      ]);
     });
 
     it('says that violations are always shown', async () => {

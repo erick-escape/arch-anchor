@@ -55,7 +55,7 @@ class SplitAnchorTest {
 		Module web = module(controller("CatalogController"), controller("CustomerController"),
 				controller("OrderController"), clazz("SalesReport", "java.sql.Connection", "shop.model.Book"));
 
-		assertThat(splitsOf(web, new AnalysisSettings(1, 1, null, 3, 0.0, null))).isEmpty();
+		assertThat(splitsOf(web, new AnalysisSettings(1, 1, null, 3, 0.0, null, null, null))).isEmpty();
 	}
 
 	private List<SplitModule.SplitModuleResult> splitsOf(Module module, AnalysisSettings settings) {

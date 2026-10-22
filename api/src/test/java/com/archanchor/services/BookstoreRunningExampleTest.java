@@ -126,7 +126,7 @@ class BookstoreRunningExampleTest {
 	// rate and stays (#36).
 	@Test
 	void aMinimumRateSavedBeforeTheAnalysisHidesTheMerge() throws IOException {
-		analysisSettingsStore.save("bookstore", new AnalysisSettings(1, 1, null, 0, 0.5, null));
+		analysisSettingsStore.save("bookstore", new AnalysisSettings(1, 1, null, 0, 0.5, null, null, null));
 
 		projectService.analyzeProject("bookstore", BOOKSTORE);
 

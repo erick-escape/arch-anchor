@@ -13,4 +13,8 @@ export interface AnalysisSettings {
   // The lowest similarity change of a recommended merge (#41); 0 keeps out merges that lower
   // similarity, null for no limit.
   minMergeSimilarityChange: number | null;
+  // The same for a move (#73); applied before each class's best targets are kept.
+  minMoveSimilarityChange: number | null;
+  // The same for a split (#73).
+  minSplitSimilarityChange: number | null;
 }
