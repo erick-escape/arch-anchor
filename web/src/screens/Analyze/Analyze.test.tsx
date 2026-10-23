@@ -4,7 +4,6 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios, { AxiosRequestConfig } from 'axios';
 import AnalyzePageWithProvider from './index';
-import { api } from '../../services/api';
 import { FakeAxiosAdapter } from '../../test/fakes/FakeAxiosAdapter';
 import { installReactFlowJsdomShims } from '../../test/reactFlowJsdom';
 import { renderWithProviders } from '../../test/renderWithProviders';
@@ -38,7 +37,7 @@ const noRecommendations = {
 
 describe('AnalyzePage', () => {
   let fakeApi: FakeAxiosAdapter;
-  let realAdapters: AxiosRequestConfig['adapter'][];
+  let realAdapter: AxiosRequestConfig['adapter'];
 
   beforeAll(() => installReactFlowJsdomShims());
 
@@ -46,14 +45,12 @@ describe('AnalyzePage', () => {
     fakeApi = new FakeAxiosAdapter()
       .respondTo('POST', '/api/analyze', analyses)
       .respondTo('GET', '/api/recommendations', noRecommendations);
-    // The recommendations client is its own axios instance, so it needs the fake too.
-    realAdapters = [axios.defaults.adapter, api.defaults.adapter];
+    realAdapter = axios.defaults.adapter;
     axios.defaults.adapter = fakeApi.adapter;
-    api.defaults.adapter = fakeApi.adapter;
   });
 
   afterEach(() => {
-    [axios.defaults.adapter, api.defaults.adapter] = realAdapters;
+    axios.defaults.adapter = realAdapter;
   });
 
   function renderPage() {
