@@ -1,0 +1,75 @@
+name: Release
+
+# The packaged tool (#77): the Docker image, for amd64 and arm64, and the jar inside it. A
+# published release pushes the image to GHCR, tagged with the release's version and latest, and
+# attaches the jar to the release. A pull request that changes the packaging only builds both, so
+# a broken Dockerfile shows up before a release depends on it.
+on:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: Image and jar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'release'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # v1.0.0 gives the tags 1.0.0 and latest, and the labels that link the image to this
+      # repository.
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: type=semver,pattern={{version}}
+
+      # Built first so that the image reuses its stages: the release carries the image's own jar.
+      - name: Build the jar
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: jar
+          outputs: type=local,dest=out
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'release' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+
+      - name: Attach the jar to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          jar="arch-anchor-${TAG#v}.jar"
+          cp out/arch-anchor.jar "$jar"
+          gh release upload "$TAG" "$jar"

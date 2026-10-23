@@ -1,0 +1,17 @@
+# Only the two halves' sources go into the build, never the projects someone has analysed or the
+# tool's local state (#77).
+*
+!api
+!web
+
+api/target
+api/uploads
+api/*.bin
+api/*.json
+api/src/main/resources/static
+
+web/node_modules
+web/dist
+web/.env*
+
+**/.DS_Store

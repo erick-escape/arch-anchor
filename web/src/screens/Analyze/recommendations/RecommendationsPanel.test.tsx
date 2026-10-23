@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import axios, { type AxiosRequestConfig } from 'axios';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from '../../../services/api';
 import { FakeAxiosAdapter } from '../../../test/fakes/FakeAxiosAdapter';
 import {
   mergeRecommendationFixture,
@@ -42,20 +41,18 @@ function HighlightProbe() {
 
 describe('RecommendationsPanel', () => {
   let fakeApi: FakeAxiosAdapter;
-  let realAdapters: AxiosRequestConfig['adapter'][];
+  let realAdapter: AxiosRequestConfig['adapter'];
   let onApplied: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
     fakeApi = new FakeAxiosAdapter();
-    // The recommendations client is its own axios instance, so it needs the fake too.
-    realAdapters = [axios.defaults.adapter, api.defaults.adapter];
+    realAdapter = axios.defaults.adapter;
     axios.defaults.adapter = fakeApi.adapter;
-    api.defaults.adapter = fakeApi.adapter;
     onApplied = vi.fn<() => void>();
   });
 
   afterEach(() => {
-    [axios.defaults.adapter, api.defaults.adapter] = realAdapters;
+    axios.defaults.adapter = realAdapter;
   });
 
   function renderPanel() {

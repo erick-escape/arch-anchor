@@ -1,10 +1,10 @@
-import { api } from './api';
+import axios from 'axios';
 import { RecommendationsResponse } from '../interface/Recommendations';
 import type { ApplyAction } from '../screens/Analyze/recommendations/recommendationCards';
 import { problemDetailOf } from './problemDetail';
 
 export const getRecommendations = async (): Promise<RecommendationsResponse> => {
-  const response = await api.get<RecommendationsResponse>('/api/recommendations');
+  const response = await axios.get<RecommendationsResponse>('/api/recommendations');
   return response.data;
 };
 
@@ -14,11 +14,11 @@ export interface ApplySplitRequest {
 }
 
 export const applySplit = async (request: ApplySplitRequest): Promise<void> => {
-  await api.post('/api/recommendations/apply/split', request);
+  await axios.post('/api/recommendations/apply/split', request);
 };
 
 export const applyMerge = async (sourceId: string, targetId: string): Promise<void> => {
-  await api.post('/api/recommendations/apply/merge', null, {
+  await axios.post('/api/recommendations/apply/merge', null, {
     params: { sourceId, targetId },
   });
 };
@@ -28,7 +28,7 @@ export const applyMove = async (
   sourceModuleId: string,
   targetModuleId: string
 ): Promise<void> => {
-  await api.post('/api/recommendations/apply/move', null, {
+  await axios.post('/api/recommendations/apply/move', null, {
     params: { classId, sourceModuleId, targetModuleId },
   });
 };

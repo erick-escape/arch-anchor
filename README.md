@@ -56,37 +56,43 @@ arch-anchor/
 Both halves live in one repository on purpose. They are developed as a single tool, released
 together, and a change to an endpoint almost always changes its caller — so they belong in one
 commit. Each side still keeps its own toolchain untouched: `api/` builds with the bundled Maven
-wrapper, `web/` with npm, and neither drives the other.
+wrapper, `web/` with npm, and neither drives the other. The `Dockerfile` at the root builds both
+and packages the frontend into the backend's jar, which is the form the tool is released in.
 
-## Prerequisites
+## Run it
 
-- **Java 17** or newer
-- **Node.js 18** or newer, with npm
-- No global Maven install — `api/` ships the Maven wrapper (`./mvnw`)
+There is nothing to build. Either way below serves the whole tool on one port.
 
-## Quick start
-
-Two terminals. First the backend:
+**With Docker**
 
 ```bash
-cd api
-./mvnw spring-boot:run
+docker run --rm -p 8080:8080 ghcr.io/erick-escape/arch-anchor:1.0.0
 ```
 
-It starts on **http://localhost:8080**, ending with `Started ArchAnchorApplication in N seconds`.
+Open **http://localhost:8080** once the log ends with `Started ArchAnchorApplication in N
+seconds`. The image runs on x86-64 and on ARM, Apple silicon included.
 
-Then the frontend:
+- If port 8080 is taken, publish another one: `-p 8090:8080`, then open http://localhost:8090.
+- The tool keeps its projects in the container's `/data`, so `--rm` discards them when the
+  container stops. Add `-v archanchor-data:/data` to keep them between runs.
+
+**With Java 17 or newer**
+
+Download `arch-anchor-1.0.0.jar` from the
+[v1.0.0 release](https://github.com/erick-escape/arch-anchor/releases/tag/v1.0.0) and run it:
 
 ```bash
-cd web
-npm install
-npm run dev
+java -jar arch-anchor-1.0.0.jar
 ```
 
-Open **http://localhost:5173**. If the home page lists your projects under **Your projects**
-(or shows only the import bar, before your first import), both halves are talking to each
-other. (The frontend reaches the backend through the Vite dev-server proxy — see
-[Limitations](#limitations).)
+It also serves **http://localhost:8080** (add `--server.port=8090` for another port), and keeps
+its state in the directory you start it from (see [Local state](#development)).
+
+Either way, the bookstore example below is the quickest check that the tool works. Its shortcut
+imports the example from GitHub, so it needs an internet connection; offline, unpack the
+release's source code and use **Upload folder** on `examples/bookstore`.
+
+To work on the tool itself, see [Development](#development).
 
 ## Your first analysis
 
@@ -204,6 +210,30 @@ Every number in a response has at most four decimal places, rounded half up.
 
 ## Development
 
+**Running from source.** You need **Java 17** or newer and **Node.js 18** or newer, with npm.
+Maven is not required: `api/` ships the Maven wrapper (`./mvnw`). Two terminals. First the
+backend:
+
+```bash
+cd api
+./mvnw spring-boot:run
+```
+
+It starts on **http://localhost:8080**, ending with `Started ArchAnchorApplication in N seconds`.
+
+Then the frontend:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173**. If the home page lists your projects under **Your projects**
+(or shows only the import bar, before your first import), both halves are talking to each
+other. The frontend calls the API through relative `/api` paths, which the Vite dev server
+proxies to port 8080 (`web/vite.config.ts`); the packaged tool serves both on one port instead.
+
 **Backend** (`api/`)
 
 | Command | Description |
@@ -212,7 +242,7 @@ Every number in a response has at most four decimal places, rounded half up.
 | `./mvnw test` | Run the test suite |
 | `./mvnw test -Dtest=SplitModuleTest` | Run one test class |
 | `./mvnw clean compile` | Compile |
-| `./mvnw clean package` | Build the executable JAR |
+| `./mvnw clean package` | Build the executable JAR, without the frontend |
 
 **Frontend** (`web/`)
 
@@ -224,7 +254,20 @@ Every number in a response has at most four decimal places, rounded half up.
 | `npm run format` | Format with Prettier |
 | `npm run build` | Type-check and build for production |
 
-**Local state.** The backend keeps everything on disk next to itself, all gitignored:
+**Packaging** (repository root; needs Docker with BuildKit, i.e. the buildx plugin)
+
+| Command | Description |
+|---|---|
+| `docker build -t arch-anchor .` | Build the image: the frontend, packaged into the backend's jar, on a Java 17 runtime |
+| `docker build --target jar --output type=local,dest=out .` | Build only that jar, into `out/arch-anchor.jar` |
+
+Publishing a GitHub release runs `.github/workflows/release.yml`, which pushes the image to
+`ghcr.io/erick-escape/arch-anchor` for amd64 and arm64, tagged with the release's version and
+`latest`, and attaches the jar to the release.
+
+**Local state.** The backend keeps everything on disk in its working directory: `api/` under
+`./mvnw spring-boot:run`, `/data` in the container, and wherever you start the jar. Under `api/`
+it is all gitignored:
 
 | Path | Contents |
 |---|---|
@@ -241,10 +284,10 @@ will fail to load, and deleting it is the fix.
 
 ## Limitations
 
-- **Development setup only.** Most of the frontend calls the API through relative `/api` paths,
-  which depend on the Vite dev-server proxy in `web/vite.config.ts`. A static `npm run build`
-  deployment needs a reverse proxy in front of both halves; there is no production configuration
-  in the repo yet.
+- **One analysed project, one user, per instance.** The backend holds the modules of the project
+  analysed last (`modules.bin`), so analysing another project replaces them, and two people
+  sharing one instance would overwrite each other's work. Run an instance per person; the
+  Docker image makes that cheap.
 - **No database.** State lives in memory and in the two `.bin` files described above. Restarting
   the backend without those files means adding the project again.
 - **GitHub only for imports.** The importer clones from `github.com` and nowhere else; code on

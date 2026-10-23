@@ -41,3 +41,7 @@ project-analyses.bin
 rating-weights.json
 analysis-settings.json
 import-source.json
+
+### the built frontend, which the Docker build copies here before packaging (#77) ###
+
+src/main/resources/static/
