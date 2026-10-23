@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use ArchAnchor, please cite it as below."
+type: software
+title: ArchAnchor
+abstract: >-
+  ArchAnchor reads a Java codebase and recovers its architectural constraints, the rules about
+  which module may depend on which package, by electing a reference class per module: the class
+  whose dependencies best represent what the module was meant to be. It reports the dependencies
+  that step outside those constraints as violations, recommends splits, merges and moves that
+  remove them, and exports the constraints.
+authors:
+  - given-names: Érick de Castro
+    family-names: Silva
+    affiliation: Federal University of Lavras
+  - given-names: Rafael
+    family-names: Durelli
+    affiliation: Federal University of Lavras
+  - given-names: Eduardo
+    family-names: Guerra
+    affiliation: Free University of Bozen-Bolzano
+  - given-names: Ricardo
+    family-names: Terra
+    affiliation: Federal University of Lavras
+version: 1.0.0
+date-released: 2026-10-23
+license: MIT
+repository-code: "https://github.com/erick-escape/arch-anchor"
+keywords:
+  - software architecture
+  - architectural constraints
+  - reference class
+  - architecture recovery
+  - refactoring recommendation
+  - Java
