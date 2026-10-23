@@ -162,7 +162,7 @@ obligations. Here both hold for every class in the module, `SalesReport` include
 
 ## Try it
 
-1. Start the tool (see the [root README](../../README.md#quick-start)).
+1. Start the tool (see [Run it](../../README.md#run-it) in the root README).
 2. On the home page, click **Try it on the bookstore example**, then **Analyze**. It imports
    `https://github.com/erick-escape/arch-anchor` with **Subdirectory** `examples/bookstore` and
    **Project name** `bookstore`. From a clone, **Upload folder** takes this directory instead.

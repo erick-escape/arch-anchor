@@ -93,6 +93,8 @@ arch-anchor/
 └── examples/  # The bookstore: the sample Java project that exercises the analyses
 ```
 
+**Packaging** (#77): the root `Dockerfile` builds `web/`, copies `web/dist` into `api/src/main/resources/static/` (gitignored) and packages one Spring Boot jar, which serves the frontend and the API on one port (`config/SinglePageAppConfig`, with `IndexHtmlFallback` for the frontend's routes, never for `/api/`). Its `jar` target exports that jar alone. The image runs as user 10001 with the state files in `/data`, its working directory; `.dockerignore` lets in only the two halves' sources, never `uploads/` or the state files. `.github/workflows/release.yml` builds on pull requests that touch the packaging, and on a published release pushes the image to GHCR (amd64 and arm64) and attaches the jar.
+
 ---
 
 ## Backend (`api/`)
@@ -225,7 +227,7 @@ The UI follows the redesign of #58 (brief: `docs/design/redesign-brief.md`).
 - `AppShell/`, `AppHeader/`, `CommandPalette/`, `ConfirmDialog/`, `feedback/useToast`, `SettingsModal/` (Rating weights, Analysis filters)
 
 **Services & Hooks**
-- `services/*Api.ts` - one module per API resource, relative `/api` paths through the Vite proxy; failures become sentences (`problemDetail.ts`)
+- `services/*Api.ts` - one module per API resource, relative `/api` paths through the Vite proxy, or the backend serving the built frontend (#77); never an absolute URL. Failures become sentences (`problemDetail.ts`)
 - `hooks/useRecommendations.ts` - keyed by project, enabled once that project's analysis returns (#53)
 
 **Data Models** (`src/interface/`)
