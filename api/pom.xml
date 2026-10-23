@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.archanchor</groupId>
     <artifactId>arch-anchor-api</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>arch-anchor-api</name>
     <description>Extracts architectural constraints from Java source code using the reference class concept.</description>
     <url>https://github.com/erick-escape/arch-anchor</url>
