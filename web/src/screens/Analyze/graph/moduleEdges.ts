@@ -28,38 +28,48 @@ export interface DependencyGraph {
 const PACKAGE_PREFIX = 'package:';
 
 /**
- * Every class of the project by fully qualified name, mapped to the id of the module holding it.
+ * Every class of the project by the name other classes refer to it by, mapped to the id of the
+ * module holding it. The name is the one the API gives, written as the project's language writes
+ * it, so nothing here joins a package and a name (#83).
  * Module names cannot be used: they become "a | b" after a merge and "_Retained" after a split.
  */
 export function classOwnerIndex(modules: ModuleData[]): Map<string, string> {
   const index = new Map<string, string>();
   for (const module of modules) {
     for (const clazz of module.clazzes) {
-      if (clazz.packageName) index.set(`${clazz.packageName}.${clazz.name}`, module.id);
+      if (clazz.qualifiedName) index.set(clazz.qualifiedName, module.id);
     }
   }
   return index;
 }
 
 /**
- * The module holding a type, walking out of nested types to their enclosing class, as
- * ModuleScope.isInternal does in the API.
+ * The module holding a type: that of the class of this exact name or, for a type nested in a
+ * class, of the class it is declared in, as ModuleScope.isInternal does in the API.
  *
  * @example owningModuleOf('bookstore.model.Book.Builder', index) // the id of bookstore/model
+ * @example owningModuleOf('App\\Models\\User', index) // the id of app/Models
  */
 export function owningModuleOf(
   fullyQualifiedName: string,
   index: Map<string, string>
 ): string | undefined {
   for (
-    let name = fullyQualifiedName;
-    name.includes('.');
-    name = name.slice(0, name.lastIndexOf('.'))
+    let name: string | undefined = fullyQualifiedName;
+    name !== undefined;
+    name = enclosingTypeOf(name)
   ) {
     const owner = index.get(name);
     if (owner) return owner;
   }
   return undefined;
+}
+
+// shop.orders.Order for shop.orders.Order.Status. Only a dot nests one type in another, so a
+// name written without dots is looked up as it is and no further (#83).
+function enclosingTypeOf(typeName: string): string | undefined {
+  const lastDot = typeName.lastIndexOf('.');
+  return lastDot > 0 ? typeName.slice(0, lastDot) : undefined;
 }
 
 /**

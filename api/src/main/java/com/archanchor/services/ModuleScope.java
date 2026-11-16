@@ -48,7 +48,7 @@ public final class ModuleScope {
 
 	public static ModuleScope of(Collection<Clazz> clazzes) {
 		return new ModuleScope(clazzes.stream()
-			.map(Clazz::qualifiedName)
+			.map(Clazz::getQualifiedName)
 			.filter(Objects::nonNull)
 			.collect(Collectors.toUnmodifiableSet()));
 	}
@@ -56,8 +56,8 @@ public final class ModuleScope {
 	/** This scope with one more class, e.g. one a simulation moves in. */
 	public ModuleScope with(Clazz joining) {
 		Set<String> names = new HashSet<>(classNames);
-		if (joining.qualifiedName() != null) {
-			names.add(joining.qualifiedName());
+		if (joining.getQualifiedName() != null) {
+			names.add(joining.getQualifiedName());
 		}
 		return new ModuleScope(names);
 	}

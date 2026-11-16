@@ -3,12 +3,14 @@ import { ModuleData } from '../../interface/ModuleData';
 
 /**
  * Builds a class as the backend serialises it (`ClazzResponseDTO`), with overridable fields.
+ * Unless given, its qualified name is the one the Java parser gives a class: package and name
+ * joined by a dot, and none in the default package.
  *
  * @example
- * const repo = clazzFixture({ id: 'c2', name: 'OrderRepository' });
+ * const repo = clazzFixture({ id: 'c2', name: 'OrderRepository' }); // shop.orders.OrderRepository
  */
 export function clazzFixture(overrides: Partial<ClazzData> = {}): ClazzData {
-  return {
+  const clazz = {
     id: 'c1',
     name: 'OrderService',
     packageName: 'shop.orders',
@@ -17,9 +19,11 @@ export function clazzFixture(overrides: Partial<ClazzData> = {}): ClazzData {
     avgSimilarityWithRefClazzes: 0.75,
     firstModule: 'm1',
     currentModule: 'm1',
-    enforceMode: 'ALLOW',
+    enforceMode: 'ALLOW' as const,
     ...overrides,
   };
+  const qualifiedName = clazz.packageName === null ? null : `${clazz.packageName}.${clazz.name}`;
+  return { qualifiedName, ...clazz };
 }
 
 /**

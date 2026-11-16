@@ -20,10 +20,10 @@ class LanguageParsersTest {
 	@Test
 	void aProjectIsReadInTheLanguageMostOfItsSourcesAreWrittenIn() throws IOException {
 		ScriptedLanguageParser java = new ScriptedLanguageParser("java")
-			.declaring(PROJECT.resolve("src/shop/Catalog.java"), "Catalog", "shop")
-			.declaring(PROJECT.resolve("src/shop/Order.java"), "Order", "shop");
+			.declaring(PROJECT.resolve("src/shop/Catalog.java"), "Catalog", "shop", "shop.Catalog")
+			.declaring(PROJECT.resolve("src/shop/Order.java"), "Order", "shop", "shop.Order");
 		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(PROJECT.resolve("docs/Example.php"),
-				"Example", null);
+				"Example", null, "Example");
 
 		LanguageParsers parsers = new LanguageParsers(List.of(php, java));
 
@@ -34,9 +34,9 @@ class LanguageParsersTest {
 	@Test
 	void languagesWithAsManySourcesAreSettledByName() throws IOException {
 		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(PROJECT.resolve("app/User.php"),
-				"User", "App");
+				"User", "App", "App\\User");
 		ScriptedLanguageParser java = new ScriptedLanguageParser("java")
-			.declaring(PROJECT.resolve("src/shop/Catalog.java"), "Catalog", "shop");
+			.declaring(PROJECT.resolve("src/shop/Catalog.java"), "Catalog", "shop", "shop.Catalog");
 
 		assertThat(new LanguageParsers(List.of(php, java)).parserOf(PROJECT)).containsSame(java);
 		assertThat(new LanguageParsers(List.of(java, php)).parserOf(PROJECT)).containsSame(java);

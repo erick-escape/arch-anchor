@@ -7,8 +7,11 @@ export interface ClazzData {
   id: string;
   name: string;
   // The package its source file declares; null for the default package or an unreadable file.
-  // With `name` it gives the class's fully qualified name, which maps a dependency to its module.
   packageName: string | null;
+  // The name other classes refer to it by, written as the project's language writes it
+  // (bookstore.web.SalesReport, App\Models\User); it maps a dependency to its module (#83).
+  // Null for a class nothing can refer to, such as a Java class of the default package.
+  qualifiedName: string | null;
   dependencies: Dependency[];
   similarity: number;
   avgSimilarityWithRefClazzes: number;

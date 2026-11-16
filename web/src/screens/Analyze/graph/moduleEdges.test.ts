@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import type { ClazzData } from '../../../interface/ClazzData';
+import type { Dependency } from '../../../interface/Dependency';
 import { bookstoreModules } from '../../../test/fixtures/bookstoreFixture';
+import { clazzFixture, moduleFixture } from '../../../test/fixtures/moduleFixtures';
 import { classOwnerIndex, dependencyGraphOf, owningModuleOf } from './moduleEdges';
+
+// A class named as PHP names it: nothing in the graph may assume a name is written with dots (#83).
+function phpClazz(namespace: string, name: string): ClazzData {
+  return clazzFixture({
+    id: name,
+    name,
+    packageName: namespace,
+    qualifiedName: `${namespace}\\${name}`,
+  });
+}
 
 describe('owningModuleOf', () => {
   const index = classOwnerIndex(bookstoreModules());
@@ -15,6 +28,27 @@ describe('owningModuleOf', () => {
 
   it('finds no module for a type outside the project', () => {
     expect(owningModuleOf('java.sql.Connection', index)).toBeUndefined();
+  });
+
+  it('finds a class by the name its parser gave it, however the language writes names', () => {
+    const models = moduleFixture({ id: 'models', clazzes: [phpClazz('App\\Models', 'User')] });
+    const phpIndex = classOwnerIndex([models]);
+
+    expect(owningModuleOf('App\\Models\\User', phpIndex)).toBe('models');
+    expect(owningModuleOf('App\\Models\\Order', phpIndex)).toBeUndefined();
+  });
+
+  it('finds a class that is in no package by its bare name', () => {
+    const mailer = clazzFixture({ name: 'Mailer', packageName: null, qualifiedName: 'Mailer' });
+    const legacy = moduleFixture({ id: 'legacy', clazzes: [mailer] });
+
+    expect(owningModuleOf('Mailer', classOwnerIndex([legacy]))).toBe('legacy');
+  });
+
+  it('leaves out a class nothing can refer to', () => {
+    const launcher = clazzFixture({ name: 'Launcher', packageName: null, qualifiedName: null });
+
+    expect(classOwnerIndex([moduleFixture({ clazzes: [launcher] })]).size).toBe(0);
   });
 });
 
@@ -54,6 +88,30 @@ describe('dependencyGraphOf', () => {
         kind: 'allowed',
       })
     );
+  });
+
+  it('draws the edges of a project whose names are not written with dots', () => {
+    const user = phpClazz('App\\Models', 'User');
+    const controller = phpClazz('App\\Http\\Controllers', 'UserController');
+    const usesModels: Dependency = {
+      packageName: 'App\\Models',
+      types: [{ fullyQualifiedName: 'App\\Models\\User', className: 'User' }],
+    };
+    const models = moduleFixture({ id: 'models', refClazzes: [user], clazzes: [user] });
+    const controllers = moduleFixture({
+      id: 'controllers',
+      refClazzes: [controller],
+      clazzes: [controller],
+      refClazzesDependencies: [usesModels],
+      allDependencies: [usesModels],
+    });
+
+    const { edges, packages } = dependencyGraphOf([models, controllers], { showExternal: true });
+
+    expect(edges.map((edge) => `${edge.source}->${edge.target}:${edge.kind}`)).toEqual([
+      'controllers->models:allowed',
+    ]);
+    expect(packages).toEqual([]);
   });
 
   it('leaves no violation once SalesReport has moved', () => {

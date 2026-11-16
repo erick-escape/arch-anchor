@@ -13,7 +13,7 @@ import java.util.List;
  *
  * <pre>
  * ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(project.resolve("app/Models/User.php"),
- * 		"User", "App\\Models");
+ * 		"User", "App\\Models", "App\\Models\\User");
  * </pre>
  */
 public final class ScriptedLanguageParser implements LanguageParser {
@@ -27,8 +27,8 @@ public final class ScriptedLanguageParser implements LanguageParser {
 	}
 
 	/** Adds a class without dependencies, declared in the given file. */
-	public ScriptedLanguageParser declaring(Path sourceFile, String name, String packageName) {
-		clazzes.add(new ParsedClazz(sourceFile, name, packageName, new ArrayList<Dependency>()));
+	public ScriptedLanguageParser declaring(Path sourceFile, String name, String packageName, String qualifiedName) {
+		clazzes.add(new ParsedClazz(sourceFile, name, packageName, qualifiedName, new ArrayList<Dependency>()));
 		return this;
 	}
 

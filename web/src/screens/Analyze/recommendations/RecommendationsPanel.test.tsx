@@ -182,6 +182,27 @@ describe('RecommendationsPanel', () => {
     expect(card.getByText('Connection')).toBeInTheDocument();
   });
 
+  it('names a violating type without its package, however the language writes names', async () => {
+    const violation = violationRecommendationFixture({
+      violation: 'Doctrine\\DBAL',
+      violatingDependencies: ['Doctrine\\DBAL\\Connection', 'PDO'],
+    });
+    fakeApi.respondTo(
+      'GET',
+      '/api/recommendations',
+      recommendationsFixture({ violations: [violation] })
+    );
+    renderPanel();
+
+    await userEvent.click(await screen.findByRole('tab', { name: /Violations/ }));
+    const card = within(
+      await screen.findByRole('article', { name: 'Fix violation in “SalesReport”' })
+    );
+    await userEvent.click(card.getByRole('button', { name: 'Details' }));
+    expect(card.getByText('2 violating dependencies')).toBeInTheDocument();
+    expect(card.getByText('Connection · PDO')).toBeInTheDocument();
+  });
+
   it('says when there is nothing to recommend', async () => {
     fakeApi.respondTo('GET', '/api/recommendations', recommendationsFixture());
     renderPanel();
