@@ -4,6 +4,7 @@ import { Meter } from '../../../components/vocabulary/Meter';
 import { PackageChip } from '../../../components/vocabulary/PackageChip';
 import { PriorityBadge } from '../../../components/vocabulary/PriorityBadge';
 import { priorityOf } from '../../../utils/priority';
+import { simpleTypeName } from '../../../utils/simpleTypeName';
 import { useGraphEmphasisActions } from '../graphEmphasisContext';
 import type { RecommendationCardModel } from './recommendationCards';
 import { cardDomIdOf } from './cardDomId';
@@ -102,9 +103,7 @@ function ViolatingTypes({ card }: { card: RecommendationCardModel }) {
       <span className={styles.violatingCount}>
         {types.length} violating {types.length === 1 ? 'dependency' : 'dependencies'}
       </span>
-      <span className={styles.violatingTypes}>
-        {types.map((type) => type.split('.').pop()).join(' · ')}
-      </span>
+      <span className={styles.violatingTypes}>{types.map(simpleTypeName).join(' · ')}</span>
     </div>
   );
 }

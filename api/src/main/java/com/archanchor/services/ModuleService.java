@@ -697,8 +697,9 @@ public class ModuleService {
 		// elected.
 		Clazz clazz = new Clazz(generateNewUUID(), parsed.name(), parsed.dependencies(), 0.0, 0.0, directoryName,
 				directoryName, "ALLOW");
-		// Identifies the class in other classes' references after a move (#43)
 		clazz.setPackageName(parsed.packageName());
+		// Identifies the class in other classes' references after a move (#43)
+		clazz.setQualifiedName(parsed.qualifiedName());
 		return clazz;
 	}
 

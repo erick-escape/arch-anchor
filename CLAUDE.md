@@ -136,7 +136,7 @@ cd api
 
 **Domain Models** (`src/main/java/com/archanchor/domains/`)
 - `Module` - Logical module with: `refClazzes`, `refClazzesDependencies`, `moduleDependencies`, `clazzes`, `similarity`, `avgRefClazzesSimilarity`, `violations`, `refClazzesChosenByHand`
-- `Clazz` - Class with: `dependencies`, `similarity`, `avgSimilarityWithRefClazzes`, `firstModule`, `currentModule`
+- `Clazz` - Class with: `dependencies`, `similarity`, `avgSimilarityWithRefClazzes`, `firstModule`, `currentModule`, `packageName`, `qualifiedName` (the name other classes refer to it by, set by its parser, #83)
 - `Dependency` - Dependency on an external package: `packageName`, `types` (List<Type>)
 - `Type` - Specific type within a dependency: `fullyQualifiedName`, `className`
 
@@ -154,7 +154,7 @@ cd api
 **Metrics:**
 - **Similarity**: `0.5 × [a/(a+b) + a/(a+c)]` where a=shared deps, b/c=unique deps (range [0,1])
 - **Violations**: Count of `moduleDependencies` NOT present in `refClazzesDependencies`
-- **Module scope** (#43): within a module, a reference to one of its own classes (or a type nested in one) is internal and counts for neither similarity, dependencies, violations nor the election (`ModuleScope`). The parser already drops same-package references; this keeps that true after a simulated or applied move or merge. Each `Clazz` records its declared `packageName` for this
+- **Module scope** (#43): within a module, a reference to one of its own classes (or a type nested in one) is internal and counts for neither similarity, dependencies, violations nor the election (`ModuleScope`). The parser already drops same-package references; this keeps that true after a simulated or applied move or merge. Each `Clazz` records its `qualifiedName` for this, as its parser read it (#83); nothing else joins a package and a name
 - **Avg Similarity with RefClazzes**: Evaluates how well a class fits module's pattern
 - **Precision** (#71): every number the API writes has at most four decimal places, rounded half up (`FourDecimalPlaces`); the analyses and stored files keep full precision
 
@@ -221,7 +221,7 @@ The UI follows the redesign of #58 (brief: `docs/design/redesign-brief.md`).
 **Screens** (`src/screens/`)
 - `Home/` - `importBar/` (`useProjectImport`, `droppedFolder.ts`, `usePageFolderDrop`), `claims/` (`useCarousel`, vignettes of the bookstore)
 - `Projects/` - cards, delete behind a named confirmation
-- `Analyze/` - `graph/` (module→module edges from `clazz.packageName`, layered layout with dagre, nodes and edges), `modules/` (list, detail, class selection toolbar, module menu), `recommendations/` (`recommendationCards.ts` keeps the Refactorings order and `CardList` the 50-card pages that `ICSE/evaluation/harness/panel.py` copies), `graphEmphasis` (hover highlight, applied-change motion), `usePanelLayout` (foldable panels, drawers below 1024 px), `useAnalyzeCommands`
+- `Analyze/` - `graph/` (module→module edges from `clazz.qualifiedName`, layered layout with dagre, nodes and edges), `modules/` (list, detail, class selection toolbar, module menu), `recommendations/` (`recommendationCards.ts` keeps the Refactorings order and `CardList` the 50-card pages that `ICSE/evaluation/harness/panel.py` copies), `graphEmphasis` (hover highlight, applied-change motion), `usePanelLayout` (foldable panels, drawers below 1024 px), `useAnalyzeCommands`
 
 **Components** (`src/components/`)
 - `vocabulary/` - Logo, ClassTile, ModuleContainer, PackageChip, Meter, StatTile, PriorityBadge, DependencyArrow, ModeToggle, ThemeSwitch
@@ -232,7 +232,7 @@ The UI follows the redesign of #58 (brief: `docs/design/redesign-brief.md`).
 - `hooks/useRecommendations.ts` - keyed by project, enabled once that project's analysis returns (#53)
 
 **Data Models** (`src/interface/`)
-- `ModuleData`, `ClazzData` (with `packageName`), `Dependency`, `Project` (`ProjectSummary` with its `ImportSource`), `Recommendations`, `RatingWeights`, `AnalysisSettings`
+- `ModuleData`, `ClazzData` (with `packageName` and `qualifiedName`), `Dependency`, `Project` (`ProjectSummary` with its `ImportSource`), `Recommendations`, `RatingWeights`, `AnalysisSettings`
 
 **Tests**
 - vitest + jsdom + Testing Library; `src/test/renderWithProviders.tsx` mounts screens like `main.tsx`, `src/test/fakes/` holds the named fakes (`FakeAxiosAdapter`, theme fakes), `src/test/fixtures/` the bookstore and recommendation fixtures

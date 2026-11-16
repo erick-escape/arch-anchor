@@ -25,10 +25,10 @@ class ModulesOfAnyLanguageTest {
 	@Test
 	void everyDirectoryHoldingAClassIsAModuleOrderedByPath() throws IOException {
 		ScriptedLanguageParser php = new ScriptedLanguageParser("php")
-			.declaring(PROJECT.resolve("app/Models/User.php"), "User", "App\\Models")
+			.declaring(PROJECT.resolve("app/Models/User.php"), "User", "App\\Models", "App\\Models\\User")
 			.declaring(PROJECT.resolve("app/Http/Controllers/UserController.php"), "UserController",
-					"App\\Http\\Controllers")
-			.declaring(PROJECT.resolve("app/Models/Order.php"), "Order", "App\\Models");
+					"App\\Http\\Controllers", "App\\Http\\Controllers\\UserController")
+			.declaring(PROJECT.resolve("app/Models/Order.php"), "Order", "App\\Models", "App\\Models\\Order");
 
 		List<Module> modules = modulesReadBy(php);
 
@@ -39,11 +39,12 @@ class ModulesOfAnyLanguageTest {
 	@Test
 	void aClassKeepsWhatItsParserSaidOfIt() throws IOException {
 		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(PROJECT.resolve("app/Models/User.php"),
-				"User", "App\\Models");
+				"User", "App\\Models", "App\\Models\\User");
 
 		Clazz user = modulesReadBy(php).get(0).getClazzes().get(0);
 
 		assertThat(user.getPackageName()).isEqualTo("App\\Models");
+		assertThat(user.getQualifiedName()).isEqualTo("App\\Models\\User");
 		assertThat(user.getFirstModule()).isEqualTo("Models");
 		assertThat(user.getCurrentModule()).isEqualTo("Models");
 		assertThat(user.getEnforceMode()).isEqualTo("ALLOW");
@@ -54,9 +55,9 @@ class ModulesOfAnyLanguageTest {
 	@Test
 	void classesDeclaredInOneFileKeepTheOrderTheirParserGaveThem() throws IOException {
 		Path shapes = PROJECT.resolve("lib/shapes.php");
-		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(shapes, "Square", null)
-			.declaring(PROJECT.resolve("lib/areas.php"), "Area", null)
-			.declaring(shapes, "Circle", null);
+		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(shapes, "Square", null, "Square")
+			.declaring(PROJECT.resolve("lib/areas.php"), "Area", null, "Area")
+			.declaring(shapes, "Circle", null, "Circle");
 
 		List<Module> modules = modulesReadBy(php);
 

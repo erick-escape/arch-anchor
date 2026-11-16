@@ -46,7 +46,7 @@ class JavaParserTest {
 	}
 
 	@Test
-	void aClassIsNamedAfterItsFileAndBelongsToThePackageTheFileDeclares() throws IOException {
+	void aClassIsNamedAfterItsFileAndKnownByItsPackageAndNameJoinedByADot() throws IOException {
 		Path project = projectWithSources("src/main/java/shop/web/OrderController.java");
 		Files.writeString(project.resolve("src/main/java/shop/web/OrderController.java"),
 				"package shop.web;\nclass OrderController {}\n");
@@ -54,7 +54,21 @@ class JavaParserTest {
 		assertThat(javaParser.clazzesOf(project)).singleElement().satisfies(clazz -> {
 			assertThat(clazz.name()).isEqualTo("OrderController");
 			assertThat(clazz.packageName()).isEqualTo("shop.web");
+			assertThat(clazz.qualifiedName()).isEqualTo("shop.web.OrderController");
 			assertThat(clazz.sourceFile()).isEqualTo(project.resolve("src/main/java/shop/web/OrderController.java"));
+		});
+	}
+
+	// No other class can refer to it: a class of the default package cannot be imported.
+	@Test
+	void aClassOfTheDefaultPackageHasNoQualifiedName() throws IOException {
+		Path project = projectWithSources("src/main/java/Launcher.java");
+		Files.writeString(project.resolve("src/main/java/Launcher.java"), "class Launcher {}\n");
+
+		assertThat(javaParser.clazzesOf(project)).singleElement().satisfies(clazz -> {
+			assertThat(clazz.name()).isEqualTo("Launcher");
+			assertThat(clazz.packageName()).isNull();
+			assertThat(clazz.qualifiedName()).isNull();
 		});
 	}
 

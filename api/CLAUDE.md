@@ -59,7 +59,8 @@ JavaParser library and provides architectural analysis capabilities through REST
 **Parsers** (`src/main/java/com/archanchor/services/parsers/`)
 
 - `LanguageParser` - What the tool asks about a project in one language (#81): `language()`, `sourceFilesOf(project)` (production
-  sources, nothing parsed) and `clazzesOf(project)`, each `ParsedClazz` with its source file, name, package and dependencies
+  sources, nothing parsed) and `clazzesOf(project)`, each `ParsedClazz` with its source file, name, package, qualified name (what
+  other classes refer to it by, as the language writes it, #83) and dependencies
 - `LanguageParsers` - Every `LanguageParser` bean; `parserOf(project)` picks the one with the most source files (one language per
   project, ties by language name), `clazzesOf(project)` reads the project with it
 - `JavaParser` - The Java layout: `src/main` when the project has one, so that tests are not modules (#47), else `src`; one class per
@@ -75,7 +76,8 @@ JavaParser library and provides architectural analysis capabilities through REST
   `moduleDependencies` (List<Dependency>), `clazzes` (List<Clazz>), `similarity` (Double), `avgRefClazzesSimilarity` (Double),
   `violations` (Integer)
 - `Clazz` - Represents a class with fields: `id`, `name`, `dependencies` (List<Dependency>), `similarity` (Double),
-  `avgSimilarityWithRefClazzes` (Double), `firstModule` (String), `currentModule` (String)
+  `avgSimilarityWithRefClazzes` (Double), `firstModule` (String), `currentModule` (String), `packageName` (String),
+  `qualifiedName` (String)
 - `Dependency` - Models a dependency on an external package with fields: `packageName` (String), `types` (List<Type>)
 - `Type` - Represents a specific type within a dependency with fields: `fullyQualifiedName` (String), `className` (String)
 
@@ -224,8 +226,9 @@ Where:
   the module's own classes (or a type nested in one) as internal: `ModuleService` leaves it out of similarity, module
   and reference-class dependencies, violations and the election, and `MoveClass` and `ArchitectureViolation` judge a
   class moved into a target with `ModuleScope.of(target).with(clazz)`
-- Each `Clazz` records the package its source declares (`packageName`, read by `util/PackageDeclaration`), kept in
-  `ClazzResponseDTO`; a class of unknown package is never matched
+- Each `Clazz` records the name other classes refer to it by (`qualifiedName`, set by its parser, #83) next to the package its
+  source declares (`packageName`), both kept in `ClazzResponseDTO`; a class without a qualified name is never matched. A class
+  saved before #83 has none stored, and `getQualifiedName` joins its package and name with a dot, as Java does
 
 **Reference Classes:**
 
@@ -391,7 +394,7 @@ The architectural analysis framework relies on three core metrics:
 **Class DTOs** (`dto/clazzes/`)
 
 - `ClazzResponseDTO` (Serializable record) - `id`, `name`, `dependencies`, `similarity`, `avgSimilarityWithRefClazzes`, `firstModule`,
-  `currentModule`
+  `currentModule`, `enforceMode`, `packageName`, `qualifiedName`
 
 **Dependency DTOs** (`dto/dependencies/`)
 

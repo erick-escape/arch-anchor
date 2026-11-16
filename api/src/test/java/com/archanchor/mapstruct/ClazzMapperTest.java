@@ -34,6 +34,7 @@ class ClazzMapperTest {
 				List.of(new Type("java.sql.Connection"), new Type("java.sql.ResultSet")));
 		Clazz salesReport = new Clazz("c1", "SalesReport", List.of(javaSql), 0.25, 0.75, "web", "persistence", "MUST");
 		salesReport.setPackageName("shop.web");
+		salesReport.setQualifiedName("shop.web.SalesReport");
 		return salesReport;
 	}
 

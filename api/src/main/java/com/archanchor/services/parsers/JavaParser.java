@@ -13,8 +13,8 @@ import java.util.stream.Stream;
 /**
  * How a Java project is laid out (#81): its sources are under {@code src/}, each
  * {@code .java} file is one class named after the file, and the class belongs to the
- * package the file declares. What a file depends on is left to a
- * {@link JavaDependencyReader}.
+ * package the file declares, which with its name is what other classes refer to it by
+ * (#83). What a file depends on is left to a {@link JavaDependencyReader}.
  *
  * <pre>
  * List&lt;ParsedClazz&gt; clazzes = new JavaParser(javaParserService).clazzesOf(Path.of("uploads/bookstore"));
@@ -66,8 +66,14 @@ public class JavaParser implements LanguageParser {
 
 	private ParsedClazz clazzDeclaredIn(Path javaSource) {
 		String className = withoutExtension(javaSource.getFileName().toString());
-		return new ParsedClazz(javaSource, className, PackageDeclaration.of(javaSource),
+		String packageName = PackageDeclaration.of(javaSource);
+		return new ParsedClazz(javaSource, className, packageName, qualifiedName(packageName, className),
 				dependencyReader.getDependencies(javaSource));
+	}
+
+	// A class of the default package cannot be imported, so no other class refers to it.
+	private static String qualifiedName(String packageName, String className) {
+		return packageName == null ? null : packageName + "." + className;
 	}
 
 	/**
