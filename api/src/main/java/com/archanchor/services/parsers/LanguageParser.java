@@ -1,23 +1,39 @@
 package com.archanchor.services.parsers;
 
-import com.archanchor.domains.dependency.Dependency;
-
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Interface defining the contract for language-specific parsers
+ * What the tool asks about a project written in one language (#81): which files are its
+ * production sources, and which classes they declare, each with what it depends on. Where
+ * the sources are, what counts as a class and what package it belongs to differ from one
+ * language to the next, so they are answered here; modules, similarity, violations and
+ * the analyses are the same for every language and never look at a source file.
+ *
+ * <pre>
+ * List&lt;ParsedClazz&gt; clazzes = javaParser.clazzesOf(Path.of("uploads/bookstore"));
+ * </pre>
  */
 public interface LanguageParser {
 
 	/**
-	 * Checks if this parser can handle the given file based on its extension
+	 * The language's name in lower case, such as {@code "java"}; no two parsers share it.
 	 */
-	boolean canHandle(Path filePath);
+	String language();
 
 	/**
-	 * Extracts all dependencies from the file
+	 * The project's production sources in this language, each inside the project
+	 * directory: no tests, no third-party code, no file that can declare no class. Empty
+	 * for a project that is not written in the language. Nothing is parsed, so that
+	 * asking is cheap.
 	 */
-	List<Dependency> getDependencies(Path filePath);
+	List<Path> sourceFilesOf(Path projectDirectory) throws IOException;
+
+	/**
+	 * Every class those sources declare. A file that cannot be parsed still yields its
+	 * class, with no dependencies, rather than failing the project.
+	 */
+	List<ParsedClazz> clazzesOf(Path projectDirectory) throws IOException;
 
 }

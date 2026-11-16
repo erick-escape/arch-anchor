@@ -30,7 +30,7 @@ class ArchitectureViolationTest {
 	void setUp() {
 		// Use a real ModuleService instance instead of mocking
 		// This ensures tests use actual similarity calculations
-		// ParserFactory not needed for tests
+		// No sources are read, so no parsers are needed
 		ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 		ModuleService realModuleService = new ModuleService(null, activeWeights);
 		architectureViolation = new ArchitectureViolation(realModuleService, activeWeights,

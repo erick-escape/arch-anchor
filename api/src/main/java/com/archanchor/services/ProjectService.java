@@ -15,7 +15,6 @@ import com.archanchor.mapstruct.ModuleMapperImpl;
 import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.analysis.AnalysisSettingsStore;
 import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
-import com.archanchor.services.parsers.ParserFactory;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.RatingWeightsStore;
 
@@ -31,8 +30,6 @@ public class ProjectService {
 
 	private final ModuleService moduleService;
 
-	private final ParserFactory parserFactory;
-
 	private final ArchitecturalAnalysesRunner analysesRunner;
 
 	private final RatingWeightsStore ratingWeightsStore;
@@ -45,12 +42,10 @@ public class ProjectService {
 
 	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
-	public ProjectService(ModuleService moduleService, ParserFactory parserFactory,
-			ArchitecturalAnalysesRunner analysesRunner, RatingWeightsStore ratingWeightsStore,
-			ActiveRatingWeights activeWeights, AnalysisSettingsStore analysisSettingsStore,
-			ActiveAnalysisSettings activeSettings) {
+	public ProjectService(ModuleService moduleService, ArchitecturalAnalysesRunner analysesRunner,
+			RatingWeightsStore ratingWeightsStore, ActiveRatingWeights activeWeights,
+			AnalysisSettingsStore analysisSettingsStore, ActiveAnalysisSettings activeSettings) {
 		this.moduleService = moduleService;
-		this.parserFactory = parserFactory;
 		this.analysesRunner = analysesRunner;
 		this.ratingWeightsStore = ratingWeightsStore;
 		this.activeWeights = activeWeights;
@@ -73,8 +68,6 @@ public class ProjectService {
 	}
 
 	public ProjectAnalysesDTO analyzeProject(String projectName, String directoryPath) throws IOException {
-		// Clear parser cache for fresh analysis to prevent duplicate processing
-		parserFactory.clearProcessingCache();
 		activeWeights.adopt(projectName, ratingWeightsStore.weightsOf(projectName));
 		activeSettings.adopt(projectName, analysisSettingsStore.settingsOf(projectName));
 

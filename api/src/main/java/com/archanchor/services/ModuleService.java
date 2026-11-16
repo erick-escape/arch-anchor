@@ -1,7 +1,5 @@
 package com.archanchor.services;
 
-import com.archanchor.util.PackageDeclaration;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import com.archanchor.domains.clazz.Clazz;
@@ -12,25 +10,23 @@ import com.archanchor.dto.dependencies.DependencyDTO;
 import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.mapstruct.*;
-import com.archanchor.services.parsers.ParserFactory;
+import com.archanchor.services.parsers.LanguageParsers;
+import com.archanchor.services.parsers.ParsedClazz;
+import com.archanchor.services.parsers.SourceFileOrder;
 import com.archanchor.services.rating.ActiveRatingWeights;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
 public class ModuleService {
 
-	private final List<Module> modules = new ArrayList<>();
-
-	private final ParserFactory parserFactory;
+	private final LanguageParsers languageParsers;
 
 	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
@@ -40,18 +36,10 @@ public class ModuleService {
 
 	private final ActiveRatingWeights activeWeights;
 
-	public ModuleService(ParserFactory parserFactory, ActiveRatingWeights activeWeights) {
-		this.parserFactory = parserFactory;
+	public ModuleService(LanguageParsers languageParsers, ActiveRatingWeights activeWeights) {
+		this.languageParsers = languageParsers;
 		this.activeWeights = activeWeights;
 	}
-
-	// Define file extensions to consider for each language
-	private static final Map<String, List<String>> LANGUAGE_EXTENSIONS = Map.of("java", List.of(".java"), "python",
-			List.of(".py"), "javascript", List.of(".js", ".ts"), "php", List.of(".php"));
-
-	// They declare a package and a Java module, not a class; as classes without
-	// dependencies they lowered every module's similarity and anchored a split (#31).
-	private static final Set<String> DESCRIPTOR_FILE_NAMES = Set.of("package-info.java", "module-info.java");
 
 	public void saveModules(List<ModuleDTO> modulesList) {
 		if (modulesList == null) {
@@ -671,171 +659,57 @@ public class ModuleService {
 		return Arrays.asList(retainedDto, newDto);
 	}
 
-	private List<Clazz> getClazzes(Path modulePath) throws IOException {
-		List<Clazz> clazzes = new ArrayList<>();
-
-		sourceFilesByName(modulePath).forEach(filePath -> {
-			try {
-				// Get dependencies using the appropriate parser
-				List<Dependency> dependencies = parserFactory.getParser(filePath).getDependencies(filePath);
-
-				String fileName = filePath.getFileName().toString();
-				String className = removeFileExtension(fileName);
-
-				Clazz clazz = new Clazz(generateNewUUID(), className, dependencies, 0.0, // Similarity
-																							// will
-																							// be
-																							// calculated
-																							// later
-						0.0, // avgSimilarityWithRefClazzes will be calculated later
-						modulePath.getFileName().toString(), // firstModule
-						modulePath.getFileName().toString(), // currentModule
-						"ALLOW" // enforceMode default
-				);
-				// Identifies the class in other classes' references after a move (#43)
-				if (filePath.toString().endsWith(".java")) {
-					clazz.setPackageName(PackageDeclaration.of(filePath));
-				}
-				clazzes.add(clazz);
-			}
-			catch (UnsupportedOperationException e) {
-				// If the language parser is not yet implemented, log and skip
-				System.out.println("Skipping unsupported file: " + filePath);
-			}
-		});
-
-		return clazzes;
-	}
-
-	// Sorted, so that class order depends on the sources and not on the order the
-	// filesystem lists them in: a tie between equally rated classes goes to the first
-	// one (#15). Names are compared as plain strings, because Path's own ordering
-	// ignores case on some platforms.
-	private List<Path> sourceFilesByName(Path modulePath) throws IOException {
-		try (Stream<Path> entries = Files.list(modulePath)) {
-			return entries.filter(Files::isRegularFile)
-				.filter(this::isSupportedSourceFile)
-				.sorted(Comparator.comparing(file -> file.getFileName().toString()))
-				.toList();
-		}
-	}
-
-	private boolean isSupportedSourceFile(Path filePath) {
-		if (DESCRIPTOR_FILE_NAMES.contains(filePath.getFileName().toString())) {
-			return false;
-		}
-		String path = filePath.toString().toLowerCase();
-		return LANGUAGE_EXTENSIONS.values().stream().flatMap(List::stream).anyMatch(path::endsWith);
-	}
-
-	private String removeFileExtension(String fileName) {
-		int lastDotIndex = fileName.lastIndexOf('.');
-		return lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
-	}
-
 	/**
-	 * Checks if a directory is a leaf directory that directly contains Java files (not
-	 * just subdirectories)
-	 */
-	private boolean isLeafDirectoryWithJavaFiles(Path directory) {
-		try {
-			// Check if this directory directly contains Java files
-			try (Stream<Path> entries = Files.list(directory)) {
-				return entries.filter(Files::isRegularFile)
-					.anyMatch(path -> path.toString().toLowerCase().endsWith(".java"));
-			}
-		}
-		catch (IOException e) {
-			return false;
-		}
-	}
-
-	// Sorted for the same reason as sourceFilesByName (#15). The separator is normalised
-	// so that a directory sorts the same way next to its siblings on every platform.
-	private List<Path> moduleDirectoriesByPath(Path srcPath) throws IOException {
-		try (Stream<Path> entries = Files.walk(srcPath)) {
-			return entries.filter(Files::isDirectory)
-				.filter(this::isLeafDirectoryWithJavaFiles)
-				.sorted(Comparator.comparing(directory -> portablePath(srcPath.relativize(directory))))
-				.toList();
-		}
-	}
-
-	private static String portablePath(Path relativePath) {
-		return relativePath.toString().replace(File.separatorChar, '/');
-	}
-
-	/**
-	 * Where the modules are read from: {@code src/main} in the standard Maven and Gradle
-	 * layout, so that the tests in {@code src/test} are not taken for modules (#47);
-	 * {@code src} itself otherwise.
+	 * The project's modules as its sources lay them out: one for every directory that
+	 * holds a class, whatever language the classes are written in (#81). Modules are
+	 * ordered by directory and their classes by source file, so that the result depends
+	 * on the sources and not on the order a filesystem lists them in: a tie between
+	 * equally rated classes goes to the first one (#15). A project in which no parser
+	 * finds sources has no modules.
 	 *
 	 * <pre>
-	 * sourceRoot(Path.of("mybatis-3/src")); // mybatis-3/src/main
+	 * List&lt;Module&gt; modules = moduleService.getModules("uploads/bookstore"); // bookstore/model, bookstore/persistence, …
 	 * </pre>
 	 */
-	private static Path sourceRoot(Path src) {
-		Path production = src.resolve("main");
-		return Files.isDirectory(production) ? production : src;
+	public List<Module> getModules(String projectDirectory) throws IOException {
+		Path project = Paths.get(projectDirectory);
+		Map<Path, List<Clazz>> clazzesByDirectory = new LinkedHashMap<>();
+		for (ParsedClazz parsed : inSourceOrder(languageParsers.clazzesOf(project), project)) {
+			clazzesByDirectory.computeIfAbsent(parsed.sourceFile().getParent(), directory -> new ArrayList<>())
+				.add(clazzOf(parsed));
+		}
+		List<Module> modules = new ArrayList<>();
+		clazzesByDirectory.forEach((directory, clazzes) -> modules.add(moduleOf(directory, clazzes)));
+		return modules;
 	}
 
-	public List<Module> getModules(String projectDirectory) throws IOException {
-		Path srcPath = sourceRoot(Paths.get(projectDirectory, "src"));
-		if (!Files.exists(srcPath) || !Files.isDirectory(srcPath)) {
-			return this.modules; // Return empty list if 'src' does not exist or is not a
-									// directory
-		}
+	// The sort is stable: classes declared in one file keep the order the parser gave
+	// them.
+	private static List<ParsedClazz> inSourceOrder(List<ParsedClazz> parsedClazzes, Path project) {
+		return parsedClazzes.stream()
+			.sorted(Comparator.comparing(ParsedClazz::sourceFile, SourceFileOrder.within(project)))
+			.toList();
+	}
 
-		// Clear existing modules
-		this.modules.clear();
+	private Clazz clazzOf(ParsedClazz parsed) {
+		String directoryName = parsed.sourceFile().getParent().getFileName().toString();
+		// Similarities are calculated later, when the module's reference classes are
+		// elected.
+		Clazz clazz = new Clazz(generateNewUUID(), parsed.name(), parsed.dependencies(), 0.0, 0.0, directoryName,
+				directoryName, "ALLOW");
+		// Identifies the class in other classes' references after a move (#43)
+		clazz.setPackageName(parsed.packageName());
+		return clazz;
+	}
 
-		// Find only leaf directories that actually contain Java files (not intermediate
-		// directories)
-		moduleDirectoriesByPath(srcPath).forEach(modulePath -> {
-			try {
-				List<Clazz> clazzes = getClazzes(modulePath);
-				if (!clazzes.isEmpty()) {
-					// Determine module fullyQualifiedName based on directory
-					// structure
-					String moduleName = modulePath.getParent().getFileName().toString() + '/'
-							+ modulePath.getFileName().toString();
-
-					// Generate deterministic UUID based on module path to prevent
-					// duplicates
-					String moduleId = generateDeterministicUUID(modulePath.toString());
-
-					// Check if module already exists to prevent duplicates
-					boolean moduleExists = this.modules.stream()
-						.anyMatch(existingModule -> existingModule.getId().equals(moduleId));
-
-					if (!moduleExists) {
-						Module module = new Module(moduleId, moduleName, null, // refClazzes
-																				// will
-																				// be
-																				// calculated
-																				// later
-								null, // refClazzesDependencies will be calculated
-										// later
-								null, // moduleDependencies will be calculated later
-								clazzes, 0.0, // Similarity will be calculated later
-								0.0, // avgRefClazzesSimilarity will be calculated
-										// later
-								0 // violations will be calculated later
-						);
-						this.modules.add(module);
-						log.info("Added new module: {} with ID: {}", moduleName, moduleId);
-					}
-					else {
-						log.warn("Module already exists, skipping: {} with ID: {}", moduleName, moduleId);
-					}
-				}
-			}
-			catch (IOException e) {
-				log.error("ModuleService -> getModules: ", e);
-			}
-		});
-
-		return this.modules;
+	// Reference classes, dependencies, similarities and violations are calculated later.
+	// The id is derived from the directory, so that analysing a project again gives its
+	// modules the ids they had.
+	private Module moduleOf(Path directory, List<Clazz> clazzes) {
+		String name = directory.getParent().getFileName().toString() + '/' + directory.getFileName().toString();
+		String id = generateDeterministicUUID(directory.toString());
+		log.info("Added new module: {} with ID: {}", name, id);
+		return new Module(id, name, null, null, null, clazzes, 0.0, 0.0, 0);
 	}
 
 	public ModuleDTO setRefClazzes(String moduleId, List<String> refClazzIds) {

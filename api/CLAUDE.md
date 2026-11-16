@@ -58,10 +58,14 @@ JavaParser library and provides architectural analysis capabilities through REST
 
 **Parsers** (`src/main/java/com/archanchor/services/parsers/`)
 
-- `JavaParser` - Java-specific parsing implementation
-- `JavaScriptParser` - JavaScript parsing capabilities
-- `PythonParser` - Python code analysis
-- `ParserFactory` - Factory pattern for selecting appropriate parser
+- `LanguageParser` - What the tool asks about a project in one language (#81): `language()`, `sourceFilesOf(project)` (production
+  sources, nothing parsed) and `clazzesOf(project)`, each `ParsedClazz` with its source file, name, package and dependencies
+- `LanguageParsers` - Every `LanguageParser` bean; `parserOf(project)` picks the one with the most source files (one language per
+  project, ties by language name), `clazzesOf(project)` reads the project with it
+- `JavaParser` - The Java layout: `src/main` when the project has one, so that tests are not modules (#47), else `src`; one class per
+  `.java` file, named after it, in the package the file declares (`util/PackageDeclaration`); never `package-info.java` or
+  `module-info.java` (#31). Dependencies come from a `JavaDependencyReader`, which `JavaParserService` implements
+- `SourceFileOrder` - The order sources are read and listed in: by directory, then by file name, as plain strings (#15)
 
 ### Domain Models
 
@@ -323,11 +327,12 @@ The analyses can utilize `ModuleService` methods for:
 1. **Project Upload or Import**: Files uploaded via `/api/upload`, or a GitHub repository shallow-cloned via
    `/api/projects/import` (`services/repositoryImport/`), end up in the same place: `uploads/<project>/`, laid out by
    `ProjectsDirectory`. An import stages in `uploads/.staging/`, strips `.git/` and symbolic links, and requires `src/`
-   directly under the chosen root, because `ModuleService.getModules` starts there
+   directly under the chosen root, because `JavaParser` reads the sources from there
 2. **Analysis**: `/api/analyze` triggers `ProjectService.analyzeProject()` which:
-    - Uses `JavaParserService` to parse Java files and resolve dependencies
-    - Organizes code into modules based on package structure: one module per directory with sources, under `src/main`
-      when the project has one, so that tests are not modules (#47), and under `src` otherwise
+    - Reads the project's classes with the parser of its language (`LanguageParsers`); for Java, `JavaParser` with
+      `JavaParserService` resolving each file's dependencies
+    - Organizes them into modules in `ModuleService.getModules`: one module per directory that holds a class, ordered by
+      directory, its classes by source file (#15); a project in which no parser finds sources has no modules
     - Populates similarity and violation metrics
     - Runs architectural analyses via `ArchitecturalAnalysesRunner`
     - Returns `ProjectAnalysesDTO` with modules and architectural constraints
@@ -435,7 +440,8 @@ The architectural analysis framework relies on three core metrics:
 ### Important Implementation Details
 
 - **Caching**: JavaParserService implements caching strategies to optimize performance
-- **Multi-language Support**: Architecture supports multiple language parsers (Java, JavaScript, Python)
+- **Languages**: Java is the only one read so far. A language is added by implementing `LanguageParser` as a bean; nothing
+  outside `services/parsers/` looks at a source file
 - **Dependency Resolution**: Integrates with Maven for resolving external dependencies
 - **File Processing**: Tracks processed files to avoid duplicate analysis
 - **Reference Classes**: Every module requires at least one reference class to define architectural intent and enable objective analysis

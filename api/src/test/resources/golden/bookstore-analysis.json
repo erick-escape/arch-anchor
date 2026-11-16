@@ -1,0 +1,718 @@
+{
+  "projectName" : "bookstore",
+  "modulesList" : [ {
+    "name" : "bookstore/model",
+    "refClazzes" : [ {
+      "name" : "Book",
+      "dependencies" : [ {
+        "packageName" : "java.time",
+        "types" : [ {
+          "fullyQualifiedName" : "java.time.LocalDate",
+          "className" : "LocalDate"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "model",
+      "currentModule" : "model",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.model"
+    } ],
+    "refClazzesDependencies" : [ {
+      "packageName" : "java.time",
+      "types" : [ {
+        "fullyQualifiedName" : "java.time.LocalDate",
+        "className" : "LocalDate"
+      } ]
+    } ],
+    "allDependencies" : [ {
+      "packageName" : "java.time",
+      "types" : [ {
+        "fullyQualifiedName" : "java.time.LocalDate",
+        "className" : "LocalDate"
+      }, {
+        "fullyQualifiedName" : "java.time.LocalDateTime",
+        "className" : "LocalDateTime"
+      } ]
+    } ],
+    "clazzes" : [ {
+      "name" : "Book",
+      "dependencies" : [ {
+        "packageName" : "java.time",
+        "types" : [ {
+          "fullyQualifiedName" : "java.time.LocalDate",
+          "className" : "LocalDate"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "model",
+      "currentModule" : "model",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.model"
+    }, {
+      "name" : "Customer",
+      "dependencies" : [ {
+        "packageName" : "java.time",
+        "types" : [ {
+          "fullyQualifiedName" : "java.time.LocalDate",
+          "className" : "LocalDate"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "model",
+      "currentModule" : "model",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.model"
+    }, {
+      "name" : "Order",
+      "dependencies" : [ {
+        "packageName" : "java.time",
+        "types" : [ {
+          "fullyQualifiedName" : "java.time.LocalDateTime",
+          "className" : "LocalDateTime"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "model",
+      "currentModule" : "model",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.model"
+    } ],
+    "similarity" : 1.0,
+    "avgRefClazzesSimilarity" : 1.0,
+    "refClazzesChosenByHand" : false
+  }, {
+    "name" : "bookstore/persistence",
+    "refClazzes" : [ {
+      "name" : "BookRepository",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "java.sql",
+        "types" : [ {
+          "fullyQualifiedName" : "java.sql.Connection",
+          "className" : "Connection"
+        }, {
+          "fullyQualifiedName" : "java.sql.Date",
+          "className" : "Date"
+        }, {
+          "fullyQualifiedName" : "java.sql.DriverManager",
+          "className" : "DriverManager"
+        }, {
+          "fullyQualifiedName" : "java.sql.PreparedStatement",
+          "className" : "PreparedStatement"
+        }, {
+          "fullyQualifiedName" : "java.sql.ResultSet",
+          "className" : "ResultSet"
+        }, {
+          "fullyQualifiedName" : "java.sql.SQLException",
+          "className" : "SQLException"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "persistence",
+      "currentModule" : "persistence",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.persistence"
+    } ],
+    "refClazzesDependencies" : [ {
+      "packageName" : "java.sql",
+      "types" : [ {
+        "fullyQualifiedName" : "java.sql.Connection",
+        "className" : "Connection"
+      }, {
+        "fullyQualifiedName" : "java.sql.Date",
+        "className" : "Date"
+      }, {
+        "fullyQualifiedName" : "java.sql.DriverManager",
+        "className" : "DriverManager"
+      }, {
+        "fullyQualifiedName" : "java.sql.PreparedStatement",
+        "className" : "PreparedStatement"
+      }, {
+        "fullyQualifiedName" : "java.sql.ResultSet",
+        "className" : "ResultSet"
+      }, {
+        "fullyQualifiedName" : "java.sql.SQLException",
+        "className" : "SQLException"
+      } ]
+    }, {
+      "packageName" : "bookstore.model",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.model.Book",
+        "className" : "Book"
+      } ]
+    } ],
+    "allDependencies" : [ {
+      "packageName" : "java.sql",
+      "types" : [ {
+        "fullyQualifiedName" : "java.sql.Connection",
+        "className" : "Connection"
+      }, {
+        "fullyQualifiedName" : "java.sql.Date",
+        "className" : "Date"
+      }, {
+        "fullyQualifiedName" : "java.sql.DriverManager",
+        "className" : "DriverManager"
+      }, {
+        "fullyQualifiedName" : "java.sql.PreparedStatement",
+        "className" : "PreparedStatement"
+      }, {
+        "fullyQualifiedName" : "java.sql.ResultSet",
+        "className" : "ResultSet"
+      }, {
+        "fullyQualifiedName" : "java.sql.SQLException",
+        "className" : "SQLException"
+      }, {
+        "fullyQualifiedName" : "java.sql.Timestamp",
+        "className" : "Timestamp"
+      } ]
+    }, {
+      "packageName" : "bookstore.model",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.model.Book",
+        "className" : "Book"
+      }, {
+        "fullyQualifiedName" : "bookstore.model.Customer",
+        "className" : "Customer"
+      }, {
+        "fullyQualifiedName" : "bookstore.model.Order",
+        "className" : "Order"
+      } ]
+    } ],
+    "clazzes" : [ {
+      "name" : "BookRepository",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "java.sql",
+        "types" : [ {
+          "fullyQualifiedName" : "java.sql.Connection",
+          "className" : "Connection"
+        }, {
+          "fullyQualifiedName" : "java.sql.Date",
+          "className" : "Date"
+        }, {
+          "fullyQualifiedName" : "java.sql.DriverManager",
+          "className" : "DriverManager"
+        }, {
+          "fullyQualifiedName" : "java.sql.PreparedStatement",
+          "className" : "PreparedStatement"
+        }, {
+          "fullyQualifiedName" : "java.sql.ResultSet",
+          "className" : "ResultSet"
+        }, {
+          "fullyQualifiedName" : "java.sql.SQLException",
+          "className" : "SQLException"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "persistence",
+      "currentModule" : "persistence",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.persistence"
+    }, {
+      "name" : "CustomerRepository",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Customer",
+          "className" : "Customer"
+        } ]
+      }, {
+        "packageName" : "java.sql",
+        "types" : [ {
+          "fullyQualifiedName" : "java.sql.Connection",
+          "className" : "Connection"
+        }, {
+          "fullyQualifiedName" : "java.sql.Date",
+          "className" : "Date"
+        }, {
+          "fullyQualifiedName" : "java.sql.DriverManager",
+          "className" : "DriverManager"
+        }, {
+          "fullyQualifiedName" : "java.sql.PreparedStatement",
+          "className" : "PreparedStatement"
+        }, {
+          "fullyQualifiedName" : "java.sql.ResultSet",
+          "className" : "ResultSet"
+        }, {
+          "fullyQualifiedName" : "java.sql.SQLException",
+          "className" : "SQLException"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "persistence",
+      "currentModule" : "persistence",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.persistence"
+    }, {
+      "name" : "OrderRepository",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        }, {
+          "fullyQualifiedName" : "bookstore.model.Customer",
+          "className" : "Customer"
+        }, {
+          "fullyQualifiedName" : "bookstore.model.Order",
+          "className" : "Order"
+        } ]
+      }, {
+        "packageName" : "java.sql",
+        "types" : [ {
+          "fullyQualifiedName" : "java.sql.Connection",
+          "className" : "Connection"
+        }, {
+          "fullyQualifiedName" : "java.sql.DriverManager",
+          "className" : "DriverManager"
+        }, {
+          "fullyQualifiedName" : "java.sql.PreparedStatement",
+          "className" : "PreparedStatement"
+        }, {
+          "fullyQualifiedName" : "java.sql.ResultSet",
+          "className" : "ResultSet"
+        }, {
+          "fullyQualifiedName" : "java.sql.SQLException",
+          "className" : "SQLException"
+        }, {
+          "fullyQualifiedName" : "java.sql.Timestamp",
+          "className" : "Timestamp"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "persistence",
+      "currentModule" : "persistence",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.persistence"
+    } ],
+    "similarity" : 1.0,
+    "avgRefClazzesSimilarity" : 1.0,
+    "refClazzesChosenByHand" : false
+  }, {
+    "name" : "bookstore/service",
+    "refClazzes" : [ {
+      "name" : "CatalogService",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "bookstore.persistence",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.persistence.BookRepository",
+          "className" : "BookRepository"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "service",
+      "currentModule" : "service",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.service"
+    } ],
+    "refClazzesDependencies" : [ {
+      "packageName" : "bookstore.model",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.model.Book",
+        "className" : "Book"
+      } ]
+    }, {
+      "packageName" : "bookstore.persistence",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.persistence.BookRepository",
+        "className" : "BookRepository"
+      } ]
+    } ],
+    "allDependencies" : [ {
+      "packageName" : "bookstore.model",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.model.Book",
+        "className" : "Book"
+      }, {
+        "fullyQualifiedName" : "bookstore.model.Customer",
+        "className" : "Customer"
+      }, {
+        "fullyQualifiedName" : "bookstore.model.Order",
+        "className" : "Order"
+      } ]
+    }, {
+      "packageName" : "bookstore.persistence",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.persistence.BookRepository",
+        "className" : "BookRepository"
+      }, {
+        "fullyQualifiedName" : "bookstore.persistence.CustomerRepository",
+        "className" : "CustomerRepository"
+      }, {
+        "fullyQualifiedName" : "bookstore.persistence.OrderRepository",
+        "className" : "OrderRepository"
+      } ]
+    } ],
+    "clazzes" : [ {
+      "name" : "CatalogService",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "bookstore.persistence",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.persistence.BookRepository",
+          "className" : "BookRepository"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "service",
+      "currentModule" : "service",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.service"
+    }, {
+      "name" : "CustomerService",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Customer",
+          "className" : "Customer"
+        } ]
+      }, {
+        "packageName" : "bookstore.persistence",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.persistence.CustomerRepository",
+          "className" : "CustomerRepository"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "service",
+      "currentModule" : "service",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.service"
+    }, {
+      "name" : "OrderService",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Order",
+          "className" : "Order"
+        } ]
+      }, {
+        "packageName" : "bookstore.persistence",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.persistence.OrderRepository",
+          "className" : "OrderRepository"
+        } ]
+      } ],
+      "similarity" : 1.0,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "service",
+      "currentModule" : "service",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.service"
+    } ],
+    "similarity" : 1.0,
+    "avgRefClazzesSimilarity" : 1.0,
+    "refClazzesChosenByHand" : false
+  }, {
+    "name" : "bookstore/web",
+    "refClazzes" : [ {
+      "name" : "CatalogController",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "bookstore.service",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.service.CatalogService",
+          "className" : "CatalogService"
+        } ]
+      } ],
+      "similarity" : 0.8333333333333334,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "web",
+      "currentModule" : "web",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.web"
+    } ],
+    "refClazzesDependencies" : [ {
+      "packageName" : "bookstore.service",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.service.CatalogService",
+        "className" : "CatalogService"
+      } ]
+    }, {
+      "packageName" : "bookstore.model",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.model.Book",
+        "className" : "Book"
+      } ]
+    } ],
+    "allDependencies" : [ {
+      "packageName" : "java.sql",
+      "types" : [ {
+        "fullyQualifiedName" : "java.sql.Connection",
+        "className" : "Connection"
+      }, {
+        "fullyQualifiedName" : "java.sql.DriverManager",
+        "className" : "DriverManager"
+      }, {
+        "fullyQualifiedName" : "java.sql.ResultSet",
+        "className" : "ResultSet"
+      }, {
+        "fullyQualifiedName" : "java.sql.SQLException",
+        "className" : "SQLException"
+      }, {
+        "fullyQualifiedName" : "java.sql.Statement",
+        "className" : "Statement"
+      } ]
+    }, {
+      "packageName" : "bookstore.service",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.service.CatalogService",
+        "className" : "CatalogService"
+      }, {
+        "fullyQualifiedName" : "bookstore.service.CustomerService",
+        "className" : "CustomerService"
+      }, {
+        "fullyQualifiedName" : "bookstore.service.OrderService",
+        "className" : "OrderService"
+      } ]
+    }, {
+      "packageName" : "bookstore.model",
+      "types" : [ {
+        "fullyQualifiedName" : "bookstore.model.Book",
+        "className" : "Book"
+      }, {
+        "fullyQualifiedName" : "bookstore.model.Customer",
+        "className" : "Customer"
+      }, {
+        "fullyQualifiedName" : "bookstore.model.Order",
+        "className" : "Order"
+      } ]
+    } ],
+    "clazzes" : [ {
+      "name" : "CatalogController",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "bookstore.service",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.service.CatalogService",
+          "className" : "CatalogService"
+        } ]
+      } ],
+      "similarity" : 0.8333333333333334,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "web",
+      "currentModule" : "web",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.web"
+    }, {
+      "name" : "CustomerController",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Customer",
+          "className" : "Customer"
+        } ]
+      }, {
+        "packageName" : "bookstore.service",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.service.CustomerService",
+          "className" : "CustomerService"
+        } ]
+      } ],
+      "similarity" : 0.8333333333333334,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "web",
+      "currentModule" : "web",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.web"
+    }, {
+      "name" : "OrderController",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        }, {
+          "fullyQualifiedName" : "bookstore.model.Customer",
+          "className" : "Customer"
+        }, {
+          "fullyQualifiedName" : "bookstore.model.Order",
+          "className" : "Order"
+        } ]
+      }, {
+        "packageName" : "bookstore.service",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.service.CatalogService",
+          "className" : "CatalogService"
+        }, {
+          "fullyQualifiedName" : "bookstore.service.CustomerService",
+          "className" : "CustomerService"
+        }, {
+          "fullyQualifiedName" : "bookstore.service.OrderService",
+          "className" : "OrderService"
+        } ]
+      } ],
+      "similarity" : 0.8333333333333334,
+      "avgSimilarityWithRefClazzes" : 1.0,
+      "firstModule" : "web",
+      "currentModule" : "web",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.web"
+    }, {
+      "name" : "SalesReport",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "java.sql",
+        "types" : [ {
+          "fullyQualifiedName" : "java.sql.Connection",
+          "className" : "Connection"
+        }, {
+          "fullyQualifiedName" : "java.sql.DriverManager",
+          "className" : "DriverManager"
+        }, {
+          "fullyQualifiedName" : "java.sql.ResultSet",
+          "className" : "ResultSet"
+        }, {
+          "fullyQualifiedName" : "java.sql.SQLException",
+          "className" : "SQLException"
+        }, {
+          "fullyQualifiedName" : "java.sql.Statement",
+          "className" : "Statement"
+        } ]
+      } ],
+      "similarity" : 0.5,
+      "avgSimilarityWithRefClazzes" : 0.5,
+      "firstModule" : "web",
+      "currentModule" : "web",
+      "enforceMode" : "ALLOW",
+      "packageName" : "bookstore.web"
+    } ],
+    "similarity" : 0.75,
+    "avgRefClazzesSimilarity" : 1.0,
+    "refClazzesChosenByHand" : false
+  } ],
+  "projectSimilarity" : 0.9375,
+  "architecturalConstraints" : [ {
+    "moduleName" : "bookstore/model",
+    "refClassConstraints" : [ {
+      "refClassName" : "Book",
+      "enforceMode" : "ALLOW",
+      "dependencies" : [ {
+        "packageName" : "java.time",
+        "types" : [ {
+          "fullyQualifiedName" : "java.time.LocalDate",
+          "className" : "LocalDate"
+        } ]
+      } ]
+    } ]
+  }, {
+    "moduleName" : "bookstore/persistence",
+    "refClassConstraints" : [ {
+      "refClassName" : "BookRepository",
+      "enforceMode" : "ALLOW",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "java.sql",
+        "types" : [ {
+          "fullyQualifiedName" : "java.sql.Connection",
+          "className" : "Connection"
+        }, {
+          "fullyQualifiedName" : "java.sql.Date",
+          "className" : "Date"
+        }, {
+          "fullyQualifiedName" : "java.sql.DriverManager",
+          "className" : "DriverManager"
+        }, {
+          "fullyQualifiedName" : "java.sql.PreparedStatement",
+          "className" : "PreparedStatement"
+        }, {
+          "fullyQualifiedName" : "java.sql.ResultSet",
+          "className" : "ResultSet"
+        }, {
+          "fullyQualifiedName" : "java.sql.SQLException",
+          "className" : "SQLException"
+        } ]
+      } ]
+    } ]
+  }, {
+    "moduleName" : "bookstore/service",
+    "refClassConstraints" : [ {
+      "refClassName" : "CatalogService",
+      "enforceMode" : "ALLOW",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "bookstore.persistence",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.persistence.BookRepository",
+          "className" : "BookRepository"
+        } ]
+      } ]
+    } ]
+  }, {
+    "moduleName" : "bookstore/web",
+    "refClassConstraints" : [ {
+      "refClassName" : "CatalogController",
+      "enforceMode" : "ALLOW",
+      "dependencies" : [ {
+        "packageName" : "bookstore.model",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.model.Book",
+          "className" : "Book"
+        } ]
+      }, {
+        "packageName" : "bookstore.service",
+        "types" : [ {
+          "fullyQualifiedName" : "bookstore.service.CatalogService",
+          "className" : "CatalogService"
+        } ]
+      } ]
+    } ]
+  } ]
+}
