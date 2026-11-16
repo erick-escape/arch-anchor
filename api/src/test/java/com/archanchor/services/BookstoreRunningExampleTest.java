@@ -7,22 +7,12 @@ import com.archanchor.dto.module.ModuleDTO;
 import com.archanchor.dto.projects.ProjectAnalysesDTO;
 import com.archanchor.dto.recommendations.RecommendationsResponseDTO;
 import com.archanchor.dto.recommendations.RecommendationsSummaryDTO;
-import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.analysis.InMemoryAnalysisSettingsStore;
-import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
-import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
-import com.archanchor.services.architecturalAnalyses.MergeModule;
-import com.archanchor.services.architecturalAnalyses.MoveClass;
-import com.archanchor.services.architecturalAnalyses.SplitModule;
-import com.archanchor.services.parsers.JavaParser;
-import com.archanchor.services.parsers.ParserFactory;
-import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.InMemoryRatingWeightsStore;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -42,34 +32,15 @@ class BookstoreRunningExampleTest {
 	private static final RatingWeights SIMILARITY_FIRST_RECOMMENDATIONS = new RatingWeights(WeightPair.EQUAL,
 			new WeightPair(0.9, 0.1));
 
-	private final ParserFactory parserFactory = javaParserFactory();
+	private final HandWiredAnalysis analysis = new HandWiredAnalysis();
 
-	private final ActiveRatingWeights activeWeights = new ActiveRatingWeights();
+	private final InMemoryRatingWeightsStore ratingWeightsStore = analysis.ratingWeightsStore;
 
-	private final InMemoryRatingWeightsStore ratingWeightsStore = new InMemoryRatingWeightsStore();
+	private final InMemoryAnalysisSettingsStore analysisSettingsStore = analysis.analysisSettingsStore;
 
-	private final ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
+	private final ProjectService projectService = analysis.projectService;
 
-	private final InMemoryAnalysisSettingsStore analysisSettingsStore = new InMemoryAnalysisSettingsStore();
-
-	private final InMemoryModuleService moduleService = new InMemoryModuleService(parserFactory, activeWeights);
-
-	private final SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
-
-	private final MergeModule mergeModule = new MergeModule(moduleService, activeWeights, activeSettings);
-
-	private final MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
-
-	private final ArchitectureViolation architectureViolation = new ArchitectureViolation(moduleService, activeWeights,
-			activeSettings);
-
-	// Same order as the running application: Spring registers the analyses by class name.
-	private final ProjectService projectService = new ProjectService(moduleService, parserFactory,
-			new ArchitecturalAnalysesRunner(List.of(architectureViolation, mergeModule, moveClass, splitModule)),
-			ratingWeightsStore, activeWeights, analysisSettingsStore, activeSettings);
-
-	private final RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule,
-			moveClass, architectureViolation, activeSettings);
+	private final RecommendationsService recommendationsService = analysis.recommendationsService;
 
 	@Test
 	void electsTheReferenceClassesTheReadmeQuotes() throws IOException {
@@ -144,15 +115,6 @@ class BookstoreRunningExampleTest {
 			.satisfies(move -> assertThat(move.metrics().rate()).isCloseTo(0.2125, within(QUOTED_PRECISION)));
 		assertThat(recommendations.merges()).isEmpty();
 		assertThat(recommendations.summary()).isEqualTo(new RecommendationsSummaryDTO(3, 0, 3, 0));
-	}
-
-	// The bookstore declares no dependencies, so the parser resolves everything from the
-	// JDK and downloads nothing.
-	private static ParserFactory javaParserFactory() {
-		JavaParserService javaParserService = new JavaParserService();
-		ParserFactory factory = new ParserFactory(javaParserService);
-		factory.registerParser(new JavaParser(javaParserService));
-		return factory;
 	}
 
 }
