@@ -25,7 +25,7 @@ class ModuleDiscoveryOrderTest {
 	@TempDir
 	Path workspace;
 
-	private final ModuleService moduleService = new ModuleService(new UniformDependenciesParserFactory("java.sql"),
+	private final ModuleService moduleService = new ModuleService(UniformJavaDependencies.parsersReporting("java.sql"),
 			new ActiveRatingWeights());
 
 	@Test

@@ -8,7 +8,7 @@ import com.archanchor.services.architecturalAnalyses.MergeModule;
 import com.archanchor.services.architecturalAnalyses.MoveClass;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
 import com.archanchor.services.parsers.JavaParser;
-import com.archanchor.services.parsers.ParserFactory;
+import com.archanchor.services.parsers.LanguageParsers;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.InMemoryRatingWeightsStore;
 
@@ -35,10 +35,9 @@ final class HandWiredAnalysis {
 	final RecommendationsService recommendationsService;
 
 	HandWiredAnalysis() {
-		ParserFactory parserFactory = javaParserFactory();
 		ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 		ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
-		InMemoryModuleService moduleService = new InMemoryModuleService(parserFactory, activeWeights);
+		InMemoryModuleService moduleService = new InMemoryModuleService(javaSources(), activeWeights);
 		SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 		MergeModule mergeModule = new MergeModule(moduleService, activeWeights, activeSettings);
 		MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
@@ -46,7 +45,7 @@ final class HandWiredAnalysis {
 				activeSettings);
 		// Same order as the running application: Spring registers the analyses by class
 		// name.
-		projectService = new ProjectService(moduleService, parserFactory,
+		projectService = new ProjectService(moduleService,
 				new ArchitecturalAnalysesRunner(List.of(architectureViolation, mergeModule, moveClass, splitModule)),
 				ratingWeightsStore, activeWeights, analysisSettingsStore, activeSettings);
 		recommendationsService = new RecommendationsService(splitModule, mergeModule, moveClass, architectureViolation,
@@ -55,11 +54,8 @@ final class HandWiredAnalysis {
 
 	// A project that declares no dependencies, like the bookstore, is resolved from the
 	// JDK alone, so the parser downloads nothing.
-	private static ParserFactory javaParserFactory() {
-		JavaParserService javaParserService = new JavaParserService();
-		ParserFactory factory = new ParserFactory(javaParserService);
-		factory.registerParser(new JavaParser(javaParserService));
-		return factory;
+	private static LanguageParsers javaSources() {
+		return new LanguageParsers(List.of(new JavaParser(new JavaParserService())));
 	}
 
 }

@@ -1,51 +1,97 @@
 package com.archanchor.services.parsers;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.archanchor.util.PackageDeclaration;
 import org.springframework.stereotype.Component;
-import com.archanchor.domains.dependency.Dependency;
-import com.archanchor.services.JavaParserService;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
 /**
- * Implementation for Java files that can use either JDT or JavaParser Based on
- * configuration, it will use JavaParserService (default) or fallback to JDTParserService
+ * How a Java project is laid out (#81): its sources are under {@code src/}, each
+ * {@code .java} file is one class named after the file, and the class belongs to the
+ * package the file declares. What a file depends on is left to a
+ * {@link JavaDependencyReader}.
+ *
+ * <pre>
+ * List&lt;ParsedClazz&gt; clazzes = new JavaParser(javaParserService).clazzesOf(Path.of("uploads/bookstore"));
+ * </pre>
  */
-@Slf4j
 @Component
 public class JavaParser implements LanguageParser {
 
-	private final JavaParserService javaParserService;
+	private static final String SOURCE_DIRECTORY = "src";
 
-	public JavaParser(@Autowired(required = false) JavaParserService javaParserService) {
-		this.javaParserService = javaParserService;
+	private static final String PRODUCTION_DIRECTORY = "main";
 
-		log.info("JavaParser initialized");
+	private static final String SOURCE_EXTENSION = ".java";
+
+	// They declare a package and a Java module, not a class; as classes without
+	// dependencies they lowered every module's similarity and anchored a split (#31).
+	private static final Set<String> DESCRIPTOR_FILE_NAMES = Set.of("package-info.java", "module-info.java");
+
+	private final JavaDependencyReader dependencyReader;
+
+	public JavaParser(JavaDependencyReader dependencyReader) {
+		this.dependencyReader = dependencyReader;
 	}
 
 	@Override
-	public boolean canHandle(Path filePath) {
-		return filePath.toString().toLowerCase().endsWith(".java");
+	public String language() {
+		return "java";
 	}
 
 	@Override
-	public List<Dependency> getDependencies(Path filePath) {
-		try {
-			if (javaParserService != null) {
-				log.debug("Using JavaParserService for: {}", filePath.getFileName());
-				return javaParserService.getDependencies(filePath);
-			}
-			return Collections.emptyList();
+	public List<Path> sourceFilesOf(Path projectDirectory) throws IOException {
+		Path sources = sourceRoot(projectDirectory.resolve(SOURCE_DIRECTORY));
+		if (!Files.isDirectory(sources)) {
+			return List.of();
 		}
-		catch (Exception e) {
-			log.warn("JavaParserService failed for {}, falling back to JDT: {}", filePath.getFileName(),
-					e.getMessage());
+		try (Stream<Path> entries = Files.walk(sources)) {
+			return entries.filter(Files::isRegularFile)
+				.filter(JavaParser::declaresAClass)
+				.sorted(SourceFileOrder.within(projectDirectory))
+				.toList();
+		}
+	}
 
-			return Collections.emptyList();
-		}
+	@Override
+	public List<ParsedClazz> clazzesOf(Path projectDirectory) throws IOException {
+		dependencyReader.clearCache();
+		return sourceFilesOf(projectDirectory).stream().map(this::clazzDeclaredIn).toList();
+	}
+
+	private ParsedClazz clazzDeclaredIn(Path javaSource) {
+		String className = withoutExtension(javaSource.getFileName().toString());
+		return new ParsedClazz(javaSource, className, PackageDeclaration.of(javaSource),
+				dependencyReader.getDependencies(javaSource));
+	}
+
+	/**
+	 * Where the sources are read from: {@code src/main} in the standard Maven and Gradle
+	 * layout, so that the tests in {@code src/test} are not taken for modules (#47);
+	 * {@code src} itself otherwise.
+	 *
+	 * <pre>
+	 * sourceRoot(Path.of("mybatis-3/src")); // mybatis-3/src/main
+	 * </pre>
+	 */
+	private static Path sourceRoot(Path src) {
+		Path production = src.resolve(PRODUCTION_DIRECTORY);
+		return Files.isDirectory(production) ? production : src;
+	}
+
+	private static boolean declaresAClass(Path file) {
+		String fileName = file.getFileName().toString();
+		return !DESCRIPTOR_FILE_NAMES.contains(fileName) && fileName.toLowerCase().endsWith(SOURCE_EXTENSION);
+	}
+
+	private static String withoutExtension(String fileName) {
+		int lastDot = fileName.lastIndexOf('.');
+		return lastDot > 0 ? fileName.substring(0, lastDot) : fileName;
 	}
 
 }

@@ -120,6 +120,7 @@ cd api
 
 **Services** (`src/main/java/com/archanchor/services/`)
 - `JavaParserService` - Core parsing and dependency resolution using JavaParser
+- `parsers/` - `LanguageParser` is what the tool asks about a project in one language: its production sources and the classes they declare (#81). `LanguageParsers` picks the project's parser (one language per project); `JavaParser` holds the Java layout and reads dependencies through `JavaParserService`
 - `ProjectService` - Orchestrates project analysis workflow
 - `ModuleService` - Module management, similarity calculations, violation tracking, module manipulation
 - `RecommendationsService` - Aggregates results from all analyses into recommendation DTOs

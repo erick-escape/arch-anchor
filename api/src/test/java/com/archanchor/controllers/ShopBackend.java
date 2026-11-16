@@ -17,7 +17,6 @@ import com.archanchor.services.architecturalAnalyses.ArchitectureViolation;
 import com.archanchor.services.architecturalAnalyses.MergeModule;
 import com.archanchor.services.architecturalAnalyses.MoveClass;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
-import com.archanchor.services.parsers.ParserFactory;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.InMemoryRatingWeightsStore;
 import com.archanchor.services.repositoryImport.InMemoryImportSourceStore;
@@ -77,8 +76,8 @@ final class ShopBackend {
 	private final ModuleMapper moduleMapper = new ModuleMapperImpl();
 
 	private ShopBackend(Path projectsRoot) {
-		ProjectService projectService = new ProjectService(moduleService, new ParserFactory(null), analysesRunner,
-				ratingWeightsStore, activeWeights, analysisSettingsStore, activeSettings);
+		ProjectService projectService = new ProjectService(moduleService, analysesRunner, ratingWeightsStore,
+				activeWeights, analysisSettingsStore, activeSettings);
 		ModuleController moduleController = new ModuleController(moduleService, new ClazzMapperImpl(),
 				new DependencyMapperImpl(), moduleMapper, projectService);
 		RecommendationsService recommendationsService = new RecommendationsService(splitModule, mergeModule, moveClass,

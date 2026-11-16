@@ -1,5 +1,6 @@
 package com.archanchor.services;
 
+import com.archanchor.services.parsers.JavaDependencyReader;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
@@ -55,7 +56,7 @@ import java.util.stream.Stream;
  */
 @Slf4j
 @Service
-public class JavaParserService {
+public class JavaParserService implements JavaDependencyReader {
 
 	private static final int BATCH_SIZE = 100;
 
@@ -78,6 +79,7 @@ public class JavaParserService {
 	 * @param classPath Path to the Java file to analyze
 	 * @return List of dependencies found in the file
 	 */
+	@Override
 	public List<Dependency> getDependencies(Path classPath) {
 		log.info("=== JavaParserService.getDependencies() called for: {}", classPath);
 
@@ -128,6 +130,7 @@ public class JavaParserService {
 	/**
 	 * Clears the TypeSolver cache between projects to prevent memory leaks
 	 */
+	@Override
 	public void clearCache() {
 		typeSolverCache.clear();
 		jarCache.clear();

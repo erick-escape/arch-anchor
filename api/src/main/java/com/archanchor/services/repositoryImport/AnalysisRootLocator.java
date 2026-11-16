@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Chooses the directory of a checkout that becomes the project. ModuleService.getModules
- * only looks for {@code src/} directly under the project root, and many repositories keep
+ * Chooses the directory of a checkout that becomes the project. The Java parser only
+ * looks for {@code src/} directly under the project root, and many repositories keep
  * theirs one or two levels down, so a root without {@code src/} is refused with the
  * directories that would work.
  */
