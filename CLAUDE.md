@@ -67,11 +67,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Arch Anchor is a full-stack tool that extracts architectural constraints from Java source code, centered on the reference class concept: the class whose dependency set best represents a module's architectural intent. The system parses Java codebases, computes similarity and violation metrics, recommends structural refactorings, and provides interactive visualization of modules, classes, and dependencies.
+Arch Anchor is a full-stack tool that extracts architectural constraints from Java and PHP source code, centered on the reference class concept: the class whose dependency set best represents a module's architectural intent. The system parses Java and PHP codebases, computes similarity and violation metrics, recommends structural refactorings, and provides interactive visualization of modules, classes, and dependencies.
 
 **Backend Stack:**
 - Spring Boot 3.3.5 (Java 17) with JavaParser for code analysis
 - JavaParser 3.27.0 (parsing + symbol resolution)
+- tree-sitter with its PHP grammar (`io.github.bonede:tree-sitter`, `tree-sitter-php`; native, bundled in the jar) for PHP (#85)
 - MapStruct 1.5.5 (DTO mapping)
 - Lombok (boilerplate reduction)
 - Maven Resolver API (dependency resolution)
@@ -90,7 +91,7 @@ Arch Anchor is a full-stack tool that extracts architectural constraints from Ja
 arch-anchor/
 ├── api/       # Spring Boot backend (Java 17, Maven wrapper bundled)
 ├── web/       # React frontend (Vite dev server, proxies /api to :8080)
-└── examples/  # The bookstore: the sample Java project that exercises the analyses
+└── examples/  # The bookstore, in Java (bookstore/) and class for class in PHP (bookstore-php/): the sample project that exercises the analyses
 ```
 
 **Packaging** (#77): the root `Dockerfile` builds `web/`, copies `web/dist` into `api/src/main/resources/static/` (gitignored) and packages one Spring Boot jar, which serves the frontend and the API on one port (`config/SinglePageAppConfig`, with `IndexHtmlFallback` for the frontend's routes, never for `/api/`). Its `jar` target exports that jar alone. The image runs as user 10001 with the state files in `/data`, its working directory; `.dockerignore` lets in only the two halves' sources, never `uploads/` or the state files. `.github/workflows/release.yml` builds on pull requests that touch the packaging, and on a published release pushes the image to GHCR (amd64 and arm64) and attaches the jar.
@@ -121,6 +122,7 @@ cd api
 **Services** (`src/main/java/com/archanchor/services/`)
 - `JavaParserService` - Core parsing and dependency resolution using JavaParser
 - `parsers/` - `LanguageParser` is what the tool asks about a project in one language: its production sources and the classes they declare (#81). `LanguageParsers` picks the project's parser (one language per project); `JavaParser` holds the Java layout and reads dependencies through `JavaParserService`
+- `parsers/php/` - `PhpParser` (#85): the sources are what `composer.json` autoloads (`ComposerAutoload`, `PhpSourceFiles`; without one, every `.php` outside Composer's `vendor/`, `node_modules/` and dot-directories); a class is each class, interface, trait or enum a file declares, under its PHP name (`App\Models\Order`, package `App\Models`), so a file may give several classes or none; dependencies are the classes a file imports and names (`PhpNameResolver`, `PhpDependencies`), a built-in class filed under `php` or `ext-<name>` (`PhpPlatformClasses`, generated from phpstorm-stubs by `src/main/scripts/PhpPlatformClassesGenerator.java`). Only `TreeSitterPhpSourceReader` touches tree-sitter, behind `PhpSourceReader`; the query it runs is `resources/php/class-facts.scm`
 - `ProjectService` - Orchestrates project analysis workflow
 - `ModuleService` - Module management, similarity calculations, violation tracking, module manipulation
 - `RecommendationsService` - Aggregates results from all analyses into recommendation DTOs
@@ -163,7 +165,7 @@ cd api
 - Two weight pairs per project (`RatingWeights`: `election`, `recommendation`), each a `WeightPair` that is non-negative and sums to 1, default 0.5 / 0.5
 - Set by the architect from the analysis page (**Settings**) or `PUT /api/projects/{projectName}/rating-weights`, stored per project in `rating-weights.json` (`JsonFileRatingWeightsStore`)
 - `ModuleService` and the analyses read the weights in force from the injected `ActiveRatingWeights`, which `ProjectService.analyzeProject` sets to the analysed project's
-- `examples/bookstore` at the defaults is pinned by `BookstoreRunningExampleTest`: its numbers are quoted in the README and the ICSE 2027 paper
+- `examples/bookstore` at the defaults is pinned by `BookstoreRunningExampleTest`: its numbers are quoted in the README and the ICSE 2027 paper. `examples/bookstore-php` is held to the same numbers by `BookstorePhpRunningExampleTest`; both take their assertions from `BookstoreRunningExample`
 
 **Analysis Settings** (#36):
 - Per project (`AnalysisSettings`), set from **Settings** or `PUT /api/projects/{projectName}/analysis-settings`, stored in `analysis-settings.json`; the defaults filter nothing
@@ -176,7 +178,7 @@ cd api
 
 ### Important Implementation Constraints
 
-**CRITICAL**: When working on `JavaParserService` or any parser implementation, DO NOT use hardcoded solutions for specific libraries or dependencies. The parser must work generically with any Java project and any external libraries. The goal is a robust, generic solution for Spring Boot, plain Maven projects, and any Java frameworks.
+**CRITICAL**: When working on `JavaParserService` or any parser implementation, DO NOT use hardcoded solutions for specific libraries or dependencies. The parser must work generically with any Java project and any external libraries. The goal is a robust, generic solution for Spring Boot, plain Maven projects, and any Java frameworks. The same holds for PHP: `PhpParser` knows no framework, and reads Laravel, Symfony and plain PHP by the same rules.
 
 ### Testing
 
@@ -244,7 +246,7 @@ The UI follows the redesign of #58 (brief: `docs/design/redesign-brief.md`).
 1. **Start Backend**: `cd api && ./mvnw spring-boot:run`
 2. **Start Frontend**: `cd web && npm run dev`
 3. **Access Application**: http://localhost:5173
-4. **Add Project**: On the homepage, paste a GitHub repository or upload a folder - `examples/bookstore` is the fixture: one misplaced class (`web.SalesReport`, which uses `java.sql`) triggers a violation and all three analyses, and its README records the tool's actual output (**Try it on the bookstore example** fills in `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/bookstore` and project name `bookstore`)
+4. **Add Project**: On the homepage, paste a GitHub repository or upload a folder - `examples/bookstore` is the fixture (and `examples/bookstore-php` its PHP twin, where `ext-pdo` stands for `java.sql`): one misplaced class (`web.SalesReport`, which uses `java.sql`) triggers a violation and all three analyses, and its README records the tool's actual output (**Try it on the bookstore example** fills in `https://github.com/erick-escape/arch-anchor` with subdirectory `examples/bookstore` and project name `bookstore`)
 5. **Analyze**: The analysis opens after the import, or from **Analyze** on a project card - backend parses, runs analyses, frontend visualizes
 
 ## API Proxy Configuration
