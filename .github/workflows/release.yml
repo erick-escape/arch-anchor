@@ -4,6 +4,10 @@ name: Release
 # published release pushes the image to GHCR, tagged with the release's version and latest, and
 # attaches the jar to the release. A pull request that changes the packaging only builds both, so
 # a broken Dockerfile shows up before a release depends on it.
+#
+# Either way the image is run before anything is pushed, on both platforms, and analyses the
+# example projects (#85): the PHP grammar is native code, so that it builds says nothing about
+# whether it loads.
 on:
   release:
     types: [published]
@@ -12,6 +16,9 @@ on:
       - 'Dockerfile'
       - '.dockerignore'
       - '.github/workflows/release.yml'
+      - '.github/scripts/image-smoke-test.sh'
+      # Where the native libraries come from: a new version must still load in the image.
+      - 'api/pom.xml'
   workflow_dispatch:
 
 jobs:
@@ -24,6 +31,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # To run the arm64 image on this amd64 runner; building it needs no emulation.
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - uses: docker/setup-buildx-action@v3
 
@@ -53,6 +65,32 @@ jobs:
           outputs: type=local,dest=out
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # One platform at a time, because only a single-platform image can be loaded into the
+      # runner's Docker to be run. The build below reuses their layers.
+      - name: Build the amd64 image to run it
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: arch-anchor:smoke-amd64
+          cache-from: type=gha
+
+      - name: Analyse the examples in the amd64 image
+        run: .github/scripts/image-smoke-test.sh arch-anchor:smoke-amd64 linux/amd64
+
+      - name: Build the arm64 image to run it
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          load: true
+          tags: arch-anchor:smoke-arm64
+          cache-from: type=gha
+
+      - name: Analyse the examples in the arm64 image
+        run: .github/scripts/image-smoke-test.sh arch-anchor:smoke-arm64 linux/arm64
 
       - name: Build the image
         uses: docker/build-push-action@v6
