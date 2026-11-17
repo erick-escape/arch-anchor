@@ -6,10 +6,14 @@ on:
     branches: [main]
     paths:
       - 'api/**'
+      # The bookstore tests analyse the example projects, so a change to one is a change
+      # to what they pin.
+      - 'examples/**'
       - '.github/workflows/ci-api.yml'
   pull_request:
     paths:
       - 'api/**'
+      - 'examples/**'
       - '.github/workflows/ci-api.yml'
 
 jobs:

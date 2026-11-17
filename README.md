@@ -2,7 +2,7 @@
 
 **Recover the architecture your code already has.**
 
-Arch Anchor reads a Java codebase and extracts its *architectural constraints* — the rules
+Arch Anchor reads a Java or PHP codebase and extracts its *architectural constraints* — the rules
 about which module may depend on which package — without requiring any architectural
 documentation up front. It does this by identifying a **reference class** per module: the class
 whose dependency set best represents what that module was meant to be. The reference class's
@@ -17,10 +17,12 @@ a violation.
 
 ## What it does
 
-Point it at a Java project and it will:
+Point it at a Java or PHP project and it will:
 
-1. **Parse** every source file with JavaParser, resolving imports to fully-qualified types.
-2. **Group** classes into modules by package structure.
+1. **Parse** every source file, Java with JavaParser and PHP with tree-sitter, resolving the
+   classes it names to fully-qualified types.
+2. **Group** classes into modules by package structure: one module per directory that holds
+   classes.
 3. **Elect a reference class** per module automatically, by rating each candidate on how well its
    dependency set represents the module and how few violations it implies, weighted as you
    choose. You can override the choice — or pick several reference classes — from the modules
@@ -50,7 +52,7 @@ but required.
 arch-anchor/
 ├── api/       Spring Boot 3.3 backend — parsing, metrics, analyses (Java 17)
 ├── web/       React 18 + TypeScript + Vite frontend — graph UI, AC export
-└── examples/  The bookstore, a small Java project to analyze on your first run
+└── examples/  The bookstore, a small project to analyze on your first run, in Java and in PHP
 ```
 
 Both halves live in one repository on purpose. They are developed as a single tool, released
@@ -124,6 +126,8 @@ mistake: `SalesReport` sits in the web layer and queries the database itself.
 
 [`examples/bookstore/README.md`](examples/bookstore/README.md) has the full output, including
 how the reference class of `web` is elected and the constraints the tool exports.
+[`examples/bookstore-php`](examples/bookstore-php/README.md) is the same bookstore in PHP, which
+the tool reads to the same result.
 
 ## Running it on your own project
 
@@ -136,8 +140,9 @@ how the reference class of `web` is elected and the constraints the tool exports
      lists the directories that would work. A private repository needs a personal access token
      that can read its contents. The token is used for that one clone and is never stored.
    - *From disk:* click **Upload folder** and select your project's root directory, or drop the
-     folder anywhere on the home page. The browser uploads the whole tree; only `.java` files
-     are parsed, so extra resources and configuration files are harmless.
+     folder anywhere on the home page. The browser uploads the whole tree; only the project's
+     `.java` or `.php` sources are parsed, so extra resources and configuration files are
+     harmless.
 
    **Projects** lists everything imported, with the repository each came from.
 2. **Analyze it.** The analysis opens after the import, and **Analyze** on a project card opens
@@ -293,8 +298,17 @@ will fail to load, and deleting it is the fix.
 - **GitHub only for imports.** The importer clones from `github.com` and nowhere else; code on
   other hosts goes through the directory upload. An import runs inside the request, so a very
   large repository keeps it open until the clone finishes.
-- **Java only**, and modules are inferred from package structure — the tool has no notion of
-  Maven modules, Gradle subprojects, or JPMS.
+- **Java and PHP only**, one language per project: the one most of its sources are written in.
+  Modules are inferred from package structure — the tool has no notion of Maven modules, Gradle
+  subprojects, or JPMS.
+- **PHP is read from what the code names.** A PHP project's sources are the directories its
+  `composer.json` autoloads (`autoload`, not `autoload-dev`), and a dependency is a class that a
+  file imports or names. Classes reached only by a string, such as a container lookup, a
+  framework's runtime alias or the class behind a facade, are not seen, and neither is anything
+  written in templates, routes or configuration files, which declare no class.
+  [`examples/bookstore-php`](examples/bookstore-php/README.md) shows what is read and how it is
+  named. Importing from GitHub still expects a `src/` directory, so a project that keeps its
+  code elsewhere, as Laravel does in `app/`, goes through the folder upload.
 - `JavaParserTypeResolutionTest` is skipped unless `api/uploads/pass-in` is present. It asserts
   against a specific local project rather than checked-in fixtures.
 

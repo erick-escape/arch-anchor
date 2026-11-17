@@ -9,15 +9,21 @@ import com.archanchor.services.architecturalAnalyses.MoveClass;
 import com.archanchor.services.architecturalAnalyses.SplitModule;
 import com.archanchor.services.parsers.JavaParser;
 import com.archanchor.services.parsers.LanguageParsers;
+import com.archanchor.services.parsers.php.ComposerAutoload;
+import com.archanchor.services.parsers.php.PhpParser;
+import com.archanchor.services.parsers.php.PhpPlatformClasses;
+import com.archanchor.services.parsers.php.PhpSourceFiles;
+import com.archanchor.services.parsers.php.TreeSitterPhpSourceReader;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.InMemoryRatingWeightsStore;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
 /**
- * The analysis wired by hand as the application wires it, with the real parser, for tests
- * that analyse a project from its sources. Weights, settings and the saved modules live
- * in memory, so nothing of whoever runs the tests is read or written.
+ * The analysis wired by hand as the application wires it, with the real parser of every
+ * language, for tests that analyse a project from its sources. Weights, settings and the
+ * saved modules live in memory, so nothing of whoever runs the tests is read or written.
  *
  * <pre>
  * HandWiredAnalysis analysis = new HandWiredAnalysis();
@@ -37,7 +43,7 @@ final class HandWiredAnalysis {
 	HandWiredAnalysis() {
 		ActiveRatingWeights activeWeights = new ActiveRatingWeights();
 		ActiveAnalysisSettings activeSettings = new ActiveAnalysisSettings();
-		InMemoryModuleService moduleService = new InMemoryModuleService(javaSources(), activeWeights);
+		InMemoryModuleService moduleService = new InMemoryModuleService(everyLanguage(), activeWeights);
 		SplitModule splitModule = new SplitModule(moduleService, activeWeights, activeSettings);
 		MergeModule mergeModule = new MergeModule(moduleService, activeWeights, activeSettings);
 		MoveClass moveClass = new MoveClass(moduleService, activeWeights, activeSettings);
@@ -52,10 +58,13 @@ final class HandWiredAnalysis {
 				activeSettings);
 	}
 
-	// A project that declares no dependencies, like the bookstore, is resolved from the
-	// JDK alone, so the parser downloads nothing.
-	private static LanguageParsers javaSources() {
-		return new LanguageParsers(List.of(new JavaParser(new JavaParserService())));
+	// A Java project that declares no dependencies, like the bookstore, is resolved from
+	// the JDK alone, so its parser downloads nothing; the PHP grammar is loaded when the
+	// first PHP source is read, so a test of a Java project never needs it.
+	private static LanguageParsers everyLanguage() {
+		PhpParser phpParser = new PhpParser(new PhpSourceFiles(new ComposerAutoload(new ObjectMapper())),
+				new TreeSitterPhpSourceReader(), new PhpPlatformClasses());
+		return new LanguageParsers(List.of(new JavaParser(new JavaParserService()), phpParser));
 	}
 
 }

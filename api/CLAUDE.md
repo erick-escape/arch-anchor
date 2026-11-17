@@ -67,6 +67,25 @@ JavaParser library and provides architectural analysis capabilities through REST
   `.java` file, named after it, in the package the file declares (`util/PackageDeclaration`); never `package-info.java` or
   `module-info.java` (#31). Dependencies come from a `JavaDependencyReader`, which `JavaParserService` implements
 - `SourceFileOrder` - The order sources are read and listed in: by directory, then by file name, as plain strings (#15)
+- `php/` - The PHP parser (#85), which knows no framework:
+    - `PhpParser` - Each class, interface, trait or enum a source declares is a class, under the name PHP gives it (`App\Models\Order`,
+      package `App\Models`; a global class has no package and its bare name). A file may declare several or none: a template, a
+      file of routes or a migration returning an anonymous class is not a class. Sources over 2 MB are left out
+    - `PhpSourceFiles`, `ComposerAutoload` - The sources: `.php` under what `composer.json` autoloads (`psr-4`, `psr-0`, `classmap`;
+      never `autoload-dev`), else every `.php` of the project; never inside Composer's `vendor/` (the one holding `autoload.php`),
+      `node_modules/` or a dot-directory. An autoload path that leaves the project is ignored
+    - `PhpSourceReader`, `PhpSourceFacts` - What a source says, in the project's own terms: per namespace block, its class imports
+      and its declarations, each with the names written where PHP expects a class. `TreeSitterPhpSourceReader` is the only class
+      that touches tree-sitter; it runs the query `resources/php/class-facts.scm`, loads the native grammar on first use and cuts
+      text from the UTF-8 bytes (`parseString`, whose offsets are standard UTF-8). `PhpSourceFactsBuilder` assembles the facts
+    - `PhpNameResolver` - PHP's compile-time class-name resolution: imports and aliases, `namespace\X`, a leading backslash; no
+      global fallback for classes; an import used as the start of a longer name is a namespace, not a class
+    - `PhpDependencies` - Imports first, then written names, grouped by package in order of first appearance; every import counts,
+      used or not; a class of the same namespace is not a dependency. A class the project declares (`PhpProjectClasses`) is
+      spelled as declared and wins over a built-in; a global class that is neither is filed under `(global)`
+    - `PhpPlatformClasses` - Built-in class to package: `php` (core, SPL, standard) or `ext-<name>` for the other extensions PHP
+      ships with, by full name and without regard to case. The table, `resources/php/platform-classes.tsv`, is generated from
+      JetBrains phpstorm-stubs (Apache-2.0) by `src/main/scripts/PhpPlatformClassesGenerator.java`; never edited by hand
 
 ### Domain Models
 
@@ -133,7 +152,8 @@ Where:
   `ProjectService.updateRatingWeights` re-elects the saved modules, except those with `refClazzesChosenByHand`, re-runs the
   analyses and saves, so module operations survive
 - `BookstoreRunningExampleTest` pins `examples/bookstore` at the default weights; the README and the ICSE 2027 paper quote
-  those numbers
+  those numbers. Its assertions live in `BookstoreRunningExample`, which `BookstorePhpRunningExampleTest` extends for
+  `examples/bookstore-php`: the same architecture in PHP, held to the same numbers and checked class by class against the Java one
 
 #### Analysis Settings
 
@@ -333,7 +353,8 @@ The analyses can utilize `ModuleService` methods for:
    directly under the chosen root, because `JavaParser` reads the sources from there
 2. **Analysis**: `/api/analyze` triggers `ProjectService.analyzeProject()` which:
     - Reads the project's classes with the parser of its language (`LanguageParsers`); for Java, `JavaParser` with
-      `JavaParserService` resolving each file's dependencies
+      `JavaParserService` resolving each file's dependencies; for PHP, `PhpParser`, which reads every source before it files a
+      name, because a name is filed by whether the project declares it
     - Organizes them into modules in `ModuleService.getModules`: one module per directory that holds a class, ordered by
       directory, its classes by source file (#15); a project in which no parser finds sources has no modules
     - Populates similarity and violation metrics
@@ -426,6 +447,9 @@ The architectural analysis framework relies on three core metrics:
 - **Projects Directory**: `uploads/` (configurable via `archanchor.projects-dir`; owned by `ProjectsDirectory`)
 - **Repository Import**: JGit shallow clone of `github.com` only; per-operation timeout `archanchor.import.timeout-seconds`
 - **Java Parser**: Latest versions (3.27.0) for Java 17+ support and binding resolution
+- **PHP grammar**: `io.github.bonede:tree-sitter` and `tree-sitter-php` (PHP 8.4 syntax, tolerant of broken files and of HTML around
+  the PHP). Native libraries inside the jars for Linux with glibc (x86_64, aarch64), macOS (x86_64, aarch64) and Windows (x86_64),
+  unpacked and loaded when the first PHP source is read; elsewhere a PHP project fails with a message naming the platform
 - **Maven Integration**: Uses Maven Resolver API for dependency resolution
 
 ### Testing
@@ -443,8 +467,8 @@ The architectural analysis framework relies on three core metrics:
 ### Important Implementation Details
 
 - **Caching**: JavaParserService implements caching strategies to optimize performance
-- **Languages**: Java is the only one read so far. A language is added by implementing `LanguageParser` as a bean; nothing
-  outside `services/parsers/` looks at a source file
+- **Languages**: Java and PHP (#85). A language is added by implementing `LanguageParser` as a bean; nothing outside
+  `services/parsers/` looks at a source file
 - **Dependency Resolution**: Integrates with Maven for resolving external dependencies
 - **File Processing**: Tracks processed files to avoid duplicate analysis
 - **Reference Classes**: Every module requires at least one reference class to define architectural intent and enable objective analysis

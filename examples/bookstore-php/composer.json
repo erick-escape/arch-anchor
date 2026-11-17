@@ -1,0 +1,15 @@
+{
+    "name": "arch-anchor/bookstore-php",
+    "description": "A small layered bookstore, the PHP example project of Arch Anchor. It uses nothing but PHP itself.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Bookstore\\": "src/Bookstore/"
+        }
+    }
+}
