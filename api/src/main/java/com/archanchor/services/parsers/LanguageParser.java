@@ -31,8 +31,9 @@ public interface LanguageParser {
 	List<Path> sourceFilesOf(Path projectDirectory) throws IOException;
 
 	/**
-	 * Every class those sources declare. A file that cannot be parsed still yields its
-	 * class, with no dependencies, rather than failing the project.
+	 * Every class those sources declare. A file that cannot be parsed must not fail the
+	 * project: it yields what can still be told of it, which for Java is its class
+	 * without dependencies, and for PHP whatever its readable part declares.
 	 */
 	List<ParsedClazz> clazzesOf(Path projectDirectory) throws IOException;
 

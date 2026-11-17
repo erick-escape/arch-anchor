@@ -1,0 +1,104 @@
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Writes src/main/resources/php/platform-classes.tsv: the classes PHP itself provides, each
+ * with the package Arch Anchor files it under (#85). The source is PhpStormStubsMap.php of
+ * JetBrains/phpstorm-stubs (Apache License 2.0), whose CLASSES table says which stub file
+ * declares each class; the directory of that file is the extension that provides it.
+ *
+ * It is a single-file program, not part of the build. To take a newer release of the stubs:
+ *
+ * <pre>
+ * curl -O https://raw.githubusercontent.com/JetBrains/phpstorm-stubs/COMMIT/PhpStormStubsMap.php
+ * java src/main/scripts/PhpPlatformClassesGenerator.java PhpStormStubsMap.php RELEASE COMMIT \
+ *     > src/main/resources/php/platform-classes.tsv
+ * </pre>
+ */
+public class PhpPlatformClassesGenerator {
+
+	// What every PHP has and cannot be built without: to a PHP project what java.lang is
+	// to a Java one.
+	private static final Set<String> BASE_LIBRARY = Set.of("Core", "SPL", "standard");
+
+	// The stub directories of the other extensions that php-src ships, as of PHP 8.5, and
+	// of the three it shipped until PHP 8.3 (imap, oci8, pspell). The stubs also cover
+	// PECL and third-party extensions (redis, mongodb, swoole...), which are left out: a
+	// class of theirs is not there unless the extension is installed, and frameworks
+	// define global aliases with the same names.
+	private static final Set<String> BUNDLED_EXTENSIONS = Set.of("bcmath", "bz2", "calendar", "com_dotnet", "ctype",
+			"curl", "date", "dba", "dom", "enchant", "exif", "FFI", "fileinfo", "filter", "ftp", "gd", "gettext", "gmp",
+			"hash", "iconv", "imap", "intl", "json", "ldap", "libxml", "mbstring", "mysqli", "oci8", "odbc",
+			"openssl", "pcntl", "pcre", "PDO", "pgsql", "Phar", "posix", "pspell", "random", "readline", "Reflection",
+			"session", "shmop", "SimpleXML", "snmp", "soap", "sockets", "sodium", "sqlite3", "sysvmsg", "sysvsem",
+			"sysvshm", "tidy", "tokenizer", "uri", "xml", "xmlreader", "xmlwriter", "xsl", "zip", "zlib");
+
+	// Names the stubs add for the IDE's own use; PHP has no such classes.
+	private static final String IDE_HELPERS = "___PHPSTORM_HELPERS\\";
+
+	// 'Random\\Randomizer' => 'random/random.php',
+	private static final Pattern CLASS_ENTRY = Pattern.compile("^\\s*'((?:[^'\\\\]|\\\\.)+)' => '([^'/]+)/[^']*',\\s*$",
+			Pattern.MULTILINE);
+
+	public static void main(String[] arguments) throws IOException {
+		if (arguments.length != 3) {
+			System.err.println("Expected <PhpStormStubsMap.php> <release> <commit>, got " + arguments.length
+					+ " arguments. Usage: java PhpPlatformClassesGenerator.java PhpStormStubsMap.php v2026.3 912ae72");
+			System.exit(64);
+		}
+		String stubsMap = Files.readString(Path.of(arguments[0]), StandardCharsets.UTF_8);
+		Map<String, String> packageByClass = packagesOf(classTableOf(stubsMap));
+		System.out.print(header(arguments[1], arguments[2], packageByClass.size()));
+		packageByClass.forEach((className, packageName) -> System.out.print(className + "\t" + packageName + "\n"));
+	}
+
+	private static String classTableOf(String stubsMap) {
+		int start = stubsMap.indexOf("const CLASSES");
+		int end = stubsMap.indexOf("const FUNCTIONS");
+		if (start < 0 || end < start) {
+			throw new IllegalArgumentException(
+					"Expected 'const CLASSES' followed by 'const FUNCTIONS' in the stubs map, found neither in that order");
+		}
+		return stubsMap.substring(start, end);
+	}
+
+	// Sorted without regard to case, as PHP compares class names.
+	private static Map<String, String> packagesOf(String classTable) {
+		Map<String, String> packageByClass = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		Matcher entry = CLASS_ENTRY.matcher(classTable);
+		while (entry.find()) {
+			String className = entry.group(1).replace("\\\\", "\\");
+			String packageName = packageOf(entry.group(2));
+			if (packageName != null && !className.startsWith(IDE_HELPERS)) {
+				packageByClass.put(className, packageName);
+			}
+		}
+		return packageByClass;
+	}
+
+	// The names Composer gives platform packages: php, ext-pdo, ext-date.
+	private static String packageOf(String stubDirectory) {
+		if (BASE_LIBRARY.contains(stubDirectory)) {
+			return "php";
+		}
+		return BUNDLED_EXTENSIONS.contains(stubDirectory) ? "ext-" + stubDirectory.toLowerCase(Locale.ROOT) : null;
+	}
+
+	private static String header(String release, String commit, int classes) {
+		return "# The classes PHP itself provides, each with the package Arch Anchor files it under (#85):\n"
+				+ "# php for the core, SPL and the standard extension, ext-<name> for the other extensions that\n"
+				+ "# PHP ships with. " + classes + " classes, one per line: the class, a tab, its package.\n" + "#\n"
+				+ "# Generated by src/main/scripts/PhpPlatformClassesGenerator.java from PhpStormStubsMap.php of\n"
+				+ "# JetBrains/phpstorm-stubs, release " + release + ", commit " + commit + ".\n"
+				+ "# The stubs are licensed under the Apache License 2.0. Do not edit by hand.\n";
+	}
+
+}
