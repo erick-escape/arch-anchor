@@ -25,7 +25,7 @@ your environment is sound.
 ## Before you open a pull request
 
 ```bash
-cd api && ./mvnw test          # 232 tests; 21 are skipped without the local uploads/ fixture
+cd api && ./mvnw test          # 21 tests are skipped without the local uploads/ fixture
 cd web && npm run lint && npm test && npm run build
 ```
 
@@ -75,10 +75,18 @@ violations are counted, you change the output of all three analyses at once, and
 intentional; `BookstoreRunningExampleTest` tells you whether the numbers the README quotes still
 hold.
 
-Also: **`JavaParserService` must stay generic.** It cannot contain special cases for particular
-libraries or frameworks. The tool is meant to parse any Java project — Spring Boot, plain Maven,
-JavaEE, no framework at all — and a hardcoded shortcut for one ecosystem is a bug even when it
-makes a specific project work better.
+Also: **every parser must stay generic.** `JavaParserService` and `PhpParser` cannot contain
+special cases for particular libraries or frameworks. The tool is meant to parse any Java
+project — Spring Boot, plain Maven, JavaEE, no framework at all — and any PHP project, Laravel,
+Symfony or plain PHP, by the same rules. A hardcoded shortcut for one ecosystem is a bug even
+when it makes a specific project work better.
+
+## Adding a language
+
+A language is one `LanguageParser` bean; nothing else in the analyses knows which language a
+project is written in. [Adding a language](docs/adding-a-parser.md) explains what a parser owes
+the tool, the questions it answers for its language, the bookstore every language is held to,
+and the checklist for the pull request.
 
 ## Workflow
 
@@ -107,7 +115,7 @@ Write the body to explain *why* the change is needed, not what the diff shows.
 
 ## Reporting bugs
 
-Open an issue with the Java project that triggered it (or a minimal reproduction), what you
-expected, and what happened. Analysis bugs are much easier to act on with the module and
+Open an issue with the project that triggered it and its language (or a minimal
+reproduction), what you expected, and what happened. Analysis bugs are much easier to act on with the module and
 reference class names included — and a small synthetic project in the shape of
 `examples/bookstore` is the most useful reproduction of all.

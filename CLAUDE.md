@@ -121,7 +121,7 @@ cd api
 
 **Services** (`src/main/java/com/archanchor/services/`)
 - `JavaParserService` - Core parsing and dependency resolution using JavaParser
-- `parsers/` - `LanguageParser` is what the tool asks about a project in one language: its production sources and the classes they declare (#81). `LanguageParsers` picks the project's parser (one language per project); `JavaParser` holds the Java layout and reads dependencies through `JavaParserService`
+- `parsers/` - `LanguageParser` is what the tool asks about a project in one language: its production sources and the classes they declare (#81). `LanguageParsers` picks the project's parser (one language per project); `JavaParser` holds the Java layout and reads dependencies through `JavaParserService`. Adding a language: `docs/adding-a-parser.md` (#91)
 - `parsers/php/` - `PhpParser` (#85): the sources are what `composer.json` autoloads (`ComposerAutoload`, `PhpSourceFiles`; without one, every `.php` outside Composer's `vendor/`, `node_modules/` and dot-directories); a class is each class, interface, trait or enum a file declares, under its PHP name (`App\Models\Order`, package `App\Models`), so a file may give several classes or none; dependencies are the classes a file imports and names (`PhpNameResolver`, `PhpDependencies`), a built-in class filed under `php` or `ext-<name>` (`PhpPlatformClasses`, generated from phpstorm-stubs by `src/main/scripts/PhpPlatformClassesGenerator.java`). Only `TreeSitterPhpSourceReader` touches tree-sitter, behind `PhpSourceReader`; the query it runs is `resources/php/class-facts.scm`
 - `ProjectService` - Orchestrates project analysis workflow
 - `ModuleService` - Module management, similarity calculations, violation tracking, module manipulation

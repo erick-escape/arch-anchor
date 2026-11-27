@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 This is a Spring Boot application for analyzing and visualizing programming projects. The application parses Java projects using the
-JavaParser library and provides architectural analysis capabilities through REST APIs.
+JavaParser library and PHP projects using tree-sitter, and provides architectural analysis capabilities through REST APIs. How to add
+another language is in `docs/adding-a-parser.md`.
 
 ## Build & Development Commands
 
@@ -477,7 +478,7 @@ The architectural analysis framework relies on three core metrics:
 
 - **Caching**: JavaParserService implements caching strategies to optimize performance
 - **Languages**: Java and PHP (#85). A language is added by implementing `LanguageParser` as a bean; nothing outside
-  `services/parsers/` looks at a source file
+  `services/parsers/` looks at a source file. `docs/adding-a-parser.md` is the contributor guide (#91)
 - **Dependency Resolution**: Integrates with Maven for resolving external dependencies
 - **File Processing**: Tracks processed files to avoid duplicate analysis
 - **Reference Classes**: Every module requires at least one reference class to define architectural intent and enable objective analysis
