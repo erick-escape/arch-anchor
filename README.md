@@ -149,8 +149,10 @@ the tool reads to the same result.
 
    **Projects** lists everything imported, with the repository each came from.
 2. **Analyze it.** The analysis opens after the import, and **Analyze** on a project card opens
-   it again later. Modules are derived from your package structure — one module per package that
-   holds classes. Expect the module names to mirror your package names.
+   it again later. Modules are derived from your package structure — one module per directory that
+   holds classes, named after that directory and its parent (`bookstore/model`). When two
+   modules would share a name, each takes as much more of its path as it needs to differ
+   (`Requests/Admin/Sale`, `Services/Admin/Sale`), so every exported constraint names one module.
 3. **Check the reference classes.** Open each module in the modules panel on the left and review
    the class the tool elected for it. This is the one judgement call worth your attention: the reference class defines
    what the module is *allowed* to depend on, so every constraint and every violation downstream
