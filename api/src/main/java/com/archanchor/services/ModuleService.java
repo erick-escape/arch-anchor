@@ -664,7 +664,9 @@ public class ModuleService {
 	 * holds a class, whatever language the classes are written in (#81). Modules are
 	 * ordered by directory and their classes by source file, so that the result depends
 	 * on the sources and not on the order a filesystem lists them in: a tie between
-	 * equally rated classes goes to the first one (#15). A project in which no parser
+	 * equally rated classes goes to the first one (#15). Each module is named after its
+	 * directory and that directory's parent, with more of its path when two modules would
+	 * otherwise share a name ({@code ModuleNames}, #89). A project in which no parser
 	 * finds a class is refused ({@code ProjectWithoutClassesException}, #87).
 	 *
 	 * <pre>
@@ -678,8 +680,10 @@ public class ModuleService {
 			clazzesByDirectory.computeIfAbsent(parsed.sourceFile().getParent(), directory -> new ArrayList<>())
 				.add(clazzOf(parsed));
 		}
+		Map<Path, String> names = ModuleNames.of(project, clazzesByDirectory.keySet());
 		List<Module> modules = new ArrayList<>();
-		clazzesByDirectory.forEach((directory, clazzes) -> modules.add(moduleOf(directory, clazzes)));
+		clazzesByDirectory
+			.forEach((directory, clazzes) -> modules.add(moduleOf(directory, names.get(directory), clazzes)));
 		return modules;
 	}
 
@@ -705,9 +709,8 @@ public class ModuleService {
 
 	// Reference classes, dependencies, similarities and violations are calculated later.
 	// The id is derived from the directory, so that analysing a project again gives its
-	// modules the ids they had.
-	private Module moduleOf(Path directory, List<Clazz> clazzes) {
-		String name = directory.getParent().getFileName().toString() + '/' + directory.getFileName().toString();
+	// modules the ids they had, whatever they are named.
+	private Module moduleOf(Path directory, String name, List<Clazz> clazzes) {
 		String id = generateDeterministicUUID(directory.toString());
 		log.info("Added new module: {} with ID: {}", name, id);
 		return new Module(id, name, null, null, null, clazzes, 0.0, 0.0, 0);

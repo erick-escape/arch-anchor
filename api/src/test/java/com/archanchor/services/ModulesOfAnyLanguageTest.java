@@ -36,6 +36,29 @@ class ModulesOfAnyLanguageTest {
 		assertThat(modules.get(1).getClazzes()).extracting(Clazz::getName).containsExactly("Order", "User");
 	}
 
+	// Exported, both would read "Admin/Sale CAN-DEPEND …", and no one could tell which
+	// module a constraint is for (#89).
+	@Test
+	void modulesThatWouldShareANameAreToldApartByTheDirectoriesAboveThem() throws IOException {
+		ScriptedLanguageParser php = new ScriptedLanguageParser("php")
+			.declaring(PROJECT.resolve("app/Http/Requests/Admin/Sale/StoreSale.php"), "StoreSale",
+					"App\\Http\\Requests\\Admin\\Sale", "App\\Http\\Requests\\Admin\\Sale\\StoreSale")
+			.declaring(PROJECT.resolve("app/Services/Admin/Sale/SaleTotals.php"), "SaleTotals",
+					"App\\Services\\Admin\\Sale", "App\\Services\\Admin\\Sale\\SaleTotals")
+			.declaring(PROJECT.resolve("app/Models/Sale.php"), "Sale", "App\\Models", "App\\Models\\Sale");
+
+		assertThat(modulesReadBy(php)).extracting(Module::getName)
+			.containsExactly("Requests/Admin/Sale", "app/Models", "Services/Admin/Sale");
+	}
+
+	@Test
+	void aModuleAtTheProjectRootIsNamedAfterTheProject() throws IOException {
+		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(PROJECT.resolve("Kernel.php"),
+				"Kernel", null, "Kernel");
+
+		assertThat(modulesReadBy(php)).extracting(Module::getName).containsExactly("shop");
+	}
+
 	@Test
 	void aClassKeepsWhatItsParserSaidOfIt() throws IOException {
 		ScriptedLanguageParser php = new ScriptedLanguageParser("php").declaring(PROJECT.resolve("app/Models/User.php"),
