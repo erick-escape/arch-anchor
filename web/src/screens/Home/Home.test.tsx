@@ -95,7 +95,7 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Find the architecture already in your Java code.',
+        name: 'Find the architecture already in your Java or PHP code.',
       })
     ).toBeInTheDocument();
     expect(importBar().getByRole('textbox', { name: 'GitHub repository URL' })).toHaveFocus();
