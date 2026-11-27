@@ -15,6 +15,12 @@ describe('violationsOf', () => {
     expect(violationsOf(web)).toEqual(['java.sql']);
     expect(violationsOf(model)).toEqual([]);
   });
+
+  it('names the forbidden package as the project’s language does', () => {
+    const [, , , phpWeb] = bookstoreModules({ language: 'php' });
+
+    expect(violationsOf(phpWeb)).toEqual(['ext-pdo']);
+  });
 });
 
 describe('totalViolationsOf', () => {

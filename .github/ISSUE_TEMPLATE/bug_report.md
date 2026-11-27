@@ -14,9 +14,9 @@ labels: bug
 
 **The project you analyzed**
 
-<!-- Java version, build tool, roughly how many classes and packages. A link to the project, or
-a small synthetic reproduction in the shape of examples/bookstore, is the most
-useful thing you can attach. -->
+<!-- Its language and version (for Java, the build tool too), roughly how many classes and
+packages. A link to the project, or a small synthetic reproduction in the shape of
+examples/bookstore, is the most useful thing you can attach. -->
 
 **If it is an analysis result you disagree with**
 
@@ -26,7 +26,7 @@ recommendation that looks wrong. -->
 **Environment**
 
 - OS:
-- Java version (`java -version`):
+- Java version running the tool (`java -version`):
 - Node version (`node -v`):
 - Arch Anchor commit:
 

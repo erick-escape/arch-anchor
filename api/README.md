@@ -1,8 +1,9 @@
 # Arch Anchor — API
 
-Spring Boot 3.3 backend (Java 17). Parses Java sources with JavaParser, groups classes into
-modules, elects reference classes, and computes similarity, violations, and refactoring
-recommendations.
+Spring Boot 3.3 backend (Java 17). Parses Java sources with JavaParser and PHP sources with
+tree-sitter, groups classes into modules, elects reference classes, and computes similarity,
+violations, and refactoring recommendations. Another language is added as a parser of its own:
+see [Adding a language](../docs/adding-a-parser.md).
 
 See the [root README](../README.md) for what the tool does, the concepts behind it, and the
 full endpoint reference.

@@ -90,6 +90,18 @@ describe('dependencyGraphOf', () => {
     );
   });
 
+  it('draws the PHP bookstore with the edges of the Java one, ext-pdo standing for java.sql', () => {
+    const java = dependencyGraphOf(bookstoreModules(), { showExternal: false });
+    const php = dependencyGraphOf(bookstoreModules({ language: 'php' }), { showExternal: false });
+
+    const pairsOf = (graph: typeof java) =>
+      graph.edges.map((edge) => `${edge.source}->${edge.target}:${edge.kind}`);
+    expect(pairsOf(php)).toEqual(
+      pairsOf(java).map((pair) => pair.replace('package:java.sql', 'package:ext-pdo'))
+    );
+    expect(php.packages).toEqual([{ id: 'package:ext-pdo', name: 'ext-pdo', violated: true }]);
+  });
+
   it('draws the edges of a project whose names are not written with dots', () => {
     const user = phpClazz('App\\Models', 'User');
     const controller = phpClazz('App\\Http\\Controllers', 'UserController');

@@ -3,11 +3,11 @@ message: "If you use ArchAnchor, please cite it as below."
 type: software
 title: ArchAnchor
 abstract: >-
-  ArchAnchor reads a Java codebase and recovers its architectural constraints, the rules about
-  which module may depend on which package, by electing a reference class per module: the class
-  whose dependencies best represent what the module was meant to be. It reports the dependencies
-  that step outside those constraints as violations, recommends splits, merges and moves that
-  remove them, and exports the constraints.
+  ArchAnchor reads a Java or PHP codebase and recovers its architectural constraints, the
+  rules about which module may depend on which package, by electing a reference class per
+  module: the class whose dependencies best represent what the module was meant to be. It
+  reports the dependencies that step outside those constraints as violations, recommends
+  splits, merges and moves that remove them, and exports the constraints.
 authors:
   - given-names: Érick de Castro
     family-names: Silva
@@ -32,3 +32,4 @@ keywords:
   - architecture recovery
   - refactoring recommendation
   - Java
+  - PHP

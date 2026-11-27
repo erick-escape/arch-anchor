@@ -305,7 +305,8 @@ will fail to load, and deleting it is the fix.
   large repository keeps it open until the clone finishes.
 - **Java and PHP only**, one language per project: the one most of its sources are written in.
   Modules are inferred from package structure — the tool has no notion of Maven modules, Gradle
-  subprojects, or JPMS.
+  subprojects, or JPMS. Another language is added with a parser of its own:
+  [Adding a language](docs/adding-a-parser.md) says how.
 - **PHP is read from what the code names.** A PHP project's sources are the directories its
   `composer.json` autoloads (`autoload`, not `autoload-dev`), and a dependency is a class that a
   file imports or names. Classes reached only by a string, such as a container lookup, a
@@ -341,7 +342,8 @@ repository*. Each release is also archived on Zenodo with a DOI of its own.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and pull requests are welcome.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and pull requests are welcome. To teach the
+tool another language, start with [Adding a language](docs/adding-a-parser.md).
 
 ## License
 
