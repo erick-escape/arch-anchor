@@ -32,7 +32,7 @@ COPY --from=api /arch-anchor.jar /
 
 FROM eclipse-temurin:17-jre-jammy
 LABEL org.opencontainers.image.title="Arch Anchor" \
-      org.opencontainers.image.description="Recovers a Java codebase's architectural constraints from one reference class per module" \
+      org.opencontainers.image.description="Recovers a Java or PHP codebase's architectural constraints from one reference class per module" \
       org.opencontainers.image.source="https://github.com/erick-escape/arch-anchor" \
       org.opencontainers.image.licenses="MIT"
 COPY --from=api /arch-anchor.jar /app/arch-anchor.jar

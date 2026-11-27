@@ -8,8 +8,9 @@
 
 - [ ] `cd api && ./mvnw test`
 - [ ] `cd web && npm run lint && npm test && npm run build`
-- [ ] Ran the tool end to end against `examples/bookstore`
-- [ ] Ran it against another Java project (which one?)
+- [ ] Ran the tool end to end against `examples/bookstore`, and `examples/bookstore-php` if it touches PHP
+- [ ] Ran it against another project (which one, in which language?)
+- [ ] Adds a language: the checklist of [Adding a language](https://github.com/erick-escape/arch-anchor/blob/main/docs/adding-a-parser.md#6-checklist) is done
 
 ## Notes for the reviewer
 
