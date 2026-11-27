@@ -15,6 +15,7 @@ import com.archanchor.mapstruct.ModuleMapperImpl;
 import com.archanchor.services.analysis.ActiveAnalysisSettings;
 import com.archanchor.services.analysis.AnalysisSettingsStore;
 import com.archanchor.services.architecturalAnalyses.ArchitecturalAnalysesRunner;
+import com.archanchor.services.parsers.ProjectWithoutClassesException;
 import com.archanchor.services.rating.ActiveRatingWeights;
 import com.archanchor.services.rating.RatingWeightsStore;
 
@@ -67,11 +68,21 @@ public class ProjectService {
 		analysesRunner.executeAll(moduleService.savedModulesForAnalysis());
 	}
 
+	/**
+	 * Reads the project from its sources, elects its reference classes and runs the
+	 * analyses with its weights and settings, which become the ones in force. A project
+	 * that cannot be read leaves the one analysed before it in force (#87).
+	 *
+	 * <pre>
+	 * ProjectAnalysesDTO bookstore = projectService.analyzeProject("bookstore", "uploads/bookstore");
+	 * </pre>
+	 * @throws ProjectWithoutClassesException when there is nothing in it to analyse
+	 */
 	public ProjectAnalysesDTO analyzeProject(String projectName, String directoryPath) throws IOException {
+		List<Module> modules = moduleService.getModules(directoryPath);
 		activeWeights.adopt(projectName, ratingWeightsStore.weightsOf(projectName));
 		activeSettings.adopt(projectName, analysisSettingsStore.settingsOf(projectName));
 
-		List<Module> modules = moduleService.getModules(directoryPath);
 		modules.forEach(this::electAndMeasure);
 		analysesRunner.executeAll(modules);
 

@@ -665,7 +665,7 @@ public class ModuleService {
 	 * ordered by directory and their classes by source file, so that the result depends
 	 * on the sources and not on the order a filesystem lists them in: a tie between
 	 * equally rated classes goes to the first one (#15). A project in which no parser
-	 * finds sources has no modules.
+	 * finds a class is refused ({@code ProjectWithoutClassesException}, #87).
 	 *
 	 * <pre>
 	 * List&lt;Module&gt; modules = moduleService.getModules("uploads/bookstore"); // bookstore/model, bookstore/persistence, …

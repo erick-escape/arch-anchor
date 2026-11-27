@@ -2,7 +2,12 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FakeAxiosAdapter } from '../test/fakes/FakeAxiosAdapter';
-import { folderFilesOf, uploadProjectFolder, type FolderFile } from './projectUploadApi';
+import {
+  FILES_PER_REQUEST,
+  folderFilesOf,
+  uploadProjectFolder,
+  type FolderFile,
+} from './projectUploadApi';
 
 function folderFile(path: string): FolderFile {
   return { file: new File(['class A {}'], path.split('/').pop() ?? path), path };
@@ -45,8 +50,41 @@ describe('uploadProjectFolder', () => {
     ]);
   });
 
-  it('refuses an empty folder without calling the API', async () => {
-    await expect(uploadProjectFolder([])).rejects.toThrow('The folder is empty');
+  it('sends only what the tool reads', async () => {
+    await uploadProjectFolder([
+      folderFile('shop/.env'),
+      folderFile('shop/composer.json'),
+      folderFile('shop/vendor/autoload.php'),
+      folderFile('shop/vendor/acme/lib/Thing.php'),
+      folderFile('shop/app/Models/Order.php'),
+    ]);
+
+    const body = fakeApi.requestsTo('POST', '/api/upload')[0].body as FormData;
+    expect(body.getAll('files').map((file) => (file as File).name)).toEqual([
+      'shop/composer.json',
+      'shop/app/Models/Order.php',
+    ]);
+  });
+
+  it('sends a large project in several requests, each under the server’s limit', async () => {
+    const files = Array.from({ length: 2 * FILES_PER_REQUEST + 1 }, (_, index) =>
+      folderFile(`shop/app/Model${index}.php`)
+    );
+
+    const name = await uploadProjectFolder(files);
+
+    expect(name).toBe('shop');
+    const sizes = fakeApi
+      .requestsTo('POST', '/api/upload')
+      .map((request) => (request.body as FormData).getAll('files').length);
+    expect(sizes).toEqual([FILES_PER_REQUEST, FILES_PER_REQUEST, 1]);
+  });
+
+  it('refuses a folder with nothing to analyse without calling the API', async () => {
+    const expected = 'Found nothing to analyse in the folder: expected .java or .php sources.';
+
+    await expect(uploadProjectFolder([])).rejects.toThrow(expected);
+    await expect(uploadProjectFolder([folderFile('notes/README.md')])).rejects.toThrow(expected);
     expect(fakeApi.requests).toHaveLength(0);
   });
 

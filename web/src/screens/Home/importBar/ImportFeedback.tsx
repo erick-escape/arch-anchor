@@ -29,7 +29,7 @@ export function ImportProgress({ what }: { what: string }) {
 /**
  * Why the import failed, in the API's words when it gave any.
  *
- * @example <ImportFailure reason="No src/ folder in owner/repo." />
+ * @example <ImportFailure reason="Found no sources to analyse in the repository root." />
  */
 export function ImportFailure({ reason }: { reason: string }) {
   return (

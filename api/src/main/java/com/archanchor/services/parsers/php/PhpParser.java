@@ -60,6 +60,12 @@ public class PhpParser implements LanguageParser {
 	}
 
 	@Override
+	public String expectedSources() {
+		return "PHP sources in the directories composer.json autoloads, or anywhere outside vendor/ and "
+				+ "node_modules/ when it names none";
+	}
+
+	@Override
 	public List<Path> sourceFilesOf(Path projectDirectory) throws IOException {
 		return sourceFiles.in(projectDirectory);
 	}

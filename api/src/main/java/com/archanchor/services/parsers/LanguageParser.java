@@ -23,6 +23,13 @@ public interface LanguageParser {
 	String language();
 
 	/**
+	 * Where the language's sources are looked for, as a phrase written for the user, such
+	 * as {@code "Java sources under src/main/, or src/ when there is no src/main/"}. The
+	 * tool says it when a project has none (#87).
+	 */
+	String expectedSources();
+
+	/**
 	 * The project's production sources in this language, each inside the project
 	 * directory: no tests, no third-party code, no file that can declare no class. Empty
 	 * for a project that is not written in the language. Nothing is parsed, so that

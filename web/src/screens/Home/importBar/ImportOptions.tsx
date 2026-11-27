@@ -27,7 +27,7 @@ export function ImportOptions({ fields }: { fields: ImportFields }) {
       <OptionField
         label="Subdirectory"
         placeholder="backend"
-        help="The folder that holds src/, when it is not the repository root."
+        help="The project’s folder, when it is not the repository root."
         mono
         {...field('subdirectory')}
       />

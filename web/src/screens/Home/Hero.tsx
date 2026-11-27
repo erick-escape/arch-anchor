@@ -39,7 +39,7 @@ export function Hero({ fields, projectImport }: HeroProps) {
       </div>
       <div className={styles.heroInner}>
         <h1 id="hero-title" className={styles.heroTitle}>
-          Find the architecture already in your Java code.
+          Find the architecture already in your Java or PHP code.
         </h1>
         <p className={styles.lead}>
           Paste a GitHub repository or drop a project folder. ArchAnchor elects a reference class in

@@ -22,6 +22,8 @@ public final class ScriptedLanguageParser implements LanguageParser {
 
 	private final List<ParsedClazz> clazzes = new ArrayList<>();
 
+	private final List<Path> sourcesDeclaringNothing = new ArrayList<>();
+
 	public ScriptedLanguageParser(String language) {
 		this.language = language;
 	}
@@ -32,14 +34,27 @@ public final class ScriptedLanguageParser implements LanguageParser {
 		return this;
 	}
 
+	/** Adds a source in which no class is declared, such as a file of functions. */
+	public ScriptedLanguageParser listing(Path sourceFile) {
+		sourcesDeclaringNothing.add(sourceFile);
+		return this;
+	}
+
 	@Override
 	public String language() {
 		return language;
 	}
 
 	@Override
+	public String expectedSources() {
+		return language + " sources where a test puts them";
+	}
+
+	@Override
 	public List<Path> sourceFilesOf(Path projectDirectory) {
-		return clazzes.stream().map(ParsedClazz::sourceFile).distinct().toList();
+		List<Path> sources = new ArrayList<>(clazzes.stream().map(ParsedClazz::sourceFile).distinct().toList());
+		sources.addAll(sourcesDeclaringNothing);
+		return sources;
 	}
 
 	@Override

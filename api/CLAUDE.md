@@ -58,11 +58,13 @@ JavaParser library and provides architectural analysis capabilities through REST
 
 **Parsers** (`src/main/java/com/archanchor/services/parsers/`)
 
-- `LanguageParser` - What the tool asks about a project in one language (#81): `language()`, `sourceFilesOf(project)` (production
-  sources, nothing parsed) and `clazzesOf(project)`, each `ParsedClazz` with its source file, name, package, qualified name (what
-  other classes refer to it by, as the language writes it, #83) and dependencies
+- `LanguageParser` - What the tool asks about a project in one language (#81): `language()`, `expectedSources()` (where it
+  looks, written for the user, #87), `sourceFilesOf(project)` (production sources, nothing parsed) and `clazzesOf(project)`,
+  each `ParsedClazz` with its source file, name, package, qualified name (what other classes refer to it by, as the language
+  writes it, #83) and dependencies
 - `LanguageParsers` - Every `LanguageParser` bean; `parserOf(project)` picks the one with the most source files (one language per
-  project, ties by language name), `clazzesOf(project)` reads the project with it
+  project, ties by language name), `clazzesOf(project)` reads the project with it and throws `ProjectWithoutClassesException`
+  when there is nothing to analyse (#87)
 - `JavaParser` - The Java layout: `src/main` when the project has one, so that tests are not modules (#47), else `src`; one class per
   `.java` file, named after it, in the package the file declares (`util/PackageDeclaration`); never `package-info.java` or
   `module-info.java` (#31). Dependencies come from a `JavaDependencyReader`, which `JavaParserService` implements
@@ -349,14 +351,18 @@ The analyses can utilize `ModuleService` methods for:
 
 1. **Project Upload or Import**: Files uploaded via `/api/upload`, or a GitHub repository shallow-cloned via
    `/api/projects/import` (`services/repositoryImport/`), end up in the same place: `uploads/<project>/`, laid out by
-   `ProjectsDirectory`. An import stages in `uploads/.staging/`, strips `.git/` and symbolic links, and requires `src/`
-   directly under the chosen root, because `JavaParser` reads the sources from there
+   `ProjectsDirectory`. An import stages in `uploads/.staging/`, strips `.git/` and symbolic links, and accepts the chosen
+   root only when a parser finds sources in it (`AnalysisRootLocator`, #87); the refusal says what each language expects
+   and lists the shallowest directories within four levels that would work. The web uploads only what a parser reads,
+   in requests of at most 1,000 files (Tomcat refuses a multipart request of more than 10,000 parts)
 2. **Analysis**: `/api/analyze` triggers `ProjectService.analyzeProject()` which:
     - Reads the project's classes with the parser of its language (`LanguageParsers`); for Java, `JavaParser` with
       `JavaParserService` resolving each file's dependencies; for PHP, `PhpParser`, which reads every source before it files a
       name, because a name is filed by whether the project declares it
     - Organizes them into modules in `ModuleService.getModules`: one module per directory that holds a class, ordered by
-      directory, its classes by source file (#15); a project in which no parser finds sources has no modules
+      directory, its classes by source file (#15). A project in which no parser finds sources, or whose sources declare
+      no class, is refused with `ProjectWithoutClassesException`, which `/api/analyze` answers as a 422 whose detail the
+      analysis page shows (#87); the project analysed before it stays in force
     - Populates similarity and violation metrics
     - Runs architectural analyses via `ArchitecturalAnalysesRunner`
     - Returns `ProjectAnalysesDTO` with modules and architectural constraints
