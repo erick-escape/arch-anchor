@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 
 /**
  * The names modules are shown and exported under (#89): a directory and its parent, as
@@ -21,8 +22,8 @@ class ModuleNamesTest {
 		Path model = SHOP.resolve("src/main/java/bookstore/model");
 		Path web = SHOP.resolve("src/main/java/bookstore/web");
 
-		assertThat(ModuleNames.of(SHOP, List.of(model, web)))
-			.containsExactlyEntriesOf(Map.of(model, "bookstore/model", web, "bookstore/web"));
+		assertThat(ModuleNames.of(SHOP, List.of(model, web))).containsExactly(entry(model, "bookstore/model"),
+				entry(web, "bookstore/web"));
 	}
 
 	@Test
