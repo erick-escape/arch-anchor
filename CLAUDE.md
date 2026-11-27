@@ -221,7 +221,7 @@ The UI follows the redesign of #58 (brief: `docs/design/redesign-brief.md`).
 - Styles are CSS modules reading `--aa-*` variables; no literal colours in components
 
 **Screens** (`src/screens/`)
-- `Home/` - `importBar/` (`useProjectImport`, `droppedFolder.ts`, `usePageFolderDrop`), `claims/` (`useCarousel`, vignettes of the bookstore)
+- `Home/` - `importBar/` (`useProjectImport`, `droppedFolder.ts`, `usePageFolderDrop`), `claims/` (`useCarousel`, vignettes of the bookstore). A folder is uploaded as what the parsers read (`services/analysableFiles.ts`: sources and manifests, never `node_modules/`, Composer's `vendor/` or dot-directories; a dropped folder is pruned while it is listed), in requests of at most 1,000 files (#87)
 - `Projects/` - cards, delete behind a named confirmation
 - `Analyze/` - `graph/` (module→module edges from `clazz.qualifiedName`, layered layout with dagre, nodes and edges), `modules/` (list, detail, class selection toolbar, module menu), `recommendations/` (`recommendationCards.ts` keeps the Refactorings order and `CardList` the 50-card pages that `ICSE/evaluation/harness/panel.py` copies), `graphEmphasis` (hover highlight, applied-change motion), `usePanelLayout` (foldable panels, drawers below 1024 px), `useAnalyzeCommands`
 

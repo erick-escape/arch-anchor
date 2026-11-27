@@ -131,18 +131,21 @@ the tool reads to the same result.
 
 ## Running it on your own project
 
-1. **Add it** from the home page's import bar. The project needs a `src/` directory directly
-   under its root; it does not need to compile, and dependencies do not need to be installed.
+1. **Add it** from the home page's import bar. Choose the project's root: for Java, the
+   directory that holds `src/`; for PHP, the one that holds `composer.json`, or any directory
+   above the PHP files when there is none. The project does not need to compile, and its
+   dependencies do not need to be installed.
    - *From GitHub:* paste the repository URL and click **Analyze**. The backend clones the latest
      commit of the default branch, or of the branch or tag you name under **Options**, and reports
      which commit it took. If the repository keeps its code deeper, for example one Maven module
-     per directory, set **Subdirectory** to the module to analyze; when it is missing, the error
-     lists the directories that would work. A private repository needs a personal access token
+     per directory, set **Subdirectory** to the module to analyze; when the tool finds no sources
+     where it looks, the error says what it expected and lists the directories that would work. A private repository needs a personal access token
      that can read its contents. The token is used for that one clone and is never stored.
    - *From disk:* click **Upload folder** and select your project's root directory, or drop the
-     folder anywhere on the home page. The browser uploads the whole tree; only the project's
-     `.java` or `.php` sources are parsed, so extra resources and configuration files are
-     harmless.
+     folder anywhere on the home page. The browser sends only what the tool reads: `.java` and
+     `.php` files and the build manifests (`pom.xml`, `build.gradle`, `composer.json`). It never
+     enters `node_modules/`, Composer's `vendor/` or a directory whose name starts with a dot,
+     and files such as `.env` stay on your machine. A large project goes in several requests.
 
    **Projects** lists everything imported, with the repository each came from.
 2. **Analyze it.** The analysis opens after the import, and **Analyze** on a project card opens
@@ -307,8 +310,8 @@ will fail to load, and deleting it is the fix.
   framework's runtime alias or the class behind a facade, are not seen, and neither is anything
   written in templates, routes or configuration files, which declare no class.
   [`examples/bookstore-php`](examples/bookstore-php/README.md) shows what is read and how it is
-  named. Importing from GitHub still expects a `src/` directory, so a project that keeps its
-  code elsewhere, as Laravel does in `app/`, goes through the folder upload.
+  named. Without a `composer.json`, every `.php` file below the root is a source, so a
+  repository with PHP anywhere in it is read as a PHP project unless a subdirectory is set.
 - `JavaParserTypeResolutionTest` is skipped unless `api/uploads/pass-in` is present. It asserts
   against a specific local project rather than checked-in fixtures.
 
