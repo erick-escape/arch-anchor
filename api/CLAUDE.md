@@ -360,9 +360,12 @@ The analyses can utilize `ModuleService` methods for:
       `JavaParserService` resolving each file's dependencies; for PHP, `PhpParser`, which reads every source before it files a
       name, because a name is filed by whether the project declares it
     - Organizes them into modules in `ModuleService.getModules`: one module per directory that holds a class, ordered by
-      directory, its classes by source file (#15). A project in which no parser finds sources, or whose sources declare
-      no class, is refused with `ProjectWithoutClassesException`, which `/api/analyze` answers as a 422 whose detail the
-      analysis page shows (#87); the project analysed before it stays in force
+      directory, its classes by source file (#15). `ModuleNames` names each after its directory and that directory's
+      parent, and gives modules that would share a name as many more leading directories as they need to differ; a module at
+      the project root takes the project's name (#89). The module id comes from the directory, never the name. A project in
+      which no parser finds sources, or whose sources declare no class, is refused with `ProjectWithoutClassesException`,
+      which `/api/analyze` answers as a 422 whose detail the analysis page shows (#87); the project analysed before it stays
+      in force
     - Populates similarity and violation metrics
     - Runs architectural analyses via `ArchitecturalAnalysesRunner`
     - Returns `ProjectAnalysesDTO` with modules and architectural constraints
