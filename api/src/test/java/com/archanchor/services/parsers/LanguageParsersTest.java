@@ -42,13 +42,39 @@ class LanguageParsersTest {
 		assertThat(new LanguageParsers(List.of(java, php)).parserOf(PROJECT)).containsSame(java);
 	}
 
+	// Not analysed as a project without modules: the user is told what was looked for
+	// (#87).
 	@Test
-	void aProjectNoParserFindsSourcesInHasNoParserAndNoClasses() throws IOException {
+	void aProjectNoParserFindsSourcesInIsRefusedWithWhatEachLanguageExpects() throws IOException {
 		LanguageParsers parsers = new LanguageParsers(
-				List.of(new ScriptedLanguageParser("java"), new ScriptedLanguageParser("php")));
+				List.of(new ScriptedLanguageParser("php"), new ScriptedLanguageParser("java")));
 
 		assertThat(parsers.parserOf(PROJECT)).isEmpty();
-		assertThat(parsers.clazzesOf(PROJECT)).isEmpty();
+		assertThatThrownBy(() -> parsers.clazzesOf(PROJECT)).isInstanceOf(ProjectWithoutClassesException.class)
+			.hasMessage("Found no sources to analyse in 'shop'. Expected java sources where a test puts them; "
+					+ "or php sources where a test puts them.");
+	}
+
+	// A folder of scripts, or of templates: read, and nothing in it to group into
+	// modules.
+	@Test
+	void aProjectWhoseSourcesDeclareNoClassIsRefusedWithHowManyWereRead() {
+		LanguageParsers parsers = new LanguageParsers(
+				List.of(new ScriptedLanguageParser("php").listing(PROJECT.resolve("index.php"))
+					.listing(PROJECT.resolve("includes/db.php"))));
+
+		assertThatThrownBy(() -> parsers.clazzesOf(PROJECT)).isInstanceOf(ProjectWithoutClassesException.class)
+			.hasMessage(
+					"Expected a class in the 2 php source files of 'shop', found none: there is nothing to analyse.");
+	}
+
+	@Test
+	void aSingleSourceWithoutAClassIsCountedAsOne() {
+		LanguageParsers parsers = new LanguageParsers(
+				List.of(new ScriptedLanguageParser("php").listing(PROJECT.resolve("index.php"))));
+
+		assertThatThrownBy(() -> parsers.clazzesOf(PROJECT)).hasMessage(
+				"Expected a class in the 1 php source file of 'shop', found none: there is nothing to analyse.");
 	}
 
 	@Test

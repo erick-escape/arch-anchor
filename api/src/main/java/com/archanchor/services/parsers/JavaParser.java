@@ -45,6 +45,11 @@ public class JavaParser implements LanguageParser {
 	}
 
 	@Override
+	public String expectedSources() {
+		return "Java sources under src/main/, or src/ when there is no src/main/";
+	}
+
+	@Override
 	public List<Path> sourceFilesOf(Path projectDirectory) throws IOException {
 		Path sources = sourceRoot(projectDirectory.resolve(SOURCE_DIRECTORY));
 		if (!Files.isDirectory(sources)) {

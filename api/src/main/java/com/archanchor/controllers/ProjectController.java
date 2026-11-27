@@ -17,6 +17,7 @@ import com.archanchor.services.InvalidProjectNameException;
 import com.archanchor.services.ProjectNotFoundException;
 import com.archanchor.services.ProjectService;
 import com.archanchor.services.ProjectsDirectory;
+import com.archanchor.services.parsers.ProjectWithoutClassesException;
 import com.archanchor.services.repositoryImport.ImportSourceStore;
 
 import java.io.IOException;
@@ -107,20 +108,14 @@ public class ProjectController {
 		}
 	}
 
+	/**
+	 * Analyses a project from its sources. A project that does not exist is a 404; one
+	 * with nothing in it to analyse a 422 whose detail says what was looked for (#87).
+	 */
 	@PostMapping("/analyze")
-	public ProjectAnalysesDTO analyzeProject(@RequestParam String projectName) {
-		try {
-			Path projectPath = projectsDirectory.resolveProject(projectName);
-			if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
-				throw new RuntimeException("Project not found!");
-			}
-
-			return projectService.analyzeProject(projectName, projectPath.toString());
-		}
-		catch (Exception e) {
-			log.error("ProjectController -> analyzeProject: ", e);
-			throw new RuntimeException("Project analysis failed!");
-		}
+	public ProjectAnalysesDTO analyzeProject(@RequestParam String projectName) throws IOException {
+		requireProject(projectName);
+		return projectService.analyzeProject(projectName, projectsDirectory.resolveProject(projectName).toString());
 	}
 
 	/** The weights of the project's election and recommendation rate (#27). */
@@ -169,6 +164,11 @@ public class ProjectController {
 	@ExceptionHandler(ProjectNotFoundException.class)
 	ProblemDetail reportUnknownProject(ProjectNotFoundException failure) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, failure.getMessage());
+	}
+
+	@ExceptionHandler(ProjectWithoutClassesException.class)
+	ProblemDetail reportNothingToAnalyse(ProjectWithoutClassesException failure) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, failure.getMessage());
 	}
 
 	private void requireProject(String projectName) {

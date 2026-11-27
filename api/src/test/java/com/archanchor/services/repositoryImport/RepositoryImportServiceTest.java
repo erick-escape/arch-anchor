@@ -8,6 +8,7 @@ import com.archanchor.dto.projects.ImportedProjectDTO;
 import com.archanchor.dto.projects.RepositoryImportRequest;
 import com.archanchor.services.ProjectAlreadyExistsException;
 import com.archanchor.services.ProjectsDirectory;
+import com.archanchor.services.parsers.EveryLanguage;
 
 import java.io.IOException;
 import java.net.URI;
@@ -165,7 +166,7 @@ class RepositoryImportServiceTest {
 
 	private RepositoryImportService service() {
 		return new RepositoryImportService(projectsDirectory, cloner, new ClonedTreeCleaner(),
-				new AnalysisRootLocator(), importSources);
+				new AnalysisRootLocator(EveryLanguage.parsers()), importSources);
 	}
 
 	private static RepositoryImportRequest request(String repositoryUrl) {
